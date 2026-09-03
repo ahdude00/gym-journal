@@ -17,7 +17,7 @@
 <style>
 :root{
   --bg:#141A1F; --panel:#1C242B; --field:#232D36; --line:#2E3A44;
-  --text:#E8EEF2; --dim:#8D9BA8; --brass:#E0A32E; --done:#5FBF8B;
+  --text:#E8EEF2; --dim:#8D9BA8; --brass:#E0A32E; --done:#5FBF8B; --prot:#6FA8DC;
   --sans:'Barlow',system-ui,-apple-system,'Segoe UI',sans-serif;
   --cond:'Barlow Condensed','Barlow',system-ui,sans-serif;
   --tabbar:62px;
@@ -33,7 +33,9 @@ button{font-family:var(--sans);font-size:16px;color:inherit;background:none;bord
 input{font-family:var(--cond);font-size:22px;font-weight:600;color:var(--text);background:var(--field);
   border:1px solid var(--line);border-radius:10px;text-align:center;width:100%;padding:9px 4px;
   font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+input[type=search],input.text{font-family:var(--sans);font-size:16px;font-weight:400;text-align:left;padding:12px 14px}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input::-webkit-search-cancel-button{-webkit-appearance:none}
 input:focus{outline:2px solid var(--brass);outline-offset:1px;border-color:transparent}
 :focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 
@@ -47,6 +49,7 @@ input:focus{outline:2px solid var(--brass);outline-offset:1px;border-color:trans
 .btn:active{transform:translateY(1px)}
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
 .btn.quiet{background:var(--field);color:var(--text)}
+.btn.sm{padding:11px;font-size:15px}
 .btn[disabled]{opacity:.45}
 
 .stage{background:#0E141B;border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -67,14 +70,24 @@ input:focus{outline:2px solid var(--brass);outline-offset:1px;border-color:trans
 .progress i{flex:1;height:4px;border-radius:2px;background:var(--line)}
 .progress i.on{background:var(--brass)}
 
+/* protein çubuğu */
+.meter{height:12px;border-radius:6px;background:var(--field);overflow:hidden;margin:8px 0 6px}
+.meter i{display:block;height:100%;background:var(--prot);border-radius:6px}
+.meter i.full{background:var(--done)}
+.bignum{font-family:var(--cond);font-size:42px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.bignum small{font-size:17px;font-weight:500;color:var(--dim)}
+
 .rest{position:fixed;inset:0;background:rgba(12,16,20,.97);z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px}
 .rest .num{font-family:var(--cond);font-weight:700;font-size:106px;line-height:.9;font-variant-numeric:tabular-nums;color:var(--brass)}
 .rest .lbl{color:var(--dim);letter-spacing:.05em}
 .rest .acts{display:flex;gap:10px;margin-top:22px;width:100%;max-width:340px}
 
-.modal{position:fixed;inset:0;background:rgba(10,14,18,.8);z-index:60;display:flex;align-items:flex-end;justify-content:center;padding:16px}
-.modal .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;width:100%;max-width:420px}
+.modal{position:fixed;inset:0;background:rgba(10,14,18,.82);z-index:60;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.modal .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;width:100%;max-width:420px;max-height:86vh;overflow:auto}
 .modal .sheet .btn{margin-top:10px}
+.chips{display:flex;gap:8px;margin:12px 0 4px;flex-wrap:wrap}
+.chips button{flex:1;min-width:60px;padding:11px 6px;border:1px solid var(--line);border-radius:10px;background:var(--field);font-family:var(--cond);font-size:18px}
+.chips button.on{background:var(--brass);border-color:var(--brass);color:#141A1F}
 
 .exitem{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);width:100%;text-align:left}
 .exitem:first-child{border-top:none}
@@ -82,6 +95,23 @@ input:focus{outline:2px solid var(--brass);outline-offset:1px;border-color:trans
 .exitem .thumb svg{width:100%;height:100%;display:block}
 ol.steps{margin:0;padding-left:20px} ol.steps li{margin-bottom:7px}
 ul.warn{margin:0;padding-left:18px;color:var(--dim)} ul.warn li{margin-bottom:6px}
+
+/* besin listesi */
+.grup{font-family:var(--cond);font-size:15px;color:var(--dim);padding:14px 0 4px;border-top:1px solid var(--line);margin-top:6px}
+.grup:first-child{border-top:none;margin-top:0;padding-top:2px}
+.food{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;width:100%;text-align:left;padding:10px 0;border-top:1px solid rgba(46,58,68,.55)}
+.food b{font-weight:500;display:block}
+.food span.por{color:var(--dim);font-size:13px}
+.food .val{font-family:var(--cond);font-size:17px;font-variant-numeric:tabular-nums;text-align:right;min-width:52px}
+.food .val u{display:block;text-decoration:none;font-size:11px;color:var(--dim);font-family:var(--sans)}
+.food .add{width:34px;height:34px;border-radius:9px;background:var(--field);border:1px solid var(--line);font-size:19px;display:flex;align-items:center;justify-content:center;color:var(--brass)}
+.logrow{display:grid;grid-template-columns:1fr auto 34px;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.logrow:first-of-type{border-top:none}
+.logrow .val{font-family:var(--cond);font-size:17px;font-variant-numeric:tabular-nums;text-align:right}
+.logrow .del{width:34px;height:34px;border-radius:9px;background:var(--field);border:1px solid var(--line);color:var(--dim);font-size:16px}
+.datenav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.datenav button{width:46px;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);font-size:18px}
+.datenav b{font-family:var(--cond);font-size:19px}
 
 .hist{width:100%;text-align:left;padding:12px 0;border-top:1px solid var(--line)}
 .hist:first-of-type{border-top:none}
@@ -96,11 +126,11 @@ ul.warn{margin:0;padding-left:18px;color:var(--dim)} ul.warn li{margin-bottom:6p
 .bars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px;height:100%}
 .bars i{display:block;width:100%;background:var(--brass);border-radius:4px 4px 0 0;min-height:3px}
 .bars i.empty{background:var(--line)}
+.bars i.p{background:var(--prot)}
 .bars small{color:var(--dim);font-size:11px}
-.kv{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);font-size:15px}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:15px}
 .kv:first-of-type{border-top:none}
-.kv b{font-family:var(--cond);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
-
+.kv b{font-family:var(--cond);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 .switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
 .switch button{width:52px;height:30px;border-radius:999px;background:var(--field);border:1px solid var(--line);position:relative;flex:none}
 .switch button i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--dim);transition:left .15s,background .15s}
@@ -127,11 +157,11 @@ nav button i{font-style:normal;font-size:18px;line-height:1}
 <main class="wrap" id="view"></main>
 
 <nav><div>
-  <button data-tab="workout" class="on"><i>▣</i>Antrenman</button>
+  <button data-tab="home" class="on"><i>◉</i>Özet</button>
+  <button data-tab="workout"><i>▣</i>Antrenman</button>
+  <button data-tab="food"><i>◍</i>Beslenme</button>
   <button data-tab="guide"><i>◈</i>Hareketler</button>
   <button data-tab="stats"><i>◪</i>İstatistik</button>
-  <button data-tab="history"><i>▤</i>Geçmiş</button>
-  <button data-tab="data"><i>⇅</i>Veri</button>
 </div></nav>
 
 <div id="rest" class="rest hidden">
@@ -149,7 +179,6 @@ nav button i{font-style:normal;font-size:18px;line-height:1}
 <script>
 /* ==========================================================
    1. HAREKET VERİSİ
-   oneri = kutulara önceden yazılacak başlangıç değerleri
    ========================================================== */
 const EX = {
   "yan-kaldiris":{
@@ -292,10 +321,88 @@ const PROGRAM = {
 };
 
 /* ==========================================================
-   2. DURUM VE KAYIT
+   2. BESİN TABLOSU  (p = protein g, k = kalori)
+   Değerler yaklaşıktır, ortalama pişmiş porsiyon üzerinden.
+   ========================================================== */
+const FOODS = [
+  // Et, tavuk, balık
+  {g:"Et, tavuk, balık", ad:"Tavuk göğsü", por:"100 g pişmiş", p:30, k:165},
+  {g:"Et, tavuk, balık", ad:"Tavuk but / kanat", por:"100 g pişmiş", p:25, k:210},
+  {g:"Et, tavuk, balık", ad:"Hindi göğsü", por:"100 g pişmiş", p:29, k:150},
+  {g:"Et, tavuk, balık", ad:"Dana biftek", por:"100 g pişmiş", p:26, k:250},
+  {g:"Et, tavuk, balık", ad:"Kıyma / köfte", por:"100 g pişmiş", p:20, k:260},
+  {g:"Et, tavuk, balık", ad:"Kuzu et", por:"100 g pişmiş", p:25, k:290},
+  {g:"Et, tavuk, balık", ad:"Ton balığı, suda", por:"1 kutu (80 g)", p:19, k:90},
+  {g:"Et, tavuk, balık", ad:"Somon", por:"150 g", p:32, k:300},
+  {g:"Et, tavuk, balık", ad:"Palamut / uskumru", por:"150 g", p:30, k:290},
+  {g:"Et, tavuk, balık", ad:"Hamsi", por:"150 g", p:29, k:190},
+  {g:"Et, tavuk, balık", ad:"Levrek / çipura", por:"150 g", p:31, k:200},
+  {g:"Et, tavuk, balık", ad:"Hindi füme / jambon", por:"4 dilim (40 g)", p:10, k:60},
+  {g:"Et, tavuk, balık", ad:"Sucuk", por:"50 g", p:12, k:190},
+
+  // Süt ve yoğurt
+  {g:"Süt ve yoğurt", ad:"Süzme yoğurt", por:"200 g", p:19, k:130},
+  {g:"Süt ve yoğurt", ad:"Normal yoğurt", por:"200 g", p:7, k:120},
+  {g:"Süt ve yoğurt", ad:"Süt, tam yağlı", por:"250 ml", p:8, k:155},
+  {g:"Süt ve yoğurt", ad:"Süt, yarım yağlı", por:"250 ml", p:8, k:120},
+  {g:"Süt ve yoğurt", ad:"Kefir", por:"250 ml", p:9, k:105},
+  {g:"Süt ve yoğurt", ad:"Ayran", por:"1 kutu (300 ml)", p:9, k:110},
+
+  // Peynir ve yumurta
+  {g:"Peynir ve yumurta", ad:"Yumurta", por:"1 adet", p:6.5, k:78},
+  {g:"Peynir ve yumurta", ad:"Beyaz peynir", por:"100 g", p:17, k:260},
+  {g:"Peynir ve yumurta", ad:"Lor peyniri", por:"100 g", p:14, k:100},
+  {g:"Peynir ve yumurta", ad:"Çökelek", por:"100 g", p:15, k:110},
+  {g:"Peynir ve yumurta", ad:"Kaşar peyniri", por:"1 dilim (30 g)", p:7.5, k:110},
+
+  // Baklagil ve sebze
+  {g:"Baklagil ve sebze", ad:"Mercimek çorbası", por:"1 kase", p:9, k:200},
+  {g:"Baklagil ve sebze", ad:"Kuru fasulye", por:"1 porsiyon", p:13, k:250},
+  {g:"Baklagil ve sebze", ad:"Nohut", por:"1 porsiyon", p:14, k:280},
+  {g:"Baklagil ve sebze", ad:"Mercimek yemeği", por:"1 porsiyon", p:12, k:230},
+  {g:"Baklagil ve sebze", ad:"Humus", por:"100 g", p:8, k:220},
+  {g:"Baklagil ve sebze", ad:"Mevsim salata", por:"1 porsiyon", p:2, k:60},
+  {g:"Baklagil ve sebze", ad:"Sebze yemeği (etli)", por:"1 porsiyon", p:15, k:280},
+
+  // Dışarıda yemek
+  {g:"Dışarıda yemek", ad:"Tavuk şiş porsiyon", por:"1 porsiyon", p:45, k:400},
+  {g:"Dışarıda yemek", ad:"Adana / urfa kebap", por:"1 porsiyon", p:35, k:550},
+  {g:"Dışarıda yemek", ad:"Izgara köfte", por:"1 porsiyon", p:30, k:390},
+  {g:"Dışarıda yemek", ad:"Tavuk dürüm", por:"1 adet", p:30, k:550},
+  {g:"Dışarıda yemek", ad:"İskender", por:"1 porsiyon", p:40, k:800},
+  {g:"Dışarıda yemek", ad:"Lahmacun", por:"1 adet", p:12, k:300},
+  {g:"Dışarıda yemek", ad:"Kıymalı pide", por:"1 adet", p:25, k:700},
+  {g:"Dışarıda yemek", ad:"Tost", por:"1 adet", p:15, k:350},
+  {g:"Dışarıda yemek", ad:"Hamburger", por:"1 adet", p:25, k:600},
+  {g:"Dışarıda yemek", ad:"Pizza", por:"2 dilim", p:18, k:550},
+
+  // Karbonhidrat
+  {g:"Karbonhidrat", ad:"Pirinç pilavı", por:"1 porsiyon (150 g)", p:4, k:250},
+  {g:"Karbonhidrat", ad:"Bulgur pilavı", por:"1 porsiyon (150 g)", p:5, k:200},
+  {g:"Karbonhidrat", ad:"Makarna", por:"1 porsiyon (200 g)", p:8, k:300},
+  {g:"Karbonhidrat", ad:"Ekmek", por:"1 dilim", p:4, k:130},
+  {g:"Karbonhidrat", ad:"Tam buğday ekmek", por:"1 dilim", p:4.5, k:120},
+  {g:"Karbonhidrat", ad:"Patates", por:"1 porsiyon (200 g)", p:4, k:180},
+  {g:"Karbonhidrat", ad:"Simit", por:"1 adet", p:8, k:280},
+  {g:"Karbonhidrat", ad:"Yulaf", por:"50 g", p:6.5, k:190},
+
+  // Atıştırmalık
+  {g:"Atıştırmalık", ad:"Badem", por:"30 g", p:6, k:175},
+  {g:"Atıştırmalık", ad:"Ceviz", por:"30 g", p:4.5, k:200},
+  {g:"Atıştırmalık", ad:"Fındık", por:"30 g", p:4.5, k:190},
+  {g:"Atıştırmalık", ad:"Fıstık ezmesi", por:"1 yemek kaşığı", p:5, k:120},
+  {g:"Atıştırmalık", ad:"Muz", por:"1 adet", p:1.5, k:105},
+  {g:"Atıştırmalık", ad:"Elma", por:"1 adet", p:0.5, k:80},
+  {g:"Atıştırmalık", ad:"Zeytin", por:"10 adet", p:1, k:60},
+  {g:"Atıştırmalık", ad:"Bal", por:"1 yemek kaşığı", p:0, k:65}
+];
+
+/* ==========================================================
+   3. DURUM VE KAYIT
    ========================================================== */
 const KEY="salonDefteri.v1";
-let state={tab:"workout",sessions:[],active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true};
+let state={tab:"home",sessions:[],meals:{},hedefProtein:150,besinTarih:null,arama:"",
+  active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true};
 let restTimer=null,restLeft=0,clockTimer=null,animRAF=null,kayitYeri="yok";
 
 function lsGet(k){ try{ return window.localStorage ? localStorage.getItem(k) : null; }catch(e){ return null; } }
@@ -304,12 +411,18 @@ function lsSet(k,v){ try{ if(window.localStorage){ localStorage.setItem(k,v); re
 async function loadAll(){
   let ham=null;
   try{ if(window.storage){ const r=await window.storage.get(KEY); if(r&&r.value){ ham=r.value; kayitYeri="uygulama hafızası"; } } }catch(e){}
-  if(!ham){ const l=lsGet(KEY); if(l){ ham=l; kayitYeri="telefon tarayıcı hafızası"; } }
-  if(ham){ try{ const d=JSON.parse(ham); state.sessions=d.sessions||[]; if(typeof d.otoDosya==="boolean") state.otoDosya=d.otoDosya; }catch(e){} }
-  if(kayitYeri==="yok" && lsSet(KEY+".test","1")) kayitYeri="telefon tarayıcı hafızası";
+  if(!ham){ const l=lsGet(KEY); if(l){ ham=l; kayitYeri="telefon hafızası"; } }
+  if(ham){ try{
+    const d=JSON.parse(ham);
+    state.sessions=d.sessions||[];
+    state.meals=d.meals||{};
+    if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
+    if(typeof d.otoDosya==="boolean") state.otoDosya=d.otoDosya;
+  }catch(e){} }
+  if(kayitYeri==="yok" && lsSet(KEY+".test","1")) kayitYeri="telefon hafızası";
 }
 async function saveAll(){
-  const paket=JSON.stringify({v:1,otoDosya:state.otoDosya,sessions:state.sessions});
+  const paket=JSON.stringify({v:2,otoDosya:state.otoDosya,hedefProtein:state.hedefProtein,sessions:state.sessions,meals:state.meals});
   let ok=false;
   try{ if(window.storage){ await window.storage.set(KEY,paket); ok=true; } }catch(e){}
   if(lsSet(KEY,paket)) ok=true;
@@ -317,7 +430,7 @@ async function saveAll(){
 }
 
 /* ==========================================================
-   3. ÇİZİM MOTORU
+   4. ÇİZİM MOTORU
    ========================================================== */
 const JOINTS=["head","neck","hip","sL","eL","hL","sR","eR","hR","kL","fL","kR","fR"];
 const lerp=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
@@ -335,7 +448,6 @@ function propsSvg(prop){
   if(prop.hyperPad) s+=`<rect x="43" y="57" width="22" height="7" rx="3.5" fill="${g}"/><line x1="54" y1="64" x2="46" y2="81" stroke="${g}" stroke-width="2.5"/><circle cx="30" cy="70" r="4" fill="${g}"/><circle cx="30" cy="78" r="4" fill="${g}"/><line x1="8" y1="82" x2="112" y2="82" stroke="${g}" stroke-width="2"/>`;
   return s;
 }
-
 function govde(p,w,c,op){
   let s="";
   s+=ln(p.sR,p.eR,w*.85,c,op)+ln(p.eR,p.hR,w*.85,c,op);
@@ -347,16 +459,13 @@ function govde(p,w,c,op){
   s+=`<circle cx="${p.head[0].toFixed(1)}" cy="${p.head[1].toFixed(1)}" r="7" fill="${c}"${op?` opacity="${op}"`:""}/>`;
   return s;
 }
-
 function figureSvg(ex,t,mini){
   const p=poseAt(ex,t), c="#F2F7FA", br="#E0A32E", w=mini?4:5.2;
   let s=`<svg viewBox="6 0 108 88" xmlns="http://www.w3.org/2000/svg">`;
   s+=propsSvg(ex.prop||{});
   if(!mini){
-    // hareketin diğer ucu: soluk hayalet figür
     const hayalet=poseAt(ex, t>0.5?0:1);
     s+=govde(hayalet,w*.9,"#5C6B78",".38");
-    // hareket yönü: izlenen eklemin yolu
     if(ex.izle){
       const A=ex.a[ex.izle],B=ex.b[ex.izle];
       if(Math.hypot(B[0]-A[0],B[1]-A[1])>6){
@@ -375,15 +484,10 @@ function figureSvg(ex,t,mini){
   if(pr.dumbbellSide) s+=`<rect x="${p.hL[0]-5.5}" y="${p.hL[1]-2.6}" width="11" height="5.2" rx="2" fill="${br}"/>`;
   return s+`</svg>`;
 }
-
-// yavaş, uçlarda duraklamalı döngü
 function faz(now,start){
   const p=((now-start)%3400)/3400;
   let u;
-  if(p<0.38) u=p/0.38;
-  else if(p<0.5) u=1;
-  else if(p<0.88) u=1-(p-0.5)/0.38;
-  else u=0;
+  if(p<0.38) u=p/0.38; else if(p<0.5) u=1; else if(p<0.88) u=1-(p-0.5)/0.38; else u=0;
   return u*u*(3-2*u);
 }
 function animate(id,exId){
@@ -401,13 +505,21 @@ function animate(id,exId){
 }
 
 /* ==========================================================
-   4. YARDIMCILAR
+   5. YARDIMCILAR
    ========================================================== */
 const pad=n=>String(n).padStart(2,"0");
 const mmss=s=>pad(Math.floor(s/60))+":"+pad(s%60);
 const AYLAR=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
 const GUNLER=["Paz","Pzt","Sal","Çrş","Prş","Cum","Cmt"];
+function gunKey(d){ d=d||new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function keyToDate(k){ const [y,m,g]=k.split("-").map(Number); return new Date(y,m-1,g); }
 function tarihTR(iso){ const d=new Date(iso); return `${GUNLER[d.getDay()]} ${d.getDate()} ${AYLAR[d.getMonth()]}`; }
+function gunAdi(k){
+  const d=keyToDate(k), b=gunKey();
+  if(k===b) return "Bugün";
+  if(k===gunKey(new Date(Date.now()-864e5))) return "Dün";
+  return `${GUNLER[d.getDay()]} ${d.getDate()} ${AYLAR[d.getMonth()]}`;
+}
 function haftaBasi(d){ const x=new Date(d); x.setDate(x.getDate()-((x.getDay()+6)%7)); x.setHours(0,0,0,0); return x; }
 function sonrakiGun(){ return state.sessions.length ? (state.sessions[state.sessions.length-1].gun==="A"?"B":"A") : "A"; }
 function sonKayit(exId){
@@ -417,21 +529,192 @@ function sonKayit(exId){
   }
   return null;
 }
+function gunToplam(k){
+  const l=state.meals[k]||[];
+  return { p:l.reduce((a,x)=>a+x.p*x.adet,0), k:l.reduce((a,x)=>a+x.k*x.adet,0), n:l.length };
+}
+function yuvarla(n){ return Math.round(n*10)/10; }
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2400); }
-
 function modalAc(html){ document.getElementById("modalBody").innerHTML=html; document.getElementById("modal").classList.remove("hidden"); }
 function modalKapat(){ document.getElementById("modal").classList.add("hidden"); }
 document.getElementById("modal").onclick=e=>{ if(e.target.id==="modal") modalKapat(); };
 
 /* ==========================================================
-   5. EKRANLAR
+   6. EKRANLAR
    ========================================================== */
 const view=document.getElementById("view");
 function render(){
   cancelAnimationFrame(animRAF);
   document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===state.tab));
   document.getElementById("clock").classList.toggle("hidden",!state.active);
-  ({workout:renderWorkout,guide:renderGuide,stats:renderStats,history:renderHistory,data:renderData}[state.tab])();
+  ({home:renderHome,workout:renderWorkout,food:renderFood,guide:renderGuide,stats:renderStats,history:renderHistory,data:renderData}[state.tab]||renderHome)();
+}
+
+/* --- ANA SAYFA --- */
+function renderHome(){
+  const bugun=gunKey(), t=gunToplam(bugun), hedef=state.hedefProtein;
+  const oran=Math.min(100,Math.round(t.p/hedef*100));
+  const gun=sonrakiGun();
+  const hb=haftaBasi(new Date());
+  const buHafta=state.sessions.filter(s=>new Date(s.tarih)>=hb).length;
+  const sonAnt=state.sessions.length?state.sessions[state.sessions.length-1]:null;
+  // bu haftanın protein ortalaması
+  let gunler=[],topP=0,say=0;
+  for(let i=0;i<7;i++){
+    const d=new Date(hb.getTime()+i*864e5);
+    if(d>new Date()) break;
+    const k=gunKey(d), g=gunToplam(k);
+    gunler.push({etiket:GUNLER[d.getDay()][0], p:g.p});
+    if(g.n){ topP+=g.p; say++; }
+  }
+  const ortP=say?Math.round(topP/say):0;
+  const enB=Math.max(hedef,...gunler.map(x=>x.p));
+
+  const d=new Date();
+  document.getElementById("title").textContent="Özet";
+  view.innerHTML=`
+    <div class="card">
+      <div class="row between"><h3>Bugünün proteini</h3><span class="muted small">${GUNLER[d.getDay()]} ${d.getDate()} ${AYLAR[d.getMonth()]}</span></div>
+      <div class="bignum" style="margin-top:6px;color:${t.p>=hedef?"var(--done)":"var(--prot)"}">${yuvarla(t.p)} <small>/ ${hedef} g</small></div>
+      <div class="meter"><i class="${t.p>=hedef?"full":""}" style="width:${oran}%"></i></div>
+      <div class="row between small muted">
+        <span>${t.p>=hedef?"Hedef tamam":yuvarla(hedef-t.p)+" g kaldı"}</span>
+        <span>${Math.round(t.k)} kcal · ${t.n} kayıt</span>
+      </div>
+      <button class="btn sm" id="goFood" style="margin-top:12px">Yemek ekle</button>
+    </div>
+
+    <div class="card">
+      <div class="row between"><h3>Sıradaki antrenman</h3><span class="pill on">Gün ${gun}</span></div>
+      <p class="muted small" style="margin-top:6px">${PROGRAM[gun].ad.split("—")[1].trim()} · ${PROGRAM[gun].hareketler.length} hareket${sonAnt?" · son antrenman "+tarihTR(sonAnt.tarih):""}</p>
+      <button class="btn" id="goWorkout">${state.active?"Antrenmana dön":"Antrenmanı başlat"}</button>
+    </div>
+
+    <div class="card">
+      <h3>Bu hafta</h3>
+      <div class="stats" style="margin:10px 0 6px">
+        <div class="stat"><b>${buHafta}</b><span>antrenman</span></div>
+        <div class="stat"><b>${ortP}</b><span>ort. protein</span></div>
+        <div class="stat"><b>${gunler.filter(x=>x.p>=hedef).length}</b><span>hedef tutan gün</span></div>
+      </div>
+      <div class="bars" style="height:80px">${gunler.map(x=>`<div><i class="p ${x.p?"":"empty"}" style="height:${x.p?Math.round(x.p/enB*88)+"%":"3px"}"></i><small>${x.etiket}</small></div>`).join("")}</div>
+    </div>
+
+    <button class="btn ghost sm" id="goData">Veri ve yedek</button>`;
+  document.getElementById("goFood").onclick=()=>{ state.tab="food"; render(); scrollTo(0,0); };
+  document.getElementById("goWorkout").onclick=()=>{ if(!state.active) startSession(gun); else { state.tab="workout"; render(); } };
+  document.getElementById("goData").onclick=()=>{ state.tab="data"; render(); scrollTo(0,0); };
+}
+
+/* --- BESLENME --- */
+function renderFood(){
+  const k=state.besinTarih||gunKey();
+  const liste=state.meals[k]||[], t=gunToplam(k), hedef=state.hedefProtein;
+  const oran=Math.min(100,Math.round(t.p/hedef*100));
+  const q=(state.arama||"").toLocaleLowerCase("tr");
+  const bulunan=FOODS.filter(f=>!q||f.ad.toLocaleLowerCase("tr").includes(q)||f.g.toLocaleLowerCase("tr").includes(q));
+  let gruplar=[]; bulunan.forEach(f=>{ if(!gruplar.includes(f.g)) gruplar.push(f.g); });
+
+  document.getElementById("title").textContent="Beslenme";
+  view.innerHTML=`
+    <div class="datenav">
+      <button id="prevD">‹</button>
+      <b>${gunAdi(k)}</b>
+      <button id="nextD" ${k>=gunKey()?"disabled style=opacity:.4":""}>›</button>
+    </div>
+
+    <div class="card">
+      <div class="bignum" style="color:${t.p>=hedef?"var(--done)":"var(--prot)"}">${yuvarla(t.p)} <small>/ ${hedef} g protein</small></div>
+      <div class="meter"><i class="${t.p>=hedef?"full":""}" style="width:${oran}%"></i></div>
+      <div class="row between small muted"><span>${t.p>=hedef?"Hedef tamam":yuvarla(hedef-t.p)+" g kaldı"}</span><span>${Math.round(t.k)} kcal</span></div>
+    </div>
+
+    <div class="card">
+      <h3>${gunAdi(k)} yedikleri</h3>
+      ${liste.length? liste.map((x,i)=>`
+        <div class="logrow">
+          <span><b style="font-weight:500">${x.ad}</b><br><span class="muted small">${x.adet===1?x.por:x.adet+" × "+x.por}</span></span>
+          <span class="val">${yuvarla(x.p*x.adet)} g<br><span class="muted small" style="font-family:var(--sans)">${Math.round(x.k*x.adet)} kcal</span></span>
+          <button class="del" data-sil="${i}">✕</button>
+        </div>`).join("")
+      : `<p class="muted small" style="margin:6px 0 0">Bugün henüz bir şey eklemedin. Aşağıdaki tablodan + tuşuna bas.</p>`}
+    </div>
+
+    <div class="card">
+      <div class="row between" style="margin-bottom:10px"><h3>Besin tablosu</h3><button class="pill" id="elle">+ elle ekle</button></div>
+      <input type="search" class="text" id="ara" placeholder="Ara: tavuk, yoğurt, pilav..." value="${state.arama||""}">
+      <p class="muted small" style="margin:8px 0 0">Değerler ortalama porsiyon içindir, yaklaşıktır.</p>
+      <div style="margin-top:6px">
+        ${gruplar.map(g=>`<div class="grup">${g}</div>${bulunan.filter(f=>f.g===g).map(f=>`
+          <div class="food">
+            <span><b>${f.ad}</b><span class="por">${f.por}</span></span>
+            <span class="val">${f.p} g<u>${f.k} kcal</u></span>
+            <button class="add" data-ekle="${FOODS.indexOf(f)}">+</button>
+          </div>`).join("")}`).join("")}
+        ${bulunan.length?"":`<p class="muted small">Aramana uyan besin yok. "elle ekle" ile kendin girebilirsin.</p>`}
+      </div>
+    </div>`;
+
+  const ara=document.getElementById("ara");
+  ara.oninput=()=>{ state.arama=ara.value; const p=ara.selectionStart; renderFood(); const y=document.getElementById("ara"); y.focus(); y.setSelectionRange(p,p); };
+  document.getElementById("prevD").onclick=()=>{ state.besinTarih=gunKey(new Date(keyToDate(k).getTime()-864e5)); renderFood(); };
+  document.getElementById("nextD").onclick=()=>{ if(k<gunKey()){ state.besinTarih=gunKey(new Date(keyToDate(k).getTime()+864e5)); renderFood(); } };
+  view.querySelectorAll("[data-ekle]").forEach(b=>b.onclick=()=>ekleSor(FOODS[+b.dataset.ekle],k));
+  view.querySelectorAll("[data-sil]").forEach(b=>b.onclick=async()=>{
+    state.meals[k].splice(+b.dataset.sil,1);
+    if(!state.meals[k].length) delete state.meals[k];
+    await saveAll(); renderFood();
+  });
+  document.getElementById("elle").onclick=()=>elleEkleSor(k);
+}
+
+function ekleSor(f,k){
+  modalAc(`
+    <h2>${f.ad}</h2>
+    <p class="muted small">${f.por} = ${f.p} g protein · ${f.k} kcal</p>
+    <div class="chips" id="chips">
+      ${[0.5,1,1.5,2,3].map(n=>`<button data-n="${n}" class="${n===1?"on":""}">${n}</button>`).join("")}
+    </div>
+    <p class="muted small" style="margin-top:8px">Kaç porsiyon?</p>
+    <div id="ozet" class="bignum" style="font-size:32px;margin:6px 0 2px">${f.p} <small>g protein · ${f.k} kcal</small></div>
+    <button class="btn" id="mEkle">Güne ekle</button>
+    <button class="btn ghost" id="mIptal">Vazgeç</button>`);
+  let adet=1;
+  const guncelle=()=>{ document.getElementById("ozet").innerHTML=`${yuvarla(f.p*adet)} <small>g protein · ${Math.round(f.k*adet)} kcal</small>`; };
+  document.querySelectorAll("#chips button").forEach(b=>b.onclick=()=>{
+    adet=+b.dataset.n;
+    document.querySelectorAll("#chips button").forEach(x=>x.classList.toggle("on",x===b));
+    guncelle();
+  });
+  document.getElementById("mEkle").onclick=async()=>{
+    if(!state.meals[k]) state.meals[k]=[];
+    state.meals[k].push({ad:f.ad,por:f.por,p:f.p,k:f.k,adet});
+    await saveAll(); modalKapat(); renderFood();
+    toast(`${f.ad} eklendi · +${yuvarla(f.p*adet)} g protein`);
+  };
+  document.getElementById("mIptal").onclick=modalKapat;
+}
+
+function elleEkleSor(k){
+  modalAc(`
+    <h2>Elle ekle</h2>
+    <p class="muted small">Tabloda olmayan bir şey yediysen buradan gir.</p>
+    <input class="text" id="eAd" placeholder="Ne yedin?" style="margin-bottom:8px">
+    <div class="row" style="gap:8px">
+      <div class="unit"><input type="number" inputmode="decimal" id="eP" placeholder="0"><span>g protein</span></div>
+      <div class="unit"><input type="number" inputmode="numeric" id="eK" placeholder="0"><span>kcal</span></div>
+    </div>
+    <button class="btn" id="mEkle2" style="margin-top:12px">Güne ekle</button>
+    <button class="btn ghost" id="mIptal2">Vazgeç</button>`);
+  document.getElementById("mEkle2").onclick=async()=>{
+    const ad=document.getElementById("eAd").value.trim()||"Diğer";
+    const p=+document.getElementById("eP").value||0, kal=+document.getElementById("eK").value||0;
+    if(!p&&!kal){ toast("Protein veya kalori gir"); return; }
+    if(!state.meals[k]) state.meals[k]=[];
+    state.meals[k].push({ad,por:"1 porsiyon",p,k:kal,adet:1});
+    await saveAll(); modalKapat(); renderFood(); toast(ad+" eklendi");
+  };
+  document.getElementById("mIptal2").onclick=modalKapat;
 }
 
 /* --- ANTRENMAN --- */
@@ -439,7 +722,7 @@ function renderWorkout(){
   if(!state.active){
     clearInterval(clockTimer);
     const gun=sonrakiGun(), p=PROGRAM[gun];
-    document.getElementById("title").textContent="Salon Defteri";
+    document.getElementById("title").textContent="Antrenman";
     view.innerHTML=`
       <div class="card">
         <div class="row between"><h2>${p.ad}</h2><span class="pill on">Sıradaki</span></div>
@@ -515,12 +798,12 @@ function startSession(gun){
     id:"s"+Date.now(), tarih:new Date().toISOString(), gun, baslangic:Date.now(), sure:0,
     kayitlar:PROGRAM[gun].hareketler.map(h=>{
       const e=EX[h.id], sk=sonKayit(h.id);
-      const kg = e.tip==="kg" ? (sk&&sk.kg!=null?sk.kg:e.oneri.kg??null) : null;
+      const kg = e.tip==="kg" ? (sk&&sk.kg!=null?sk.kg:(e.oneri.kg??null)) : null;
       const tk = sk&&sk.tekrar!=null ? sk.tekrar : (e.oneri.tekrar??null);
       return { id:h.id, setler:Array.from({length:h.set},()=>({kg,tekrar:tk,done:false})) };
     })
   };
-  state.exIndex=0;
+  state.exIndex=0; state.tab="workout";
   clearInterval(clockTimer);
   clockTimer=setInterval(()=>{
     if(!state.active) return;
@@ -542,7 +825,7 @@ function bitirSor(){
     <button class="btn quiet" id="mDrop">Kaydetmeden çık</button>
     <button class="btn ghost" id="mBack">Vazgeç, devam et</button>`);
   const sv=document.getElementById("mSave"); if(sv) sv.onclick=()=>{ modalKapat(); kaydetVeBitir(); };
-  document.getElementById("mDrop").onclick=()=>{ modalKapat(); state.active=null; clearInterval(clockTimer); state.tab="workout"; render(); toast("Antrenman kaydedilmedi"); };
+  document.getElementById("mDrop").onclick=()=>{ modalKapat(); state.active=null; clearInterval(clockTimer); state.tab="home"; render(); toast("Antrenman kaydedilmedi"); };
   document.getElementById("mBack").onclick=modalKapat;
 }
 
@@ -557,8 +840,7 @@ async function kaydetVeBitir(){
   clearInterval(clockTimer);
   const ok=await saveAll();
   if(state.otoDosya) dosyayaAktar(true);
-  state.tab="stats";
-  render();
+  state.tab="stats"; render();
   toast(ok?`Kaydedildi · ${mmss(s.sure)}`:"Kaydedildi, ama telefon hafızası kapalı. Veri sekmesinden dosyaya aktar.");
 }
 
@@ -610,45 +892,58 @@ function renderGuide(){
 }
 
 /* --- İSTATİSTİK --- */
-function donemFiltre(){
+function donemBaslangic(){
   const now=new Date();
-  if(state.donem==="hafta"){ const b=haftaBasi(now); return state.sessions.filter(s=>new Date(s.tarih)>=b); }
-  if(state.donem==="ay"){ const b=new Date(now.getFullYear(),now.getMonth(),1); return state.sessions.filter(s=>new Date(s.tarih)>=b); }
-  return state.sessions.slice();
+  if(state.donem==="hafta") return haftaBasi(now);
+  if(state.donem==="ay") return new Date(now.getFullYear(),now.getMonth(),1);
+  return new Date(2000,0,1);
 }
 function renderStats(){
   document.getElementById("title").textContent="İstatistik";
-  const ss=donemFiltre();
+  const bas=donemBaslangic();
+  const ss=state.sessions.filter(s=>new Date(s.tarih)>=bas);
   const setSay=ss.reduce((a,s)=>a+s.kayitlar.reduce((b,k)=>b+k.setler.length,0),0);
   const sureDk=Math.round(ss.reduce((a,s)=>a+(s.sure||0),0)/60);
   const hacim=Math.round(ss.reduce((a,s)=>a+(s.hacim||0),0));
   const ortDk=ss.length?Math.round(sureDk/ss.length):0;
   const tekrarSay=ss.reduce((a,s)=>a+s.kayitlar.reduce((b,k)=>b+k.setler.reduce((c,x)=>c+(x.tekrar||0),0),0),0);
 
-  // hareket bazlı en iyi set
+  // beslenme
+  const gunKeys=Object.keys(state.meals).filter(k=>keyToDate(k)>=bas).sort();
+  let topP=0,topK=0,hedefTutan=0;
+  gunKeys.forEach(k=>{ const g=gunToplam(k); topP+=g.p; topK+=g.k; if(g.p>=state.hedefProtein) hedefTutan++; });
+  const ortP=gunKeys.length?Math.round(topP/gunKeys.length):0;
+  const ortK=gunKeys.length?Math.round(topK/gunKeys.length):0;
+
   const enIyi={};
   ss.forEach(s=>s.kayitlar.forEach(k=>k.setler.forEach(x=>{
     const skor=(x.kg||0)*1000+(x.tekrar||0);
     if(!enIyi[k.id]||skor>enIyi[k.id].skor) enIyi[k.id]={skor,kg:x.kg,tekrar:x.tekrar};
   })));
 
-  // grafik: son 8 hafta veya son 6 ay
   let bars=[];
-  if(state.donem==="ay"||state.donem==="hafta"){
-    const bugun=new Date();
-    for(let i=7;i>=0;i--){
-      const b=haftaBasi(new Date(bugun.getTime()-i*7*864e5));
-      const son=new Date(b.getTime()+7*864e5);
-      bars.push({etiket:b.getDate()+"."+(b.getMonth()+1), n:state.sessions.filter(s=>{const d=new Date(s.tarih);return d>=b&&d<son;}).length});
-    }
-  }else{
-    const bugun=new Date();
+  if(state.donem==="tum"){
+    const b=new Date();
     for(let i=5;i>=0;i--){
-      const d=new Date(bugun.getFullYear(),bugun.getMonth()-i,1), son=new Date(d.getFullYear(),d.getMonth()+1,1);
+      const d=new Date(b.getFullYear(),b.getMonth()-i,1), son=new Date(d.getFullYear(),d.getMonth()+1,1);
       bars.push({etiket:AYLAR[d.getMonth()], n:state.sessions.filter(s=>{const x=new Date(s.tarih);return x>=d&&x<son;}).length});
     }
+  }else{
+    const b=new Date();
+    for(let i=7;i>=0;i--){
+      const h=haftaBasi(new Date(b.getTime()-i*7*864e5)), son=new Date(h.getTime()+7*864e5);
+      bars.push({etiket:h.getDate()+"."+(h.getMonth()+1), n:state.sessions.filter(s=>{const d=new Date(s.tarih);return d>=h&&d<son;}).length});
+    }
   }
-  const enBuyuk=Math.max(1,...bars.map(b=>b.n));
+  const enB=Math.max(1,...bars.map(b=>b.n));
+
+  // son 7 gün protein
+  let pBars=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(Date.now()-i*864e5), k=gunKey(d);
+    pBars.push({etiket:GUNLER[d.getDay()][0], p:gunToplam(k).p});
+  }
+  const enP=Math.max(state.hedefProtein,...pBars.map(x=>x.p));
 
   view.innerHTML=`
     <div class="seg">
@@ -656,70 +951,92 @@ function renderStats(){
       <button data-d="ay" class="${state.donem==="ay"?"on":""}">Bu ay</button>
       <button data-d="tum" class="${state.donem==="tum"?"on":""}">Tüm zamanlar</button>
     </div>
+
     <div class="stats">
       <div class="stat"><b>${ss.length}</b><span>antrenman</span></div>
       <div class="stat"><b>${sureDk}</b><span>dakika</span></div>
       <div class="stat"><b>${setSay}</b><span>set</span></div>
     </div>
+
     <div class="card">
       <h3>${state.donem==="tum"?"Aylara göre":"Haftalara göre"} antrenman</h3>
-      <div class="bars">${bars.map(b=>`<div><i class="${b.n?"":"empty"}" style="height:${b.n?Math.round(b.n/enBuyuk*88)+"%":"3px"}"></i><small>${b.etiket}</small></div>`).join("")}</div>
+      <div class="bars">${bars.map(b=>`<div><i class="${b.n?"":"empty"}" style="height:${b.n?Math.round(b.n/enB*88)+"%":"3px"}"></i><small>${b.etiket}</small></div>`).join("")}</div>
     </div>
+
     <div class="card">
-      <h3>Özet</h3>
+      <h3>Beslenme</h3>
+      <div class="bars" style="height:90px">${pBars.map(x=>`<div><i class="p ${x.p?"":"empty"}" style="height:${x.p?Math.round(x.p/enP*88)+"%":"3px"}"></i><small>${x.etiket}</small></div>`).join("")}</div>
+      <p class="muted small" style="margin:2px 0 10px">Son 7 gün protein</p>
+      <div class="kv"><span>Ortalama günlük protein</span><b>${ortP} g</b></div>
+      <div class="kv"><span>Ortalama günlük kalori</span><b>${ortK} kcal</b></div>
+      <div class="kv"><span>Hedefi tutturduğun gün</span><b>${hedefTutan} / ${gunKeys.length}</b></div>
+    </div>
+
+    <div class="card">
+      <h3>Antrenman özeti</h3>
       <div class="kv"><span>Ortalama antrenman süresi</span><b>${ortDk} dk</b></div>
       <div class="kv"><span>Toplam tekrar</span><b>${tekrarSay}</b></div>
       <div class="kv"><span>Toplam kaldırılan ağırlık</span><b>${hacim.toLocaleString("tr-TR")} kg</b></div>
     </div>
+
     ${Object.keys(enIyi).length?`<div class="card"><h3>Hareket bazlı en iyi set</h3>
-      ${Object.keys(enIyi).map(id=>`<div class="kv"><span>${EX[id]?EX[id].ad:id}</span><b>${(enIyi[id].kg?enIyi[id].kg+" kg × ":"")+(enIyi[id].tekrar||0)}${EX[id]&&EX[id].tip==="sure"?" sn":""}</b></div>`).join("")}</div>`:
-      `<div class="card"><p class="muted small" style="margin:0">Bu dönemde kayıt yok. Antrenman yaptıkça buradaki sayılar dolar.</p></div>`}`;
+      ${Object.keys(enIyi).map(id=>`<div class="kv"><span>${EX[id]?EX[id].ad:id}</span><b>${(enIyi[id].kg?enIyi[id].kg+" kg × ":"")+(enIyi[id].tekrar||0)}${EX[id]&&EX[id].tip==="sure"?" sn":""}</b></div>`).join("")}</div>`:""}
+
+    <button class="btn ghost sm" id="goHist">Antrenman geçmişi</button>`;
   view.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{ state.donem=b.dataset.d; renderStats(); });
+  document.getElementById("goHist").onclick=()=>{ state.tab="history"; render(); scrollTo(0,0); };
 }
 
 /* --- GEÇMİŞ --- */
 function renderHistory(){
   document.getElementById("title").textContent="Geçmiş";
   const ss=state.sessions;
-  if(!ss.length){ view.innerHTML=`<div class="card"><h3>Henüz kayıt yok</h3><p class="muted small">İlk antrenmanını bitirdiğinde tarih, süre ve ağırlıkların burada listelenir.</p></div>`; return; }
-  view.innerHTML=`<div class="card">${[...ss].reverse().map(s=>{
-    const setSayisi=s.kayitlar.reduce((a,k)=>a+k.setler.length,0), acik=state.openHist===s.id;
-    return `<button class="hist" data-h="${s.id}">
-      <div class="row between">
-        <span><b style="font-family:var(--cond);font-size:18px">${tarihTR(s.tarih)}</b><span class="pill" style="margin-left:8px">Gün ${s.gun}</span></span>
-        <span class="muted small">${mmss(s.sure||0)} · ${setSayisi} set</span>
-      </div>
-      ${acik?`<div class="small muted" style="margin-top:8px">${s.kayitlar.map(k=>`<div style="padding:3px 0">${EX[k.id]?EX[k.id].ad:k.id}: ${k.setler.map(x=>(x.kg?x.kg+"kg×":"")+x.tekrar).join(" · ")}</div>`).join("")}</div>`:""}
-    </button>`;}).join("")}</div>`;
+  view.innerHTML=`<button class="btn ghost sm" id="back" style="margin-bottom:12px">İstatistiğe dön</button>`+
+    (ss.length? `<div class="card">${[...ss].reverse().map(s=>{
+      const setSayisi=s.kayitlar.reduce((a,k)=>a+k.setler.length,0), acik=state.openHist===s.id;
+      return `<button class="hist" data-h="${s.id}">
+        <div class="row between">
+          <span><b style="font-family:var(--cond);font-size:18px">${tarihTR(s.tarih)}</b><span class="pill" style="margin-left:8px">Gün ${s.gun}</span></span>
+          <span class="muted small">${mmss(s.sure||0)} · ${setSayisi} set</span>
+        </div>
+        ${acik?`<div class="small muted" style="margin-top:8px">${s.kayitlar.map(k=>`<div style="padding:3px 0">${EX[k.id]?EX[k.id].ad:k.id}: ${k.setler.map(x=>(x.kg?x.kg+"kg×":"")+x.tekrar).join(" · ")}</div>`).join("")}</div>`:""}
+      </button>`;}).join("")}</div>`
+    : `<div class="card"><h3>Henüz kayıt yok</h3><p class="muted small">İlk antrenmanını bitirdiğinde burada listelenir.</p></div>`);
+  document.getElementById("back").onclick=()=>{ state.tab="stats"; render(); };
   view.querySelectorAll("[data-h]").forEach(b=>b.onclick=()=>{ state.openHist=state.openHist===b.dataset.h?null:b.dataset.h; renderHistory(); });
 }
 
 /* --- VERİ --- */
 function renderData(){
   document.getElementById("title").textContent="Veri";
+  const gunSay=Object.keys(state.meals).length;
   view.innerHTML=`
+    <button class="btn ghost sm" id="back" style="margin-bottom:12px">Özete dön</button>
     <div class="card">
-      <h3>Otomatik kayıt</h3>
-      <p class="muted small">Antrenman bittiğinde kayıtlar telefonun hafızasına yazılır. Yedek dosya da otomatik olarak <b>İndirilenler</b> klasörüne iner.</p>
-      <div class="switch"><span>Bitirince dosyaya da yaz</span>
-        <button id="tgl" class="${state.otoDosya?"on":""}"><i></i></button></div>
-      <div class="kv"><span>Kayıt yeri</span><b>${kayitYeri}</b></div>
-      <div class="kv"><span>Kayıtlı antrenman</span><b>${state.sessions.length}</b></div>
+      <h3>Günlük protein hedefi</h3>
+      <p class="muted small">83 kilo için 135-165 g arası uygun. Varsayılan 150.</p>
+      <div class="unit" style="max-width:150px"><input type="number" inputmode="numeric" id="hedef" value="${state.hedefProtein}"><span>g</span></div>
     </div>
     <div class="card">
-      <h3>Elle yedek al</h3>
-      <p class="muted small">Tüm geçmişin tek dosyaya iner. Telefon değiştirirsen bu dosyayı taşı.</p>
+      <h3>Otomatik kayıt</h3>
+      <p class="muted small">Veriler telefon hafızasına yazılır ve uygulama açılınca otomatik okunur. İstersen antrenman bitince İndirilenler klasörüne yedek dosya da iner.</p>
+      <div class="switch"><span>Bitirince dosyaya da yaz</span><button id="tgl" class="${state.otoDosya?"on":""}"><i></i></button></div>
+      <div class="kv"><span>Kayıt yeri</span><b>${kayitYeri}</b></div>
+      <div class="kv"><span>Kayıtlı antrenman</span><b>${state.sessions.length}</b></div>
+      <div class="kv"><span>Beslenme kaydı olan gün</span><b>${gunSay}</b></div>
+    </div>
+    <div class="card">
+      <h3>Yedek al</h3>
+      <p class="muted small">Antrenman ve beslenme geçmişin tek dosyaya iner.</p>
       <button class="btn" id="exp">Dosyaya aktar</button>
     </div>
     <div class="card">
       <h3>Dosyadan geri yükle</h3>
-      <p class="muted small">İndirilenler klasöründen json dosyasını seç. Kayıtlar mevcutlara eklenir, aynı antrenman iki kez yazılmaz.</p>
-      <input type="file" id="imp" accept="application/json,.json" style="font-family:var(--sans);font-size:14px;text-align:left;padding:12px">
-    </div>
-    <div class="card">
-      <h3>Tarayıcı hafızası hakkında</h3>
-      <p class="muted small">Android'de bir web sayfası kendi başına klasör okuyup yazamaz — bu bir güvenlik kuralı. Uygulama bu yüzden iki yerde birden tutuyor: tarayıcı hafızası (otomatik okunur) ve İndirilenler'deki yedek dosya (tarayıcı verilerini silersen buradan geri yüklersin).</p>
+      <p class="muted small">Kayıtlar mevcutlara eklenir, aynı gün iki kez yazılmaz.</p>
+      <input type="file" id="imp" accept="application/json,.json" class="text">
     </div>`;
+  document.getElementById("back").onclick=()=>{ state.tab="home"; render(); };
+  document.getElementById("hedef").onchange=async e=>{ const v=+e.target.value; if(v>=50&&v<=400){ state.hedefProtein=v; await saveAll(); toast("Hedef "+v+" g olarak kaydedildi"); } };
   document.getElementById("tgl").onclick=async()=>{ state.otoDosya=!state.otoDosya; await saveAll(); renderData(); };
   document.getElementById("exp").onclick=()=>dosyayaAktar(false);
   document.getElementById("imp").onchange=dosyadanYukle;
@@ -727,7 +1044,7 @@ function renderData(){
 
 function dosyayaAktar(sessiz){
   try{
-    const blob=new Blob([JSON.stringify({v:1,sessions:state.sessions},null,1)],{type:"application/json"});
+    const blob=new Blob([JSON.stringify({v:2,hedefProtein:state.hedefProtein,sessions:state.sessions,meals:state.meals},null,1)],{type:"application/json"});
     const d=new Date(), ad=`salon-defteri-${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}.json`;
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=ad; a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -741,23 +1058,25 @@ function dosyadanYukle(e){
   r.onload=async()=>{
     try{
       const d=JSON.parse(r.result), gelen=Array.isArray(d)?d:(d.sessions||[]);
-      if(!gelen.length){ toast("Dosyada antrenman kaydı yok"); return; }
       const varOlan=new Set(state.sessions.map(s=>s.id)); let eklenen=0;
       gelen.forEach(s=>{ if(s&&s.id&&!varOlan.has(s.id)){ state.sessions.push(s); eklenen++; } });
       state.sessions.sort((a,b)=>new Date(a.tarih)-new Date(b.tarih));
+      let gun=0;
+      if(d.meals) Object.keys(d.meals).forEach(k=>{ if(!state.meals[k]){ state.meals[k]=d.meals[k]; gun++; } });
+      if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
       await saveAll();
-      toast(eklenen?eklenen+" antrenman eklendi":"Yeni kayıt yoktu");
-      state.tab="stats"; render();
+      toast(`${eklenen} antrenman, ${gun} beslenme günü eklendi`);
+      state.tab="home"; render();
     }catch(err){ toast("Dosya okunamadı. Doğru json dosyasını seçtiğinden emin ol."); }
   };
   r.readAsText(f);
 }
 
 /* ==========================================================
-   6. BAŞLAT
+   7. BAŞLAT
    ========================================================== */
 document.querySelectorAll("nav button").forEach(b=>{
-  b.onclick=()=>{ state.tab=b.dataset.tab; state.openEx=null; render(); scrollTo(0,0); };
+  b.onclick=()=>{ state.tab=b.dataset.tab; state.openEx=null; state.besinTarih=null; state.arama=""; render(); scrollTo(0,0); };
 });
 (async()=>{ await loadAll(); render(); })();
 </script>
