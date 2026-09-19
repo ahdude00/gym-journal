@@ -726,11 +726,35 @@ async function yzIstek(parcalar, sema, sistem, maxTokens){
   if(!yanit.ok) throw new Error(await hataMetni(yanit,sag));
   const d=await yanit.json();
   if(d.stop_reason==="refusal") throw new Error("Model bu fotoğrafı değerlendirmedi");
-  const metin = state.saglayici==="claude"
-    ? (d.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("")
-    : (d.output_text||"");
-  try{ return JSON.parse(metin); }
-  catch(e){ throw new Error("Yanıt okunamadı"); }
+  return jsonAyikla(yanitMetni(d));
+}
+
+/* Claude metni content[] içinde; Gemini yanıtı adımlara bölüyor ve metin
+   model_output adımının content[]'inde duruyor (düşünme adımları ayrı). */
+function yanitMetni(d){
+  if(state.saglayici==="claude")
+    return (d.content||[]).filter(c=>c&&c.type==="text").map(c=>c.text).join("");
+  const adimlar=Array.isArray(d.steps)?d.steps:[];
+  const metin=adimlar
+    .filter(a=>a&&a.type==="model_output")
+    .reduce((t,a)=>t.concat(Array.isArray(a.content)?a.content:[]),[])
+    .filter(c=>c&&c.type==="text")
+    .map(c=>c.text).join("");
+  return metin || d.output_text || "";
+}
+
+/* Şema istesek de model JSON'u ``` içine alabiliyor ya da başına bir cümle
+   ekleyebiliyor; kabuğu soyup öyle ayrıştırıyoruz. Hiç olmazsa gelen metnin
+   başını hataya koyuyoruz, yoksa sorun teşhis edilemiyor. */
+function jsonAyikla(metin){
+  const t=String(metin||"").trim();
+  const cit=t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const ham=cit?cit[1].trim():t;
+  try{ return JSON.parse(ham); }catch(e){}
+  const ilk=ham.indexOf("{"), son=ham.lastIndexOf("}");
+  if(ilk>=0&&son>ilk){ try{ return JSON.parse(ham.slice(ilk,son+1)); }catch(e){} }
+  const ornek=ham.slice(0,140).replace(/\s+/g," ");
+  throw new Error("Yanıt okunamadı"+(ornek?" — gelen: "+ornek:" — yanıt boş geldi"));
 }
 
 /* Tek fotoğraf, ya da [önce, kalan] ikilisi. */
