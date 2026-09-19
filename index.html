@@ -334,7 +334,7 @@ function varsayilanProgramlar(){
 const KEY="salonDefteri.v1";
 let state={tab:"home",sessions:[],meals:{},hedefProtein:150,besinTarih:null,
   programs:[],active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
-  kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false,saglayici:"gemini"};
+  kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false,saglayici:"gemini",modeller:{}};
 let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,sayacTipi="dinlenme",clockTimer=null,kayitYeri="yok";
 
 function lsGet(k){ try{ return window.localStorage ? localStorage.getItem(k) : null; }catch(e){ return null; } }
@@ -368,6 +368,7 @@ async function loadAll(){
     if(typeof d.otoDosya==="boolean") state.otoDosya=d.otoDosya;
     if(typeof d.bildirim==="boolean") state.bildirim=d.bildirim;
     if(d.saglayici&&SAGLAYICI[d.saglayici]) state.saglayici=d.saglayici;
+    if(d.modeller&&typeof d.modeller==="object") state.modeller=d.modeller;
     if(Array.isArray(d.programs)&&d.programs.length) state.programs=d.programs;
     /* Yarım kalan antrenman. Sayfa yenilenirse (ekran döndürme, tarayıcının
        sekmeyi bellekten atması, uygulamanın kapanıp açılması) kaldığı
@@ -383,7 +384,7 @@ async function loadAll(){
   if(kayitYeri==="yok" && lsSet(KEY+".test","1")) kayitYeri="telefon haf\u0131zas\u0131";
 }
 async function saveAll(){
-  const paket=JSON.stringify({v:3,otoDosya:state.otoDosya,bildirim:state.bildirim,saglayici:state.saglayici,hedefProtein:state.hedefProtein,
+  const paket=JSON.stringify({v:3,otoDosya:state.otoDosya,bildirim:state.bildirim,saglayici:state.saglayici,modeller:state.modeller,hedefProtein:state.hedefProtein,
     programs:state.programs,sessions:state.sessions,meals:state.meals,
     aktif:state.active,aktifIndex:state.exIndex});
   let ok=false;
@@ -614,10 +615,28 @@ function elleEkleSor(k){
 const SAGLAYICI={
   gemini:{ ad:"Gemini", key:"salonDefteri.geminiKey", onek:/^AIza/,
     konsol:"https://aistudio.google.com/apikey", konsolAd:"Google AI Studio",
-    ucretsiz:"ücretsiz katmanı var" },
+    ucretsiz:"ücretsiz katmanı var",
+    /* Lite sürümler yüksek hacim için tasarlandığından ücretsiz kotaları
+       daha geniş; ağır olanlar daha iyi görsel muhakeme yapıyor. Kesin
+       günlük limitler hesaba göre değiştiği için seçimi kullanıcıya
+       bırakıyoruz - AI Studio'daki kota sayfası doğrusunu gösteriyor. */
+    modeller:[
+      {id:"gemini-2.5-flash-lite", ad:"2.5 Flash Lite", not:"geniş kota"},
+      {id:"gemini-3.5-flash-lite", ad:"3.5 Flash Lite", not:"geniş kota, daha yeni"},
+      {id:"gemini-3.1-flash-lite", ad:"3.1 Flash Lite"},
+      {id:"gemini-2.5-flash",      ad:"2.5 Flash"},
+      {id:"gemini-3.8-flash",      ad:"3.8 Flash", not:"en iyi görsel muhakeme, dar kota"}
+    ], varsayilanModel:"gemini-2.5-flash-lite" },
   claude:{ ad:"Claude", key:"salonDefteri.apiKey", onek:/^sk-ant-/,
     konsol:"https://platform.claude.com/settings/keys", konsolAd:"Console → API keys",
-    ucretsiz:"kredi gerektirir" }
+    ucretsiz:"kredi gerektirir",
+    modeller:[{id:"claude-opus-5", ad:"Opus 5"}, {id:"claude-sonnet-5", ad:"Sonnet 5", not:"daha ucuz"}],
+    varsayilanModel:"claude-opus-5" }
+};
+const aktifModel=()=>{
+  const sag=aktifSag();
+  const secili=(state.modeller||{})[state.saglayici];
+  return sag.modeller.some(m=>m.id===secili) ? secili : sag.varsayilanModel;
 };
 const aktifSag=()=>SAGLAYICI[state.saglayici]||SAGLAYICI.gemini;
 const apiAnahtar=sag=>lsGet((sag||aktifSag()).key)||"";
@@ -709,7 +728,7 @@ function istekGovdesi(parcalar, sema, sistem, maxTokens, anahtar){
         "anthropic-dangerous-direct-browser-access":"true"
       },
       body:JSON.stringify({
-        model:"claude-opus-5",
+        model:aktifModel(),
         max_tokens:maxTokens||4000,
         system:sistem,
         output_config:{format:{type:"json_schema",schema:sema}},
@@ -724,7 +743,7 @@ function istekGovdesi(parcalar, sema, sistem, maxTokens, anahtar){
     method:"POST",
     headers:{"content-type":"application/json","x-goog-api-key":anahtar},
     body:JSON.stringify({
-      model:"gemini-3.8-flash",
+      model:aktifModel(),
       input:[{type:"text",text:sistem}].concat(parcalar.map(p=>p.gorsel
         ? {type:"image",data:p.gorsel,mime_type:"image/jpeg"}
         : {type:"text",text:p.metin})),
@@ -746,7 +765,11 @@ async function hataMetni(yanit, sag){
   if(/API key not valid|API key expired|API_KEY_INVALID|api key is invalid/i.test(ek))
     return `Anahtar kabul edilmedi — ${sag.konsolAd}'den yeni bir anahtar al.`;
   if(yanit.status===429)
-    return "Kota ya da hız sınırına takıldı, biraz sonra dene."+(ek?" — "+ek:"");
+    return "Kota ya da hız sınırına takıldı ("+aktifModel()+"). Günlük limit dolduysa "
+      +"Veri sekmesinden daha geniş kotalı bir model seçebilirsin."+(ek?" — "+ek:"");
+  if(yanit.status===404||/not found|not supported|does not exist/i.test(ek))
+    return "Model bulunamadı ya da bu isteği desteklemiyor ("+aktifModel()
+      +"). Veri sekmesinden başka bir model dene."+(ek?" — "+ek:"");
   const on={401:"Anahtar kabul edilmedi", 403:"Bu anahtarın yetkisi yok",
             400:"İstek reddedildi",
             503:"Sunucu yoğun. Birkaç kez denedim, hepsi meşgul döndü - biraz bekleyip tekrar dene",
@@ -1894,6 +1917,13 @@ function renderData(){
         ${Object.keys(SAGLAYICI).map(k=>`<button data-sag="${k}" class="${state.saglayici===k?"on":""}">${SAGLAYICI[k].ad}</button>`).join("")}
       </div>
       <p class="muted small" style="margin-top:8px">${aktifSag().ad} — ${aktifSag().ucretsiz}</p>
+      <div class="filters" style="margin-top:8px">
+        <select id="apiModel">
+          ${aktifSag().modeller.map(m=>`<option value="${m.id}" ${aktifModel()===m.id?"selected":""}>${m.ad}${m.not?" · "+m.not:""}</option>`).join("")}
+        </select>
+      </div>
+      <p class="muted small" style="margin-top:6px">Günlük limitin dolarsa daha geniş kotalı bir modele geç.
+        Kendi limitlerini <a href="https://aistudio.google.com/rate-limit" target="_blank" rel="noopener">AI Studio kota sayfasından</a> görebilirsin.</p>
       <div class="kv"><span>Anahtar</span><b>${apiAnahtar()?"kayıtlı":"yok"}</b></div>
       <div class="row" style="gap:8px;margin-top:12px">
         <button class="btn quiet sm" id="apiDuzenle">${apiAnahtar()?"Anahtarı değiştir":"Anahtar gir"}</button>
@@ -1931,6 +1961,10 @@ function renderData(){
   view.querySelectorAll("[data-sag]").forEach(b=>b.onclick=async()=>{
     state.saglayici=b.dataset.sag; await saveAll(); renderData();
   });
+  document.getElementById("apiModel").onchange=async e=>{
+    state.modeller=Object.assign({},state.modeller,{[state.saglayici]:e.target.value});
+    await saveAll(); renderData(); toast(e.target.value+" seçildi");
+  };
   document.getElementById("goProg2").onclick=()=>{ state.tab="programs"; render(); scrollTo(0,0); };
   document.getElementById("hedef").onchange=async e=>{ const v=+e.target.value; if(v>=50&&v<=400){ state.hedefProtein=v; await saveAll(); toast("Hedef "+v+" g olarak kaydedildi"); } };
   document.getElementById("tgl").onclick=async()=>{ state.otoDosya=!state.otoDosya; await saveAll(); renderData(); };
