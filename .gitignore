@@ -1,0 +1,9 @@
+# Kişisel vücut fotoğrafları — repo herkese açık, buraya asla girmesin.
+body/
+
+# İşletim sistemi ve editör artıkları
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
