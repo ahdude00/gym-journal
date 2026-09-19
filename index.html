@@ -800,6 +800,10 @@ function renderWorkout(){
       <button class="btn quiet" id="prevEx" ${state.exIndex===0?"disabled":""}>Önceki</button>
       <button class="btn" id="nextEx">${state.exIndex===s.hareketler.length-1?"Son hareket":"Sonraki"}</button>
     </div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn ghost sm" id="exCikar">Hareketi çıkar</button>
+      <button class="btn ghost sm" id="exEkle">+ Hareket ekle</button>
+    </div>
     <button class="btn ghost" id="finish" style="margin-top:10px">Antrenmanı bitir</button>`;
 
   /* Dinleyiciler tek tek satirlara degil kapsayiciya baglaniyor: sonradan
@@ -873,7 +877,47 @@ function renderWorkout(){
     if(state.exIndex<s.hareketler.length-1){ state.exIndex++; saveAll(); renderWorkout(); scrollTo(0,0); }
     else bitirSor();
   };
+  /* Antrenman sürerken programa değil, yalnızca bu seansa dokunur. */
+  document.getElementById("exEkle").onclick=()=>{
+    state.secici={seans:true};
+    state.tab="guide"; state.kat.limit=60; state.openEx=null;
+    render(); scrollTo(0,0);
+  };
+  document.getElementById("exCikar").onclick=()=>{
+    if(s.hareketler.length<=1){ toast("Antrenmanda en az bir hareket kalmalı"); return; }
+    const cikar=()=>{
+      s.hareketler.splice(state.exIndex,1);
+      s.kayitlar.splice(state.exIndex,1);
+      if(state.exIndex>=s.hareketler.length) state.exIndex=s.hareketler.length-1;
+      saveAll(); renderWorkout(); scrollTo(0,0);
+      toast("Hareket antrenmandan çıkarıldı");
+    };
+    const yapilan=kayit.setler.filter(x=>x.done).length;
+    if(!yapilan) return cikar();
+    modalAc(`
+      <h2>Hareketi çıkar</h2>
+      <p class="muted small">${exAd(h.ex)} için ${yapilan} işaretli set var, bu kayıt silinecek.</p>
+      <button class="btn danger" id="hEvet">Çıkar</button>
+      <button class="btn ghost" id="hHayir">Vazgeç</button>`);
+    document.getElementById("hEvet").onclick=()=>{ modalKapat(); cikar(); };
+    document.getElementById("hHayir").onclick=modalKapat;
+  };
   document.getElementById("finish").onclick=bitirSor;
+}
+
+/* Bir hareket icin seans kaydi. adet verilmezse gecen antrenmandaki set
+   sayisi, o da yoksa programdaki hedef kullanilir. Kilo ve tekrar her zaman
+   gecen antrenmandan set set tasinir. */
+function kayitOlustur(h,adet){
+  const onceki=sonKayitBilgi(h.ex), o=oneriOf(h.ex);
+  const gecmis = onceki ? onceki.setler : null;
+  const n = adet!=null ? adet : (gecmis ? gecmis.length : h.set);
+  return { id:h.ex, tip:h.tip, setler:Array.from({length:n},(_,i)=>{
+    const ref = gecmis ? (gecmis[i]||gecmis[gecmis.length-1]) : null;
+    const kg = h.tip==="kg" ? (ref&&ref.kg!=null?ref.kg:(o.kg!=null?o.kg:null)) : null;
+    const tk = ref&&ref.tekrar!=null ? ref.tekrar : (o.tekrar!=null?o.tekrar:null);
+    return {kg,tekrar:tk,done:false};
+  })};
 }
 
 function startSession(prog){
@@ -890,18 +934,11 @@ function startSession(prog){
        tekrar set set birebir tasinir. Programi o antrenmandan SONRA
        duzenlediysen programdaki hedef gecerli olur. */
     kayitlar:hareketler.map(h=>{
-      const onceki=sonKayitBilgi(h.ex), o=oneriOf(h.ex);
-      const gecmis = onceki ? onceki.setler : null;
       /* Program duzenlemesi yalnizca SET SAYISINI belirler; kilo ve tekrar
          her zaman gecen antrenmandan gelir. */
+      const onceki=sonKayitBilgi(h.ex);
       const programDahaYeni = prog.duzenlendi && (!onceki || prog.duzenlendi > Date.parse(onceki.tarih));
-      const adet = (gecmis && !programDahaYeni) ? gecmis.length : h.set;
-      return { id:h.ex, tip:h.tip, setler:Array.from({length:adet},(_,i)=>{
-        const ref = gecmis ? (gecmis[i]||gecmis[gecmis.length-1]) : null;
-        const kg = h.tip==="kg" ? (ref&&ref.kg!=null?ref.kg:(o.kg!=null?o.kg:null)) : null;
-        const tk = ref&&ref.tekrar!=null ? ref.tekrar : (o.tekrar!=null?o.tekrar:null);
-        return {kg,tekrar:tk,done:false};
-      })};
+      return kayitOlustur(h, programDahaYeni ? h.set : null);
     })
   };
   state.exIndex=0; state.tab="workout"; state.duzenle=null; state.secici=null; state.openEx=null;
@@ -1073,19 +1110,22 @@ function hareketAyarSheet(p,i){
 
 /* katalogdan seçilen hareketi bir programa ekler */
 function ekleSheet(exId){
-  const hedefProg=state.secici?progById(state.secici.progId):null;
-  if(!hedefProg && !state.programs.length){ toast("Önce bir program oluştur"); return; }
+  /* Sürmekte olan antrenmana mı, bir programa mı ekleniyor? */
+  const seansaMi = !!(state.secici && state.secici.seans && state.active);
+  const hedefProg=(!seansaMi && state.secici)?progById(state.secici.progId):null;
+  if(!seansaMi && !hedefProg && !state.programs.length){ toast("Önce bir program oluştur"); return; }
   const o=oneriOf(exId);
   const y={ tip:tipOf(exId), set:3, tekrar:"", mola:0 };
   y.tekrar=String(y.tip==="sure"?(o.tekrar!=null?o.tekrar:30):(o.tekrar!=null?o.tekrar:10));
   y.mola=y.tip==="kg"?90:60;
-  let secilen=hedefProg?hedefProg.id:state.programs[0].id;
+  let secilen=hedefProg?hedefProg.id:(state.programs[0]?state.programs[0].id:null);
 
   const ciz=()=>{
     modalAc(`
       <h2>Programa ekle</h2>
       <p class="muted small">${exAd(exId)}</p>
-      ${hedefProg?`<p class="small" style="margin-top:12px">Program: <b>${hedefProg.ad}</b></p>`
+      ${seansaMi?`<p class="small" style="margin-top:12px">Sürmekte olan antrenmana eklenecek</p>`
+        :hedefProg?`<p class="small" style="margin-top:12px">Program: <b>${hedefProg.ad}</b></p>`
         :`<p class="muted small" style="margin:12px 0 6px">Hangi programa?</p>
           <div class="seg sm" style="flex-wrap:wrap">${state.programs.map(p=>`<button data-p="${p.id}" class="${p.id===secilen?"on":""}">${progKisa(p.ad)}</button>`).join("")}</div>`}
       <p class="muted small" style="margin:12px 0 6px">Nasıl sayılsın?</p>
@@ -1111,6 +1151,18 @@ function ekleSheet(exId){
     sheet.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ oku(); y.tip=b.dataset.t; ciz(); });
     sheet.querySelector("#nOk").onclick=async()=>{
       oku();
+      if(seansaMi){
+        const h={ex:exId,set:y.set,tekrar:y.tekrar,mola:y.mola,tip:y.tip};
+        state.active.hareketler.push(h);
+        state.active.kayitlar.push(kayitOlustur(h,y.set));
+        state.exIndex=state.active.hareketler.length-1;   // yeni harekete geç
+        await saveAll();
+        modalKapat();
+        toast(exAd(exId)+" antrenmana eklendi");
+        state.secici=null; state.openEx=null; state.tab="workout";
+        render(); scrollTo(0,0);
+        return;
+      }
       const p=progById(secilen);
       if(!p){ toast("Program bulunamadı"); return; }
       p.hareketler.push({ex:exId,set:y.set,tekrar:y.tekrar,mola:y.mola,tip:y.tip});
@@ -1194,7 +1246,9 @@ function renderGuide(){
 
   view.innerHTML=`
     ${secim?`<div class="card" style="padding:12px 16px;margin-bottom:10px">
-      <div class="row between"><span class="small">Eklenecek program: <b>${progById(state.secici.progId)?progById(state.secici.progId).ad:"?"}</b></span>
+      <div class="row between"><span class="small">${state.secici.seans
+        ? "Sürmekte olan <b>antrenmana</b> ekleniyor"
+        : "Eklenecek program: <b>"+(progById(state.secici.progId)?progById(state.secici.progId).ad:"?")+"</b>"}</span>
       <button class="pill" id="vazgec">Vazgeç</button></div></div>`:""}
     <input type="search" class="text" id="kAra" placeholder="Ara: bench press, squat, omuz, dambıl..." value="${String(k.q||"").replace(/"/g,"&quot;")}">
     <div class="filters">
@@ -1229,8 +1283,10 @@ function renderGuide(){
   if(daha) daha.onclick=()=>{ state.kat.limit+=60; renderGuide(); };
   const vz=document.getElementById("vazgec");
   if(vz) vz.onclick=()=>{
-    const pid=state.secici.progId;
-    state.secici=null; state.duzenle=pid; state.tab="programs";
+    const seans=state.secici.seans, pid=state.secici.progId;
+    state.secici=null;
+    if(seans){ state.tab="workout"; }
+    else { state.duzenle=pid; state.tab="programs"; }
     render(); scrollTo(0,0);
   };
   view.querySelectorAll("[data-ex]").forEach(b=>b.onclick=()=>{
