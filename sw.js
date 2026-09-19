@@ -9,7 +9,10 @@
    kapaliyken (ya da internet yokken) onceAg cache'e duser ve kullanici
    eski surumu gorur — guncelleme yapilmamis gibi. */
 const CORE  = 'salon-defteri-v5';   // v5: eliptik isinma, c003-c005 cizimleri
-const MEDYA = 'salon-defteri-medya-v2';   // c001/c002 gorselleri degisti
+/* Medya "once cache" okunuyor: bir kez indirilen gorsel bir daha aga
+   sorulmaz. Var olan bir gorseli DEGISTIRDIGINDE bu surumu artir, yoksa
+   kullanicida eski gorsel kalir. (Yeni id eklemek icin gerekmez.) */
+const MEDYA = 'salon-defteri-medya-v3';   // v3: c003-c005 figur cizimine gecti
 const MEDYA_TAVAN = 600;   // bu sayiyi asinca en eski kayitlar atilir
 
 const ASSETS = [
