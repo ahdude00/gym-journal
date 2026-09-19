@@ -419,8 +419,8 @@ const FOODS = [
 const KEY="salonDefteri.v1";
 let state={tab:"home",sessions:[],meals:{},hedefProtein:150,besinTarih:null,arama:"",
   programs:[],active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
-  kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null};
-let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,clockTimer=null,kayitYeri="yok";
+  kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false};
+let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,sayacTipi="dinlenme",clockTimer=null,kayitYeri="yok";
 
 function lsGet(k){ try{ return window.localStorage ? localStorage.getItem(k) : null; }catch(e){ return null; } }
 function lsSet(k,v){ try{ if(window.localStorage){ localStorage.setItem(k,v); return true; } }catch(e){} return false; }
@@ -451,6 +451,7 @@ async function loadAll(){
     state.meals=d.meals||{};
     if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
     if(typeof d.otoDosya==="boolean") state.otoDosya=d.otoDosya;
+    if(typeof d.bildirim==="boolean") state.bildirim=d.bildirim;
     if(Array.isArray(d.programs)&&d.programs.length) state.programs=d.programs;
     /* Yarım kalan antrenman. Sayfa yenilenirse (ekran döndürme, tarayıcının
        sekmeyi bellekten atması, uygulamanın kapanıp açılması) kaldığı
@@ -466,7 +467,7 @@ async function loadAll(){
   if(kayitYeri==="yok" && lsSet(KEY+".test","1")) kayitYeri="telefon haf\u0131zas\u0131";
 }
 async function saveAll(){
-  const paket=JSON.stringify({v:3,otoDosya:state.otoDosya,hedefProtein:state.hedefProtein,
+  const paket=JSON.stringify({v:3,otoDosya:state.otoDosya,bildirim:state.bildirim,hedefProtein:state.hedefProtein,
     programs:state.programs,sessions:state.sessions,meals:state.meals,
     aktif:state.active,aktifIndex:state.exIndex});
   let ok=false;
@@ -1181,6 +1182,25 @@ function ekleSheet(exId){
 /* --- DİNLENME VE SÜRE SAYACI --- */
 /* Aynı tam ekran sayaç iki iş görüyor: setler arası dinlenme, ve plank gibi
    süreli hareketlerde setin kendisi. Fark etiketlerde ve bitişte olanda. */
+/* --- BİLDİRİM ---
+   Sayaç bittiğinde uygulama arka plandaysa bildirim gönderir. Android'de
+   new Notification() desteklenmiyor, service worker üzerinden göndermek
+   gerekiyor; masaüstünde ikisi de çalışıyor, SW yoksa geri düşüyoruz. */
+function bildirimDurum(){
+  if(!("Notification" in window)) return "desteklenmiyor";
+  return {granted:"verildi", denied:"reddedildi", "default":"sorulmadı"}[Notification.permission] || Notification.permission;
+}
+async function bildirimGonder(baslik,govde){
+  if(!("Notification" in window) || Notification.permission!=="granted") return;
+  const ayar={body:govde, icon:"icon-192.png", badge:"icon-192.png",
+              tag:"salon-sayac", renotify:true, vibrate:[120,80,120]};
+  try{
+    const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+    if(reg && reg.showNotification){ await reg.showNotification(baslik,ayar); return; }
+  }catch(e){}
+  try{ new Notification(baslik,ayar); }catch(e){}
+}
+
 /* --- AYRI PENCERE ---
    Document Picture-in-Picture: sayacı, diğer pencerelerin üstünde duran
    küçük bir pencereye taşır. Masaüstü Chrome/Edge'de çalışır. Android'de
@@ -1226,6 +1246,7 @@ function sayacCiz(){
   if(kalan<=0) sayacKapat(true);
 }
 function sayacAc(tip,sn,not,bitince){
+  sayacTipi=tip;
   sayacBitti=bitince||null;
   sayacBas=Date.now();
   restBitis=Date.now()+sn*1000;
@@ -1247,6 +1268,11 @@ function sayacKapat(suresiDoldu){
     if(pipPencere){
       const l=pipPencere.document.getElementById("l");
       if(l) l.textContent="Bitti";
+    }
+    /* Ekrandaysan zaten görüyorsun; bildirim sadece arka plandayken. */
+    if(state.bildirim && document.hidden){
+      bildirimGonder(sayacTipi==="sure" ? "Süre doldu" : "Dinlenme bitti",
+                     document.getElementById("restNext").textContent || "Salon Defteri");
     }
   }
   const bit=sayacBitti; sayacBitti=null;
@@ -1500,6 +1526,14 @@ function renderData(){
       <div class="kv"><span>Beslenme kaydı olan gün</span><b>${gunSay}</b></div>
     </div>
     <div class="card">
+      <h3>Dinlenme bildirimi</h3>
+      <p class="muted small">Uygulama arka plandayken sayaç bitince bildirim gönderir. Telefonda başka bir uygulamadayken işe yarar.</p>
+      <div class="switch"><span>Sayaç bitince bildir</span><button id="tglBildirim" class="${state.bildirim?"on":""}"><i></i></button></div>
+      <div class="kv"><span>İzin durumu</span><b>${bildirimDurum()}</b></div>
+      ${("Notification" in window) && Notification.permission==="denied"
+        ? `<p class="muted small" style="margin:8px 0 0">Bildirim izni tarayıcı ayarlarından reddedilmiş; oradan izin vermen gerekiyor.</p>` : ""}
+    </div>
+    <div class="card">
       <h3>Hareket veritabanı</h3>
       <div class="kv"><span>Hareket sayısı</span><b>${RAW.length}</b></div>
       <div class="kv"><span>Programların</span><b>${state.programs.length}</b></div>
@@ -1520,6 +1554,16 @@ function renderData(){
   document.getElementById("goProg2").onclick=()=>{ state.tab="programs"; render(); scrollTo(0,0); };
   document.getElementById("hedef").onchange=async e=>{ const v=+e.target.value; if(v>=50&&v<=400){ state.hedefProtein=v; await saveAll(); toast("Hedef "+v+" g olarak kaydedildi"); } };
   document.getElementById("tgl").onclick=async()=>{ state.otoDosya=!state.otoDosya; await saveAll(); renderData(); };
+  /* İzin isteme kullanıcı hareketi gerektirdiği için tam burada yapılıyor. */
+  document.getElementById("tglBildirim").onclick=async()=>{
+    if(state.bildirim){ state.bildirim=false; await saveAll(); renderData(); return; }
+    if(!("Notification" in window)){ toast("Bu tarayıcı bildirimi desteklemiyor"); return; }
+    let izin=Notification.permission;
+    if(izin==="default"){ try{ izin=await Notification.requestPermission(); }catch(e){ izin="denied"; } }
+    if(izin!=="granted"){ toast("Bildirim izni verilmedi"); renderData(); return; }
+    state.bildirim=true; await saveAll(); renderData();
+    toast("Sayaç bitince bildirim gelecek");
+  };
   document.getElementById("exp").onclick=()=>dosyayaAktar(false);
   document.getElementById("imp").onchange=dosyadanYukle;
 }
