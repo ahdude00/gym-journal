@@ -203,6 +203,7 @@ nav button i{font-style:normal;font-size:18px;line-height:1}
     <button class="btn quiet" id="restPlus">+15 sn</button>
     <button class="btn" id="restSkip">Devam et</button>
   </div>
+  <button class="btn ghost sm hidden" id="restPip" style="width:100%;max-width:340px;margin-top:10px">Ayrı pencerede göster</button>
 </div>
 
 <div id="modal" class="modal hidden"><div class="sheet" id="modalBody"></div></div>
@@ -1180,12 +1181,48 @@ function ekleSheet(exId){
 /* --- DİNLENME VE SÜRE SAYACI --- */
 /* Aynı tam ekran sayaç iki iş görüyor: setler arası dinlenme, ve plank gibi
    süreli hareketlerde setin kendisi. Fark etiketlerde ve bitişte olanda. */
+/* --- AYRI PENCERE ---
+   Document Picture-in-Picture: sayacı, diğer pencerelerin üstünde duran
+   küçük bir pencereye taşır. Masaüstü Chrome/Edge'de çalışır. Android'de
+   tarayıcılar bir web sayfasının başka uygulamaların üstünde durmasına izin
+   vermiyor; orada düğme hiç görünmüyor. */
+let pipPencere=null;
+function pipDestekli(){ return "documentPictureInPicture" in window; }
+function pipGuncelle(){
+  if(!pipPencere) return;
+  const d=pipPencere.document;
+  const yaz=(id,v)=>{ const e=d.getElementById(id); if(e) e.textContent=v; };
+  yaz("l", document.getElementById("restLbl").textContent);
+  yaz("n", document.getElementById("restNum").textContent);
+  yaz("a", document.getElementById("restNext").textContent);
+}
+async function pipAc(){
+  if(!pipDestekli()){ toast("Bu tarayıcı ayrı pencereyi desteklemiyor"); return; }
+  if(pipPencere){ pipPencere.focus(); return; }
+  try{
+    const w=await window.documentPictureInPicture.requestWindow({width:260,height:200});
+    const st=w.document.createElement("style");
+    st.textContent=`body{margin:0;height:100vh;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:6px;background:#141A1F;color:#E8EEF2;
+      font-family:system-ui,-apple-system,'Segoe UI',sans-serif;user-select:none}
+      #l{color:#8D9BA8;font-size:13px;letter-spacing:.05em}
+      #n{font-size:76px;font-weight:700;line-height:1;color:#E0A32E;font-variant-numeric:tabular-nums}
+      #a{color:#8D9BA8;font-size:12px;text-align:center;padding:0 12px}`;
+    w.document.head.appendChild(st);
+    w.document.body.innerHTML=`<div id="l"></div><div id="n">0</div><div id="a"></div>`;
+    w.addEventListener("pagehide",()=>{ pipPencere=null; });
+    pipPencere=w;
+    pipGuncelle();
+  }catch(e){ toast("Ayrı pencere açılamadı"); }
+}
+
 /* Sayaç duvar saatine göre çalışır. Tarayıcı arka plandaki sekmenin
    setInterval'ini kıstığında geri sayım kaymaz; uygulamaya dönünce doğru
    değere atlar. Bitiş anı restBitis'te tutulur, tik sayısında değil. */
 function sayacCiz(){
   const kalan=Math.max(0, Math.round((restBitis-Date.now())/1000));
   document.getElementById("restNum").textContent=kalan;
+  pipGuncelle();
   if(kalan<=0) sayacKapat(true);
 }
 function sayacAc(tip,sn,not,bitince){
@@ -1205,13 +1242,21 @@ function sayacAc(tip,sn,not,bitince){
 function sayacKapat(suresiDoldu){
   clearInterval(restTimer);
   document.getElementById("rest").classList.add("hidden");
-  if(suresiDoldu && navigator.vibrate) navigator.vibrate([120,80,120]);
+  if(suresiDoldu){
+    if(navigator.vibrate) navigator.vibrate([120,80,120]);
+    if(pipPencere){
+      const l=pipPencere.document.getElementById("l");
+      if(l) l.textContent="Bitti";
+    }
+  }
   const bit=sayacBitti; sayacBitti=null;
   if(bit) bit(Math.max(1,Math.round((Date.now()-sayacBas)/1000)));
 }
 function startRest(sn,not){ sayacAc("dinlenme",sn,not,null); }
 function startHold(sn,not,bitince){ sayacAc("sure",sn,not,bitince); }
 document.getElementById("restSkip").onclick=()=>sayacKapat(false);
+document.getElementById("restPip").onclick=pipAc;
+if(pipDestekli()) document.getElementById("restPip").classList.remove("hidden");
 document.getElementById("restPlus").onclick=()=>{ restBitis+=15000; sayacCiz(); };
 /* Arka plandan dönünce sayaç beklemeden doğru değere atlasın. */
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden && restTimer) sayacCiz(); });
