@@ -709,24 +709,45 @@ async function hataMetni(yanit, sag){
   if(yanit.status===429)
     return "Kota ya da hız sınırına takıldı, biraz sonra dene."+(ek?" — "+ek:"");
   const on={401:"Anahtar kabul edilmedi", 403:"Bu anahtarın yetkisi yok",
-            400:"İstek reddedildi", 503:"Sunucu meşgul, biraz sonra dene",
-            529:"Sunucu meşgul, biraz sonra dene"}[yanit.status]
+            400:"İstek reddedildi",
+            503:"Sunucu yoğun. Birkaç kez denedim, hepsi meşgul döndü - biraz bekleyip tekrar dene",
+            529:"Sunucu yoğun, biraz bekleyip tekrar dene"}[yanit.status]
             || ("API hatası "+yanit.status);
   /* Sağlayıcının kendi açıklaması teşhis için en değerli bilgi, saklama */
   return on+(ek?" — "+ek:"");
 }
 
-async function yzIstek(parcalar, sema, sistem, maxTokens){
+const uyu=ms=>new Promise(r=>setTimeout(r,ms));
+/* Ücretsiz katmanda model yoğunken 503 sık geliyor ve geçici; elle tekrar
+   denemek yerine kendimiz deniyoruz. 4xx'lerin çoğu kalıcı, onları denemiyoruz. */
+const GECICI_DURUM=[408,429,500,502,503,504,529];
+
+async function yzIstek(parcalar, sema, sistem, maxTokens, ilerle){
   const sag=aktifSag(), anahtar=apiAnahtar(sag);
   if(!anahtar) throw new Error(sag.ad+" anahtarı girilmemiş");
   const istek=istekGovdesi(parcalar,sema,sistem,maxTokens,anahtar);
-  let yanit;
-  try{ yanit=await fetch(istek.url,istek.ayar); }
-  catch(e){ throw new Error("Sunucuya ulaşılamadı. İnternet bağlantını kontrol et."); }
-  if(!yanit.ok) throw new Error(await hataMetni(yanit,sag));
-  const d=await yanit.json();
-  if(d.stop_reason==="refusal") throw new Error("Model bu fotoğrafı değerlendirmedi");
-  return jsonAyikla(yanitMetni(d));
+  const enFazla=3;
+  for(let deneme=1;;deneme++){
+    let yanit;
+    try{ yanit=await fetch(istek.url,istek.ayar); }
+    catch(e){
+      if(deneme<enFazla){ if(ilerle) ilerle(deneme+1,enFazla); await uyu(800*deneme); continue; }
+      throw new Error("Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.");
+    }
+    if(yanit.ok){
+      const d=await yanit.json();
+      if(d.stop_reason==="refusal") throw new Error("Model bu fotoğrafı değerlendirmedi");
+      return jsonAyikla(yanitMetni(d));
+    }
+    if(GECICI_DURUM.indexOf(yanit.status)>=0 && deneme<enFazla){
+      /* sunucu ne kadar bekleneceğini söylüyorsa ona uy */
+      const sonra=yanit.headers&&yanit.headers.get?+(yanit.headers.get("retry-after")||0):0;
+      if(ilerle) ilerle(deneme+1,enFazla);
+      await uyu(Math.max(sonra*1000, 900*Math.pow(2,deneme-1)));
+      continue;
+    }
+    throw new Error(await hataMetni(yanit,sag));
+  }
 }
 
 /* Claude metni content[] içinde; Gemini yanıtı adımlara bölüyor ve metin
@@ -758,6 +779,13 @@ function jsonAyikla(metin){
 }
 
 /* Tek fotoğraf, ya da [önce, kalan] ikilisi. */
+/* Yeniden denerken kullanıcıyı boş ekranda bırakmamak için. */
+function ilerlemeYaz(deneme,toplam){
+  const g=document.getElementById("modalBody");
+  if(g) g.innerHTML=`<h2>Fotoğraf inceleniyor</h2>
+    <p class="muted small">Sunucu meşguldü, yeniden deneniyor (${deneme}/${toplam}).</p>`;
+}
+
 async function fotoAnaliz(gorseller){
   const kalanVar=gorseller.length>1;
   const parcalar=kalanVar
@@ -766,7 +794,7 @@ async function fotoAnaliz(gorseller){
        {metin:"Yenen miktarın protein ve kalorisini tahmin et."}]
     : [{gorsel:gorseller[0]},
        {metin:"Bu fotoğraftaki porsiyonun protein ve kalori miktarını tahmin et."}];
-  return yzIstek(parcalar, fotoSema(kalanVar), kalanVar?SISTEM_KALAN:SISTEM_TEK);
+  return yzIstek(parcalar, fotoSema(kalanVar), kalanVar?SISTEM_KALAN:SISTEM_TEK, null, ilerlemeYaz);
 }
 
 /* Uzun kenarı 1024 px'e indirip JPEG'e çevirir: yemek fotoğrafı için
@@ -843,13 +871,16 @@ async function baglantiSina(){
   document.getElementById("sKapat").onclick=modalKapat;
 }
 
-function fotoHataSheet(e){
+function fotoHataSheet(e, tekrar){
   const sag=aktifSag();
   modalAc(`<h2>Olmadı</h2>
     <p class="muted small">${String(e.message||e)}</p>
     <p class="attrib"><a href="${sag.konsol}" target="_blank" rel="noopener">${sag.ad} anahtarları</a></p>
+    ${tekrar?`<button class="btn" id="fTekrar">Tekrar dene</button>`:""}
     <button class="btn quiet" id="fAnahtar">Anahtarı değiştir</button>
     <button class="btn ghost" id="fKapat">Kapat</button>`);
+  const t=document.getElementById("fTekrar");
+  if(t) t.onclick=tekrar;
   document.getElementById("fAnahtar").onclick=anahtarSor;
   document.getElementById("fKapat").onclick=modalKapat;
 }
@@ -893,7 +924,7 @@ function fotoSonucSheet(sonuc, durum){
       const kalanB64=await fotoKucult(dosya);
       const iki=await fotoAnaliz([durum.oncekiB64, kalanB64]);
       fotoSonucSheet(iki, Object.assign({},durum,{kalanVar:true}));
-    }catch(e){ fotoHataSheet(e); }
+    }catch(e){ fotoHataSheet(e, ()=>fotoSonucSheet(sonuc,durum)); }
   };
   document.getElementById("fIptal").onclick=modalKapat;
 }
@@ -905,7 +936,10 @@ async function fotoSheet(dosya,gunK){
     const b64=await fotoKucult(dosya);
     const sonuc=await fotoAnaliz([b64]);
     fotoSonucSheet(sonuc,{gunK,oncekiB64:b64,kalanVar:false});
-  }catch(e){ fotoHataSheet(e); }
+  }catch(e){
+    /* fotoğrafı yeniden çektirmeden aynı kareyle tekrar denesin */
+    fotoHataSheet(e, ()=>fotoSheet(dosya,gunK));
+  }
 }
 
 /* --- ANTRENMAN --- */
