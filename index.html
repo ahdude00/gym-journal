@@ -673,6 +673,10 @@ async function claudeIstek(icerik, sema, sistem, maxTokens){
   if(!yanit.ok){
     let ek="";
     try{ const h=await yanit.json(); ek=(h.error&&h.error.message)||""; }catch(e){}
+    /* Kredi bitmesi en sık karşılaşılan durum ve çözümü anahtardan farklı:
+       anahtar geçerli, sadece bakiye yok. Ayrıca yakalayıp söylüyoruz. */
+    if(/credit balance/i.test(ek))
+      throw new Error("Anahtar geçerli ama hesapta kredi yok. Console → Plans & Billing'den kredi yükle.");
     const on={401:"Anahtar kabul edilmedi",403:"Bu anahtarın yetkisi yok",
               400:"İstek reddedildi",429:"Hız ya da kota sınırına takıldı",
               529:"Sunucu meşgul, biraz sonra dene"}[yanit.status]
@@ -767,7 +771,9 @@ async function baglantiSina(){
     govde=`<h2>Olmadı</h2><p class="muted small">${String(e.message||e)}</p>
       <p class="muted small" style="margin-top:8px">Anahtar
         <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">Console → API keys</a>'den
-        oluşturulur ve hesapta kredi olması gerekir.</p>`;
+        oluşturulur; kredi
+        <a href="https://platform.claude.com/settings/billing" target="_blank" rel="noopener">Plans &amp; Billing</a>'den
+        yüklenir.</p>`;
   }
   modalAc(govde+`
     <button class="btn quiet" id="sAnahtar">Anahtarı değiştir</button>
@@ -779,6 +785,8 @@ async function baglantiSina(){
 function fotoHataSheet(e){
   modalAc(`<h2>Olmadı</h2>
     <p class="muted small">${String(e.message||e)}</p>
+    <p class="attrib"><a href="https://platform.claude.com/settings/billing" target="_blank" rel="noopener">Plans &amp; Billing</a>
+      · <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">API keys</a></p>
     <button class="btn quiet" id="fAnahtar">API anahtarını değiştir</button>
     <button class="btn ghost" id="fKapat">Kapat</button>`);
   document.getElementById("fAnahtar").onclick=anahtarSor;
