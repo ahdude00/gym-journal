@@ -90,6 +90,12 @@ input:focus{outline:2px solid var(--brass);outline-offset:1px;border-color:trans
 .rest .num{font-family:var(--cond);font-weight:700;font-size:106px;line-height:.9;font-variant-numeric:tabular-nums;color:var(--brass)}
 .rest .lbl{color:var(--dim);letter-spacing:.05em}
 .rest .acts{display:flex;gap:10px;margin-top:22px;width:100%;max-width:340px}
+/* dinlenirken sırada ne olduğunu gösteren kart */
+.rest .onizleme{display:flex;align-items:center;gap:12px;width:100%;max-width:340px;margin-top:14px;
+  padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.rest .onizleme .plate{width:52px;height:52px}
+.rest .onizleme .nm{flex:1;min-width:0;text-align:left}
+.rest .onizleme .nm b{font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .modal{position:fixed;inset:0;background:rgba(10,14,18,.82);z-index:60;display:flex;align-items:flex-end;justify-content:center;padding:16px}
 .modal .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;width:100%;max-width:420px;max-height:86vh;overflow:auto}
@@ -191,6 +197,10 @@ nav button i{font-style:normal;font-size:18px;line-height:1}
   <div class="lbl" id="restLbl">Dinlenme</div>
   <div class="num" id="restNum">90</div>
   <div class="lbl small" id="restNext"></div>
+  <div class="onizleme hidden" id="restOnizleme">
+    <span class="plate"><img id="restImg" alt=""></span>
+    <span class="nm"><b id="restAd"></b><span class="muted small" id="restAlt"></span></span>
+  </div>
   <div class="acts">
     <button class="btn quiet" id="restPlus">+15 sn</button>
     <button class="btn" id="restSkip">Devam et</button>
@@ -799,6 +809,21 @@ async function hataMetni(yanit, sag, model){
   return on+(ek?" — "+ek:"");
 }
 
+/* Dinlenirken sırada ne olduğunu hesaplar: aynı hareketin bir sonraki seti,
+   ya da hareket bittiyse sıradaki hareket. */
+function sonrakiBilgi(s, exIndex, kayit){
+  const kalan=kayit.setler.filter(x=>!x.done).length;
+  if(kalan>0){
+    const h=s.hareketler[exIndex], yapilan=kayit.setler.length-kalan;
+    return {baslik:"Sıradaki set", ex:h.ex,
+            alt:`set ${yapilan+1} / ${kayit.setler.length}`};
+  }
+  const sonraki=s.hareketler[exIndex+1];
+  if(!sonraki) return {baslik:"Son hareket bitti", ex:null, alt:"Antrenmanı bitirebilirsin"};
+  return {baslik:"Sıradaki hareket", ex:sonraki.ex,
+          alt:`${sonraki.set} set × ${sonraki.tekrar}${sonraki.tip==="sure"?" sn":""}`};
+}
+
 const uyu=ms=>new Promise(r=>setTimeout(r,ms));
 /* Ücretsiz katmanda model yoğunken 503 sık geliyor ve geçici; elle tekrar
    denemek yerine kendimiz deniyoruz. 4xx'lerin çoğu kalıcı, onları denemiyoruz. */
@@ -1251,9 +1276,9 @@ function renderWorkout(){
     st.done=true;
     satir.classList.add("done");
     satir.querySelector("[data-done]").textContent="✓";
-    const kalan=kayit.setler.filter(x=>!x.done).length;
     saveAll();
-    startRest(h.mola, kalan>0?`Sonraki: ${exAd(h.ex)} · set ${i+2}`:"Bu hareket bitti");
+    const bilgi=sonrakiBilgi(s,state.exIndex,kayit);
+    startRest(h.mola, bilgi.baslik, bilgi);
   };
   setKutu.onclick=ev=>{
     const b=ev.target.closest("[data-done]");
@@ -1643,7 +1668,8 @@ function pipGuncelle(){
   const yaz=(id,v)=>{ const e=d.getElementById(id); if(e) e.textContent=v; };
   yaz("l", document.getElementById("restLbl").textContent);
   yaz("n", document.getElementById("restNum").textContent);
-  yaz("a", document.getElementById("restNext").textContent);
+  const alt=document.getElementById("restNext");
+  yaz("a", alt.dataset.tam || alt.textContent);
 }
 async function pipAc(){
   if(!pipDestekli()){ toast("Bu tarayıcı ayrı pencereyi desteklemiyor"); return; }
@@ -1674,14 +1700,16 @@ function sayacCiz(){
   pipGuncelle();
   if(kalan<=0) sayacKapat(true);
 }
-function sayacAc(tip,sn,not,bitince){
+function sayacAc(tip,sn,not,bitince,onizleme){
   sayacTipi=tip;
   sayacBitti=bitince||null;
   sayacBas=Date.now();
   restBitis=Date.now()+sn*1000;
   document.getElementById("restLbl").textContent = tip==="sure" ? "Süre" : "Dinlenme";
   document.getElementById("restSkip").textContent = tip==="sure" ? "Bitir" : "Devam et";
-  document.getElementById("restNext").textContent=not||"";
+  const alt=document.getElementById("restNext");
+  alt.textContent=not||"";
+  onizlemeYaz(onizleme, alt);
   document.getElementById("rest").classList.remove("hidden");
   clearInterval(restTimer);
   sayacCiz();
@@ -1707,7 +1735,24 @@ function sayacKapat(suresiDoldu){
   const bit=sayacBitti; sayacBitti=null;
   if(bit) bit(Math.max(1,Math.round((Date.now()-sayacBas)/1000)));
 }
-function startRest(sn,not){ sayacAc("dinlenme",sn,not,null); }
+function startRest(sn,not,onizleme){ sayacAc("dinlenme",sn,not,null,onizleme); }
+
+/* Önizleme kartını doldurur. Ayrı pencere yalnızca metni gösterdiği için
+   tam metni restNext üzerinde saklıyoruz. */
+function onizlemeYaz(bilgi, altEl){
+  const kutu=document.getElementById("restOnizleme");
+  const e=bilgi&&bilgi.ex?EX[bilgi.ex]:null;
+  if(!bilgi||!e){
+    kutu.classList.add("hidden");
+    altEl.dataset.tam=altEl.textContent;
+    return;
+  }
+  kutu.classList.remove("hidden");
+  document.getElementById("restImg").src=exImg(e);
+  document.getElementById("restAd").textContent=e.n;
+  document.getElementById("restAlt").textContent=bilgi.alt||"";
+  altEl.dataset.tam=(altEl.textContent?altEl.textContent+": ":"")+e.n;
+}
 function startHold(sn,not,bitince){ sayacAc("sure",sn,not,bitince); }
 document.getElementById("restSkip").onclick=()=>sayacKapat(false);
 document.getElementById("restPip").onclick=pipAc;
