@@ -196,7 +196,7 @@ nav button i{font-style:normal;font-size:18px;line-height:1}
 </div></nav>
 
 <div id="rest" class="rest hidden">
-  <div class="lbl">Dinlenme</div>
+  <div class="lbl" id="restLbl">Dinlenme</div>
   <div class="num" id="restNum">90</div>
   <div class="lbl small" id="restNext"></div>
   <div class="acts">
@@ -419,7 +419,7 @@ const KEY="salonDefteri.v1";
 let state={tab:"home",sessions:[],meals:{},hedefProtein:150,besinTarih:null,arama:"",
   programs:[],active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
   kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null};
-let restTimer=null,restLeft=0,clockTimer=null,kayitYeri="yok";
+let restTimer=null,restLeft=0,sayacBas=0,sayacBitti=null,clockTimer=null,kayitYeri="yok";
 
 function lsGet(k){ try{ return window.localStorage ? localStorage.getItem(k) : null; }catch(e){ return null; } }
 function lsSet(k,v){ try{ if(window.localStorage){ localStorage.setItem(k,v); return true; } }catch(e){} return false; }
@@ -796,15 +796,38 @@ function renderWorkout(){
     if(!inp.dataset||inp.dataset.f===undefined) return;
     kayit.setler[+inp.dataset.set][inp.dataset.f]= inp.value===""?null:+inp.value;
   };
+  /* Seti tamamlar: sn verilirse gerçekleşen süreyi kutuya yazar. */
+  const setiBitir=(i,sn)=>{
+    const st=kayit.setler[i], satir=setKutu.querySelectorAll(".setrow")[i];
+    if(sn!=null){
+      st.tekrar=sn;
+      const inp=satir.querySelector('[data-f="tekrar"]');
+      if(inp) inp.value=sn;
+    }
+    st.done=true;
+    satir.classList.add("done");
+    satir.querySelector("[data-done]").textContent="✓";
+    const kalan=kayit.setler.filter(x=>!x.done).length;
+    startRest(h.mola, kalan>0?`Sonraki: ${exAd(h.ex)} · set ${i+2}`:"Bu hareket bitti");
+  };
   setKutu.onclick=ev=>{
     const b=ev.target.closest("[data-done]");
     if(!b) return;
     const i=+b.dataset.done, st=kayit.setler[i];
-    st.done=!st.done;
-    b.closest(".setrow").classList.toggle("done",st.done);
-    b.textContent=st.done?"✓":"○";
-    const kalan=kayit.setler.filter(x=>!x.done).length;
-    if(st.done) startRest(h.mola, kalan>0?`Sonraki: ${exAd(h.ex)} · set ${i+2}`:"Bu hareket bitti");
+    if(st.done){                                  // işareti geri al
+      st.done=false;
+      b.closest(".setrow").classList.remove("done");
+      b.textContent="○";
+      return;
+    }
+    /* Plank gibi süreli hareketlerde tik önce sayacı başlatır; set, süre
+       dolunca ya da "Bitir"e basılınca geçen süreyle kapanır. */
+    if(h.tip==="sure"){
+      const hedef=Math.max(1, +st.tekrar || parseInt(h.tekrar,10) || 30);
+      startHold(hedef, `${exAd(h.ex)} · set ${i+1}`, gecen=>setiBitir(i,gecen));
+      return;
+    }
+    setiBitir(i,null);
   };
   document.getElementById("setEkle").onclick=()=>{
     if(kayit.setler.length>=20){ toast("Bir harekette en fazla 20 set"); return; }
@@ -1048,9 +1071,15 @@ function ekleSheet(exId){
   };
   ciz();
 }
-/* --- DİNLENME --- */
-function startRest(sn,not){
+/* --- DİNLENME VE SÜRE SAYACI --- */
+/* Aynı tam ekran sayaç iki iş görüyor: setler arası dinlenme, ve plank gibi
+   süreli hareketlerde setin kendisi. Fark etiketlerde ve bitişte olanda. */
+function sayacAc(tip,sn,not,bitince){
+  sayacBitti=bitince||null;
+  sayacBas=Date.now();
   restLeft=sn;
+  document.getElementById("restLbl").textContent = tip==="sure" ? "Süre" : "Dinlenme";
+  document.getElementById("restSkip").textContent = tip==="sure" ? "Bitir" : "Devam et";
   document.getElementById("restNum").textContent=restLeft;
   document.getElementById("restNext").textContent=not||"";
   document.getElementById("rest").classList.remove("hidden");
@@ -1058,11 +1087,21 @@ function startRest(sn,not){
   restTimer=setInterval(()=>{
     restLeft--;
     document.getElementById("restNum").textContent=Math.max(restLeft,0);
-    if(restLeft<=0){ stopRest(); if(navigator.vibrate) navigator.vibrate([120,80,120]); }
+    if(restLeft<=0) sayacKapat(true);
   },1000);
 }
-function stopRest(){ clearInterval(restTimer); document.getElementById("rest").classList.add("hidden"); }
-document.getElementById("restSkip").onclick=stopRest;
+/* Geçen süreyi duvar saatinden ölçüyoruz; "+15 sn" ve erken bitirme
+   ikisinde de gerçek süre kaydedilsin diye. */
+function sayacKapat(suresiDoldu){
+  clearInterval(restTimer);
+  document.getElementById("rest").classList.add("hidden");
+  if(suresiDoldu && navigator.vibrate) navigator.vibrate([120,80,120]);
+  const bit=sayacBitti; sayacBitti=null;
+  if(bit) bit(Math.max(1,Math.round((Date.now()-sayacBas)/1000)));
+}
+function startRest(sn,not){ sayacAc("dinlenme",sn,not,null); }
+function startHold(sn,not,bitince){ sayacAc("sure",sn,not,bitince); }
+document.getElementById("restSkip").onclick=()=>sayacKapat(false);
 document.getElementById("restPlus").onclick=()=>{ restLeft+=15; document.getElementById("restNum").textContent=restLeft; };
 
 /* --- HAREKET KATALOĞU --- */
