@@ -334,7 +334,7 @@ function varsayilanProgramlar(){
 const KEY="salonDefteri.v1";
 let state={tab:"home",sessions:[],meals:{},hedefProtein:150,besinTarih:null,
   programs:[],active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
-  kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false,saglayici:"gemini",modeller:{}};
+  kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false,saglayici:"gemini",modeller:{},kotaDolu:{}};
 let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,sayacTipi="dinlenme",clockTimer=null,kayitYeri="yok";
 
 function lsGet(k){ try{ return window.localStorage ? localStorage.getItem(k) : null; }catch(e){ return null; } }
@@ -369,6 +369,7 @@ async function loadAll(){
     if(typeof d.bildirim==="boolean") state.bildirim=d.bildirim;
     if(d.saglayici&&SAGLAYICI[d.saglayici]) state.saglayici=d.saglayici;
     if(d.modeller&&typeof d.modeller==="object") state.modeller=d.modeller;
+    if(d.kotaDolu&&typeof d.kotaDolu==="object") state.kotaDolu=d.kotaDolu;
     if(Array.isArray(d.programs)&&d.programs.length) state.programs=d.programs;
     /* Yarım kalan antrenman. Sayfa yenilenirse (ekran döndürme, tarayıcının
        sekmeyi bellekten atması, uygulamanın kapanıp açılması) kaldığı
@@ -384,7 +385,7 @@ async function loadAll(){
   if(kayitYeri==="yok" && lsSet(KEY+".test","1")) kayitYeri="telefon haf\u0131zas\u0131";
 }
 async function saveAll(){
-  const paket=JSON.stringify({v:3,otoDosya:state.otoDosya,bildirim:state.bildirim,saglayici:state.saglayici,modeller:state.modeller,hedefProtein:state.hedefProtein,
+  const paket=JSON.stringify({v:3,otoDosya:state.otoDosya,bildirim:state.bildirim,saglayici:state.saglayici,modeller:state.modeller,kotaDolu:state.kotaDolu,hedefProtein:state.hedefProtein,
     programs:state.programs,sessions:state.sessions,meals:state.meals,
     aktif:state.active,aktifIndex:state.exIndex});
   let ok=false;
@@ -620,24 +621,44 @@ const SAGLAYICI={
        daha geniş; ağır olanlar daha iyi görsel muhakeme yapıyor. Kesin
        günlük limitler hesaba göre değiştiği için seçimi kullanıcıya
        bırakıyoruz - AI Studio'daki kota sayfası doğrusunu gösteriyor. */
+    /* Sıra aynı zamanda düşme zinciri: en iyiden başlar, kota bitince bir
+       alttakine geçilir. Aşağı indikçe kota genişliyor, muhakeme zayıflıyor. */
     modeller:[
-      {id:"gemini-2.5-flash-lite", ad:"2.5 Flash Lite", not:"geniş kota"},
-      {id:"gemini-3.5-flash-lite", ad:"3.5 Flash Lite", not:"geniş kota, daha yeni"},
+      {id:"gemini-3.8-flash",      ad:"3.8 Flash", not:"en iyi, dar kota"},
+      {id:"gemini-3.5-flash-lite", ad:"3.5 Flash Lite"},
       {id:"gemini-3.1-flash-lite", ad:"3.1 Flash Lite"},
       {id:"gemini-2.5-flash",      ad:"2.5 Flash"},
-      {id:"gemini-3.8-flash",      ad:"3.8 Flash", not:"en iyi görsel muhakeme, dar kota"}
-    ], varsayilanModel:"gemini-2.5-flash-lite" },
+      {id:"gemini-2.5-flash-lite", ad:"2.5 Flash Lite", not:"en geniş kota"}
+    ], varsayilanModel:"gemini-3.8-flash" },
   claude:{ ad:"Claude", key:"salonDefteri.apiKey", onek:/^sk-ant-/,
     konsol:"https://platform.claude.com/settings/keys", konsolAd:"Console → API keys",
     ucretsiz:"kredi gerektirir",
-    modeller:[{id:"claude-opus-5", ad:"Opus 5"}, {id:"claude-sonnet-5", ad:"Sonnet 5", not:"daha ucuz"}],
+    modeller:[{id:"claude-opus-5", ad:"Opus 5", not:"en iyi"}, {id:"claude-sonnet-5", ad:"Sonnet 5", not:"daha ucuz"}],
     varsayilanModel:"claude-opus-5" }
 };
-const aktifModel=()=>{
+/* Seçilen modelden başlayıp listenin altına inen sıra. Bugün kotası
+   dolduğu bilinen modeller atlanıyor; kota günlük sıfırlandığı için
+   işaret tarihle tutuluyor. */
+function modelZinciri(){
   const sag=aktifSag();
+  const hepsi=sag.modeller.map(m=>m.id);
   const secili=(state.modeller||{})[state.saglayici];
-  return sag.modeller.some(m=>m.id===secili) ? secili : sag.varsayilanModel;
-};
+  let bas=hepsi.indexOf(secili);
+  if(bas<0) bas=Math.max(0,hepsi.indexOf(sag.varsayilanModel));
+  const sira=hepsi.slice(bas);
+  const bugun=gunKey(), dolu=state.kotaDolu||{};
+  const acik=sira.filter(id=>dolu[id]!==bugun);
+  return acik.length?acik:sira;   // hepsi doluysa yine de dene, belki sıfırlanmıştır
+}
+const aktifModel=()=>modelZinciri()[0];
+function modelAdi(id){
+  const m=aktifSag().modeller.filter(x=>x.id===id)[0];
+  return m?m.ad:id;
+}
+function kotayiIsaretle(id){
+  state.kotaDolu=Object.assign({},state.kotaDolu,{[id]:gunKey()});
+  saveAll();
+}
 const aktifSag=()=>SAGLAYICI[state.saglayici]||SAGLAYICI.gemini;
 const apiAnahtar=sag=>lsGet((sag||aktifSag()).key)||"";
 
@@ -715,7 +736,7 @@ function fotoSema(kalanVar){
 }
 
 /* Sağlayıcıdan bağımsız iç biçim: [{metin},{gorsel}] */
-function istekGovdesi(parcalar, sema, sistem, maxTokens, anahtar){
+function istekGovdesi(model, parcalar, sema, sistem, maxTokens, anahtar){
   if(state.saglayici==="claude"){
     return {url:"https://api.anthropic.com/v1/messages", ayar:{
       method:"POST",
@@ -728,7 +749,7 @@ function istekGovdesi(parcalar, sema, sistem, maxTokens, anahtar){
         "anthropic-dangerous-direct-browser-access":"true"
       },
       body:JSON.stringify({
-        model:aktifModel(),
+        model:model,
         max_tokens:maxTokens||4000,
         system:sistem,
         output_config:{format:{type:"json_schema",schema:sema}},
@@ -743,7 +764,7 @@ function istekGovdesi(parcalar, sema, sistem, maxTokens, anahtar){
     method:"POST",
     headers:{"content-type":"application/json","x-goog-api-key":anahtar},
     body:JSON.stringify({
-      model:aktifModel(),
+      model:model,
       input:[{type:"text",text:sistem}].concat(parcalar.map(p=>p.gorsel
         ? {type:"image",data:p.gorsel,mime_type:"image/jpeg"}
         : {type:"text",text:p.metin})),
@@ -752,7 +773,7 @@ function istekGovdesi(parcalar, sema, sistem, maxTokens, anahtar){
   }};
 }
 
-async function hataMetni(yanit, sag){
+async function hataMetni(yanit, sag, model){
   let ek="";
   try{
     const h=await yanit.json();
@@ -765,11 +786,10 @@ async function hataMetni(yanit, sag){
   if(/API key not valid|API key expired|API_KEY_INVALID|api key is invalid/i.test(ek))
     return `Anahtar kabul edilmedi — ${sag.konsolAd}'den yeni bir anahtar al.`;
   if(yanit.status===429)
-    return "Kota ya da hız sınırına takıldı ("+aktifModel()+"). Günlük limit dolduysa "
-      +"Veri sekmesinden daha geniş kotalı bir model seçebilirsin."+(ek?" — "+ek:"");
+    return "Kota ya da hız sınırına takıldı ("+(model||aktifModel())+")."+(ek?" — "+ek:"");
   if(yanit.status===404||/not found|not supported|does not exist/i.test(ek))
-    return "Model bulunamadı ya da bu isteği desteklemiyor ("+aktifModel()
-      +"). Veri sekmesinden başka bir model dene."+(ek?" — "+ek:"");
+    return "Model bulunamadı ya da bu isteği desteklemiyor ("+(model||aktifModel())
+      +")."+(ek?" — "+ek:"");
   const on={401:"Anahtar kabul edilmedi", 403:"Bu anahtarın yetkisi yok",
             400:"İstek reddedildi",
             503:"Sunucu yoğun. Birkaç kez denedim, hepsi meşgul döndü - biraz bekleyip tekrar dene",
@@ -784,16 +804,14 @@ const uyu=ms=>new Promise(r=>setTimeout(r,ms));
    denemek yerine kendimiz deniyoruz. 4xx'lerin çoğu kalıcı, onları denemiyoruz. */
 const GECICI_DURUM=[408,429,500,502,503,504,529];
 
-async function yzIstek(parcalar, sema, sistem, maxTokens, ilerle){
-  const sag=aktifSag(), anahtar=apiAnahtar(sag);
-  if(!anahtar) throw new Error(sag.ad+" anahtarı girilmemiş");
-  const istek=istekGovdesi(parcalar,sema,sistem,maxTokens,anahtar);
+async function tekModelIstek(model, parcalar, sema, sistem, maxTokens, anahtar, sag, ilerle){
+  const istek=istekGovdesi(model,parcalar,sema,sistem,maxTokens,anahtar);
   const enFazla=3;
   for(let deneme=1;;deneme++){
     let yanit;
     try{ yanit=await fetch(istek.url,istek.ayar); }
     catch(e){
-      if(deneme<enFazla){ if(ilerle) ilerle(deneme+1,enFazla); await uyu(800*deneme); continue; }
+      if(deneme<enFazla){ if(ilerle) ilerle("Bağlanılamadı, yeniden deneniyor ("+(deneme+1)+"/"+enFazla+")"); await uyu(800*deneme); continue; }
       throw new Error("Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.");
     }
     if(yanit.ok){
@@ -801,15 +819,42 @@ async function yzIstek(parcalar, sema, sistem, maxTokens, ilerle){
       if(d.stop_reason==="refusal") throw new Error("Model bu fotoğrafı değerlendirmedi");
       return jsonAyikla(yanitMetni(d));
     }
+    /* 429 ve "model yok" durumlarını zincire bildiriyoruz: bu modelde
+       ısrar etmek yerine bir alttakine geçmek daha hızlı çözüm. */
+    if(yanit.status===429||yanit.status===404){
+      const hata=new Error(await hataMetni(yanit,sag,model));
+      hata.modelDegistir=true;
+      hata.gunlukKota=yanit.status===429;
+      throw hata;
+    }
     if(GECICI_DURUM.indexOf(yanit.status)>=0 && deneme<enFazla){
       /* sunucu ne kadar bekleneceğini söylüyorsa ona uy */
       const sonra=yanit.headers&&yanit.headers.get?+(yanit.headers.get("retry-after")||0):0;
-      if(ilerle) ilerle(deneme+1,enFazla);
+      if(ilerle) ilerle("Sunucu meşguldü, yeniden deneniyor ("+(deneme+1)+"/"+enFazla+")");
       await uyu(Math.max(sonra*1000, 900*Math.pow(2,deneme-1)));
       continue;
     }
-    throw new Error(await hataMetni(yanit,sag));
+    throw new Error(await hataMetni(yanit,sag,model));
   }
+}
+
+async function yzIstek(parcalar, sema, sistem, maxTokens, ilerle){
+  const sag=aktifSag(), anahtar=apiAnahtar(sag);
+  if(!anahtar) throw new Error(sag.ad+" anahtarı girilmemiş");
+  const zincir=modelZinciri();
+  let son=null;
+  for(let i=0;i<zincir.length;i++){
+    try{
+      return await tekModelIstek(zincir[i],parcalar,sema,sistem,maxTokens,anahtar,sag,ilerle);
+    }catch(e){
+      son=e;
+      if(!e.modelDegistir || i===zincir.length-1) throw e;
+      if(e.gunlukKota) kotayiIsaretle(zincir[i]);
+      if(ilerle) ilerle(modelAdi(zincir[i])+" kotası doldu, "+modelAdi(zincir[i+1])+" deneniyor");
+      await uyu(300);
+    }
+  }
+  throw son;
 }
 
 /* Claude metni content[] içinde; Gemini yanıtı adımlara bölüyor ve metin
@@ -842,10 +887,9 @@ function jsonAyikla(metin){
 
 /* Tek fotoğraf, ya da [önce, kalan] ikilisi. */
 /* Yeniden denerken kullanıcıyı boş ekranda bırakmamak için. */
-function ilerlemeYaz(deneme,toplam){
+function ilerlemeYaz(mesaj){
   const g=document.getElementById("modalBody");
-  if(g) g.innerHTML=`<h2>Fotoğraf inceleniyor</h2>
-    <p class="muted small">Sunucu meşguldü, yeniden deneniyor (${deneme}/${toplam}).</p>`;
+  if(g) g.innerHTML=`<h2>Hesaplanıyor</h2><p class="muted small">${mesaj}</p>`;
 }
 
 async function fotoAnaliz(gorseller, ek){
@@ -1919,10 +1963,14 @@ function renderData(){
       <p class="muted small" style="margin-top:8px">${aktifSag().ad} — ${aktifSag().ucretsiz}</p>
       <div class="filters" style="margin-top:8px">
         <select id="apiModel">
-          ${aktifSag().modeller.map(m=>`<option value="${m.id}" ${aktifModel()===m.id?"selected":""}>${m.ad}${m.not?" · "+m.not:""}</option>`).join("")}
+          ${aktifSag().modeller.map(m=>{
+            const dolu=(state.kotaDolu||{})[m.id]===gunKey();
+            const secili=((state.modeller||{})[state.saglayici]||aktifSag().varsayilanModel)===m.id;
+            return `<option value="${m.id}" ${secili?"selected":""}>${m.ad}${m.not?" · "+m.not:""}${dolu?" · bugün doldu":""}</option>`;
+          }).join("")}
         </select>
       </div>
-      <p class="muted small" style="margin-top:6px">Günlük limitin dolarsa daha geniş kotalı bir modele geç.
+      <p class="muted small" style="margin-top:6px">Buradan başlanır; kota dolarsa alttaki modele kendiliğinden geçilir.
         Kendi limitlerini <a href="https://aistudio.google.com/rate-limit" target="_blank" rel="noopener">AI Studio kota sayfasından</a> görebilirsin.</p>
       <div class="kv"><span>Anahtar</span><b>${apiAnahtar()?"kayıtlı":"yok"}</b></div>
       <div class="row" style="gap:8px;margin-top:12px">
