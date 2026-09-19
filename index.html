@@ -1271,7 +1271,13 @@ function bitirSor(){
     <button class="btn quiet" id="mDrop">Kaydetmeden çık</button>
     <button class="btn ghost" id="mBack">Vazgeç, devam et</button>`);
   const sv=document.getElementById("mSave"); if(sv) sv.onclick=()=>{ modalKapat(); kaydetVeBitir(); };
-  document.getElementById("mDrop").onclick=()=>{ modalKapat(); state.active=null; clearInterval(clockTimer); state.tab="home"; render(); toast("Antrenman kaydedilmedi"); };
+  document.getElementById("mDrop").onclick=async()=>{
+    modalKapat();
+    state.active=null; clearInterval(clockTimer);
+    /* Diskteki yarım seans kopyasını da sil; yoksa her yenilemede geri gelir. */
+    await saveAll();
+    state.tab="home"; render(); toast("Antrenman kaydedilmedi");
+  };
   document.getElementById("mBack").onclick=modalKapat;
 }
 
@@ -1936,7 +1942,12 @@ window.addEventListener("pagehide",()=>{ if(state.active) saveAll(); });
 
 (async()=>{
   await loadAll();
-  if(state.active) saatBaslat();   // yarım kalan antrenman sürüyor
+  if(state.active){
+    saatBaslat();
+    /* Sayaç kendiliğinden çalışıyor gibi görünmesin: neden sürdüğünü söyle. */
+    const gecen=Math.floor((Date.now()-state.active.baslangic)/60000);
+    setTimeout(()=>toast(`Yarım kalan antrenman sürüyor · ${gecen} dk önce başladı`),400);
+  }
   render();
 })();
 </script>
