@@ -419,7 +419,7 @@ const KEY="salonDefteri.v1";
 let state={tab:"home",sessions:[],meals:{},hedefProtein:150,besinTarih:null,arama:"",
   programs:[],active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
   kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null};
-let restTimer=null,restLeft=0,sayacBas=0,sayacBitti=null,clockTimer=null,kayitYeri="yok";
+let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,clockTimer=null,kayitYeri="yok";
 
 function lsGet(k){ try{ return window.localStorage ? localStorage.getItem(k) : null; }catch(e){ return null; } }
 function lsSet(k,v){ try{ if(window.localStorage){ localStorage.setItem(k,v); return true; } }catch(e){} return false; }
@@ -451,6 +451,14 @@ async function loadAll(){
     if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
     if(typeof d.otoDosya==="boolean") state.otoDosya=d.otoDosya;
     if(Array.isArray(d.programs)&&d.programs.length) state.programs=d.programs;
+    /* Yarım kalan antrenman. Sayfa yenilenirse (ekran döndürme, tarayıcının
+       sekmeyi bellekten atması, uygulamanın kapanıp açılması) kaldığı
+       yerden devam eder. 12 saatten eskiyse unutulur. */
+    if(d.aktif && d.aktif.baslangic && Date.now()-d.aktif.baslangic < 12*3600*1000){
+      state.active=d.aktif;
+      const n=(d.aktif.hareketler||[]).length;
+      state.exIndex=Math.max(0, Math.min(+d.aktifIndex||0, n-1));
+    }
   }catch(e){} }
   if(!state.programs.length) state.programs=varsayilanProgramlar();
   if(migrasyonYap()) await saveAll();
@@ -458,7 +466,8 @@ async function loadAll(){
 }
 async function saveAll(){
   const paket=JSON.stringify({v:3,otoDosya:state.otoDosya,hedefProtein:state.hedefProtein,
-    programs:state.programs,sessions:state.sessions,meals:state.meals});
+    programs:state.programs,sessions:state.sessions,meals:state.meals,
+    aktif:state.active,aktifIndex:state.exIndex});
   let ok=false;
   try{ if(window.storage){ await window.storage.set(KEY,paket); ok=true; } }catch(e){}
   if(lsSet(KEY,paket)) ok=true;
@@ -814,6 +823,7 @@ function renderWorkout(){
     satir.classList.add("done");
     satir.querySelector("[data-done]").textContent="✓";
     const kalan=kayit.setler.filter(x=>!x.done).length;
+    saveAll();
     startRest(h.mola, kalan>0?`Sonraki: ${exAd(h.ex)} · set ${i+2}`:"Bu hareket bitti");
   };
   setKutu.onclick=ev=>{
@@ -824,6 +834,7 @@ function renderWorkout(){
       st.done=false;
       b.closest(".setrow").classList.remove("done");
       b.textContent="○";
+      saveAll();
       return;
     }
     /* Plank gibi süreli hareketlerde tik önce sayacı başlatır; set, süre
@@ -847,19 +858,19 @@ function renderWorkout(){
     kayit.setler.push({kg:son.kg??null, tekrar:son.tekrar??null, done:false});
     const i=kayit.setler.length-1;
     setKutu.insertAdjacentHTML("beforeend", setSatiri(kayit.setler[i],i,h,birim));
-    setDurum();
+    setDurum(); saveAll();
   };
   /* Sondaki seti cikarir; en az bir set kalir. */
   setSilBtn.onclick=()=>{
     if(kayit.setler.length<=1) return;
     const cikan=kayit.setler.pop();
     setKutu.lastElementChild.remove();
-    setDurum();
+    setDurum(); saveAll();
     if(cikan.done) toast("İşaretli set çıkarıldı");
   };
-  document.getElementById("prevEx").onclick=()=>{ if(state.exIndex>0){state.exIndex--;renderWorkout();scrollTo(0,0);} };
+  document.getElementById("prevEx").onclick=()=>{ if(state.exIndex>0){state.exIndex--;saveAll();renderWorkout();scrollTo(0,0);} };
   document.getElementById("nextEx").onclick=()=>{
-    if(state.exIndex<s.hareketler.length-1){ state.exIndex++; renderWorkout(); scrollTo(0,0); }
+    if(state.exIndex<s.hareketler.length-1){ state.exIndex++; saveAll(); renderWorkout(); scrollTo(0,0); }
     else bitirSor();
   };
   document.getElementById("finish").onclick=bitirSor;
@@ -894,14 +905,21 @@ function startSession(prog){
     })
   };
   state.exIndex=0; state.tab="workout"; state.duzenle=null; state.secici=null; state.openEx=null;
+  saatBaslat();
+  render(); scrollTo(0,0);
+}
+
+/* Süre başlangıç anından hesaplanıyor, tik sayısından değil; uygulama arka
+   planda kalsa da geri dönünce doğru süreyi gösterir. */
+function saatBaslat(){
   clearInterval(clockTimer);
-  clockTimer=setInterval(()=>{
+  const yaz=()=>{
     if(!state.active) return;
     const el=document.getElementById("clock");
     if(el) el.textContent=mmss(Math.floor((Date.now()-state.active.baslangic)/1000));
-  },1000);
-  document.getElementById("clock").textContent="00:00";
-  render(); scrollTo(0,0);
+  };
+  yaz();
+  clockTimer=setInterval(yaz,1000);
 }
 
 function bitirSor(){
@@ -1110,21 +1128,25 @@ function ekleSheet(exId){
 /* --- DİNLENME VE SÜRE SAYACI --- */
 /* Aynı tam ekran sayaç iki iş görüyor: setler arası dinlenme, ve plank gibi
    süreli hareketlerde setin kendisi. Fark etiketlerde ve bitişte olanda. */
+/* Sayaç duvar saatine göre çalışır. Tarayıcı arka plandaki sekmenin
+   setInterval'ini kıstığında geri sayım kaymaz; uygulamaya dönünce doğru
+   değere atlar. Bitiş anı restBitis'te tutulur, tik sayısında değil. */
+function sayacCiz(){
+  const kalan=Math.max(0, Math.round((restBitis-Date.now())/1000));
+  document.getElementById("restNum").textContent=kalan;
+  if(kalan<=0) sayacKapat(true);
+}
 function sayacAc(tip,sn,not,bitince){
   sayacBitti=bitince||null;
   sayacBas=Date.now();
-  restLeft=sn;
+  restBitis=Date.now()+sn*1000;
   document.getElementById("restLbl").textContent = tip==="sure" ? "Süre" : "Dinlenme";
   document.getElementById("restSkip").textContent = tip==="sure" ? "Bitir" : "Devam et";
-  document.getElementById("restNum").textContent=restLeft;
   document.getElementById("restNext").textContent=not||"";
   document.getElementById("rest").classList.remove("hidden");
   clearInterval(restTimer);
-  restTimer=setInterval(()=>{
-    restLeft--;
-    document.getElementById("restNum").textContent=Math.max(restLeft,0);
-    if(restLeft<=0) sayacKapat(true);
-  },1000);
+  sayacCiz();
+  restTimer=setInterval(sayacCiz,250);
 }
 /* Geçen süreyi duvar saatinden ölçüyoruz; "+15 sn" ve erken bitirme
    ikisinde de gerçek süre kaydedilsin diye. */
@@ -1138,7 +1160,9 @@ function sayacKapat(suresiDoldu){
 function startRest(sn,not){ sayacAc("dinlenme",sn,not,null); }
 function startHold(sn,not,bitince){ sayacAc("sure",sn,not,bitince); }
 document.getElementById("restSkip").onclick=()=>sayacKapat(false);
-document.getElementById("restPlus").onclick=()=>{ restLeft+=15; document.getElementById("restNum").textContent=restLeft; };
+document.getElementById("restPlus").onclick=()=>{ restBitis+=15000; sayacCiz(); };
+/* Arka plandan dönünce sayaç beklemeden doğru değere atlasın. */
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden && restTimer) sayacCiz(); });
 
 /* --- HAREKET KATALOĞU --- */
 const ATIF=`<p class="attrib">Hareket görselleri © <a href="https://gymvisual.com/" target="_blank" rel="noopener">Gym visual</a> · veri: exercises-dataset (MIT)</p>`;
@@ -1444,7 +1468,15 @@ document.querySelectorAll("nav button").forEach(b=>{
     render(); scrollTo(0,0);
   };
 });
-(async()=>{ await loadAll(); render(); })();
+/* Uygulama arka plana alınırken ya da kapanırken yarım antrenmanı yaz. */
+document.addEventListener("visibilitychange",()=>{ if(document.hidden && state.active) saveAll(); });
+window.addEventListener("pagehide",()=>{ if(state.active) saveAll(); });
+
+(async()=>{
+  await loadAll();
+  if(state.active) saatBaslat();   // yarım kalan antrenman sürüyor
+  render();
+})();
 </script>
 <script>
 if ("serviceWorker" in navigator) {
