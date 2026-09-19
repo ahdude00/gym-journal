@@ -334,7 +334,7 @@ function varsayilanProgramlar(){
 const KEY="salonDefteri.v1";
 let state={tab:"home",sessions:[],meals:{},hedefProtein:150,besinTarih:null,
   programs:[],active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
-  kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false};
+  kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false,saglayici:"gemini"};
 let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,sayacTipi="dinlenme",clockTimer=null,kayitYeri="yok";
 
 function lsGet(k){ try{ return window.localStorage ? localStorage.getItem(k) : null; }catch(e){ return null; } }
@@ -367,6 +367,7 @@ async function loadAll(){
     if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
     if(typeof d.otoDosya==="boolean") state.otoDosya=d.otoDosya;
     if(typeof d.bildirim==="boolean") state.bildirim=d.bildirim;
+    if(d.saglayici&&SAGLAYICI[d.saglayici]) state.saglayici=d.saglayici;
     if(Array.isArray(d.programs)&&d.programs.length) state.programs=d.programs;
     /* Yarım kalan antrenman. Sayfa yenilenirse (ekran döndürme, tarayıcının
        sekmeyi bellekten atması, uygulamanın kapanıp açılması) kaldığı
@@ -382,7 +383,7 @@ async function loadAll(){
   if(kayitYeri==="yok" && lsSet(KEY+".test","1")) kayitYeri="telefon haf\u0131zas\u0131";
 }
 async function saveAll(){
-  const paket=JSON.stringify({v:3,otoDosya:state.otoDosya,bildirim:state.bildirim,hedefProtein:state.hedefProtein,
+  const paket=JSON.stringify({v:3,otoDosya:state.otoDosya,bildirim:state.bildirim,saglayici:state.saglayici,hedefProtein:state.hedefProtein,
     programs:state.programs,sessions:state.sessions,meals:state.meals,
     aktif:state.active,aktifIndex:state.exIndex});
   let ok=false;
@@ -591,18 +592,30 @@ function elleEkleSor(k){
 
 /* ==========================================================
    FOTOĞRAFTAN BESİN TAHMİNİ
-   Yemek fotoğrafı Claude'a gönderilip protein ve kalori tahmini alınır.
-   İstersen ikinci bir fotoğrafla (tabakta kalanlar) gerçekten ne kadar
-   yediğini hesaplatabilirsin. Tek çevrimiçi özellik; uygulamanın geri
-   kalanı çevrimdışı çalışmaya devam eder.
+   Yemek fotoğrafı bir görsel modele gönderilip protein ve kalori tahmini
+   alınır. İstersen ikinci bir fotoğrafla (tabakta kalanlar) gerçekten ne
+   kadar yediğini hesaplatabilirsin. Tek çevrimiçi özellik; uygulamanın
+   geri kalanı çevrimdışı çalışmaya devam eder.
 
-   API anahtarı ayrı bir localStorage kaydında durur: yedek dosyasına ve
+   İki sağlayıcı var. Gemini'nin ücretsiz katmanı olduğu için varsayılan;
+   Claude daha iyi sonuç veriyor ama kredi gerektiriyor. İkisi de aynı JSON
+   şemasını döndürüyor, üst katman aradaki farkı görmüyor.
+
+   API anahtarı ayrı localStorage kayıtlarında durur: yedek dosyasına ve
    uygulama verisine karışmaz. Uygulama statik bir sayfa olduğu için istek
-   tarayıcıdan doğrudan api.anthropic.com'a gider; anahtar cihazdan çıkmaz
-   ama cihazı paylaşan herkes erişebilir.
+   tarayıcıdan doğrudan sağlayıcıya gider; anahtar cihazdan çıkmaz ama
+   cihazı paylaşan herkes erişebilir.
    ========================================================== */
-const ANAHTAR_KEY="salonDefteri.apiKey";
-const apiAnahtar=()=>lsGet(ANAHTAR_KEY)||"";
+const SAGLAYICI={
+  gemini:{ ad:"Gemini", key:"salonDefteri.geminiKey", onek:/^AIza/,
+    konsol:"https://aistudio.google.com/apikey", konsolAd:"Google AI Studio",
+    ucretsiz:"ücretsiz katmanı var" },
+  claude:{ ad:"Claude", key:"salonDefteri.apiKey", onek:/^sk-ant-/,
+    konsol:"https://platform.claude.com/settings/keys", konsolAd:"Console → API keys",
+    ucretsiz:"kredi gerektirir" }
+};
+const aktifSag=()=>SAGLAYICI[state.saglayici]||SAGLAYICI.gemini;
+const apiAnahtar=sag=>lsGet((sag||aktifSag()).key)||"";
 
 const OLCEK_KURALI=`Porsiyonu gözünle tahmin etme. Fotoğrafta boyutu bilinen bir nesne ara ve onu ölçek olarak kullan. Öncelik sırası:
 1. Çatal, kaşık, bıçak (yemek kaşığı ve çatal ~19 cm, çay kaşığı ~13 cm)
@@ -643,13 +656,10 @@ function fotoSema(kalanVar){
   return {type:"object",properties:alan,required:gerekli};
 }
 
-/* Tek giriş noktası: hata mesajları burada anlaşılır hale getiriliyor. */
-async function claudeIstek(icerik, sema, sistem, maxTokens){
-  const anahtar=apiAnahtar();
-  if(!anahtar) throw new Error("API anahtarı girilmemiş");
-  let yanit;
-  try{
-    yanit=await fetch("https://api.anthropic.com/v1/messages",{
+/* Sağlayıcıdan bağımsız iç biçim: [{metin},{gorsel}] */
+function istekGovdesi(parcalar, sema, sistem, maxTokens, anahtar){
+  if(state.saglayici==="claude"){
+    return {url:"https://api.anthropic.com/v1/messages", ayar:{
       method:"POST",
       headers:{
         "content-type":"application/json",
@@ -664,46 +674,75 @@ async function claudeIstek(icerik, sema, sistem, maxTokens){
         max_tokens:maxTokens||4000,
         system:sistem,
         output_config:{format:{type:"json_schema",schema:sema}},
-        messages:[{role:"user",content:icerik}]
+        messages:[{role:"user",content:parcalar.map(p=>p.gorsel
+          ? {type:"image",source:{type:"base64",media_type:"image/jpeg",data:p.gorsel}}
+          : {type:"text",text:p.metin})}]
       })
-    });
-  }catch(e){
-    throw new Error("Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.");
+    }};
   }
-  if(!yanit.ok){
-    let ek="";
-    try{ const h=await yanit.json(); ek=(h.error&&h.error.message)||""; }catch(e){}
-    /* Kredi bitmesi en sık karşılaşılan durum ve çözümü anahtardan farklı:
-       anahtar geçerli, sadece bakiye yok. Ayrıca yakalayıp söylüyoruz. */
-    if(/credit balance/i.test(ek))
-      throw new Error("Anahtar geçerli ama hesapta kredi yok. Console → Plans & Billing'den kredi yükle.");
-    const on={401:"Anahtar kabul edilmedi",403:"Bu anahtarın yetkisi yok",
-              400:"İstek reddedildi",429:"Hız ya da kota sınırına takıldı",
-              529:"Sunucu meşgul, biraz sonra dene"}[yanit.status]
-              || ("API hatası "+yanit.status);
-    /* API'nin kendi açıklaması teşhis için en değerli bilgi, saklama */
-    throw new Error(on+(ek?" — "+ek:""));
-  }
+  /* Gemini: sistem istemi ilk metin parçası olarak gidiyor, ayrı alanı yok */
+  return {url:"https://generativelanguage.googleapis.com/v1beta/interactions", ayar:{
+    method:"POST",
+    headers:{"content-type":"application/json","x-goog-api-key":anahtar},
+    body:JSON.stringify({
+      model:"gemini-3.8-flash",
+      input:[{type:"text",text:sistem}].concat(parcalar.map(p=>p.gorsel
+        ? {type:"image",data:p.gorsel,mime_type:"image/jpeg"}
+        : {type:"text",text:p.metin})),
+      response_format:{type:"text",mime_type:"application/json",schema:sema}
+    })
+  }};
+}
+
+async function hataMetni(yanit, sag){
+  let ek="";
+  try{
+    const h=await yanit.json();
+    /* Gemini hatayı dizi içinde döndürebiliyor */
+    const g=Array.isArray(h)?h[0]:h;
+    ek=(g&&g.error&&g.error.message)||"";
+  }catch(e){}
+  if(/credit balance/i.test(ek))
+    return `Anahtar geçerli ama ${sag.ad} hesabında kredi yok.`;
+  if(/API key not valid|API key expired|API_KEY_INVALID|api key is invalid/i.test(ek))
+    return `Anahtar kabul edilmedi — ${sag.konsolAd}'den yeni bir anahtar al.`;
+  if(yanit.status===429)
+    return "Kota ya da hız sınırına takıldı, biraz sonra dene."+(ek?" — "+ek:"");
+  const on={401:"Anahtar kabul edilmedi", 403:"Bu anahtarın yetkisi yok",
+            400:"İstek reddedildi", 503:"Sunucu meşgul, biraz sonra dene",
+            529:"Sunucu meşgul, biraz sonra dene"}[yanit.status]
+            || ("API hatası "+yanit.status);
+  /* Sağlayıcının kendi açıklaması teşhis için en değerli bilgi, saklama */
+  return on+(ek?" — "+ek:"");
+}
+
+async function yzIstek(parcalar, sema, sistem, maxTokens){
+  const sag=aktifSag(), anahtar=apiAnahtar(sag);
+  if(!anahtar) throw new Error(sag.ad+" anahtarı girilmemiş");
+  const istek=istekGovdesi(parcalar,sema,sistem,maxTokens,anahtar);
+  let yanit;
+  try{ yanit=await fetch(istek.url,istek.ayar); }
+  catch(e){ throw new Error("Sunucuya ulaşılamadı. İnternet bağlantını kontrol et."); }
+  if(!yanit.ok) throw new Error(await hataMetni(yanit,sag));
   const d=await yanit.json();
   if(d.stop_reason==="refusal") throw new Error("Model bu fotoğrafı değerlendirmedi");
-  const metin=(d.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
+  const metin = state.saglayici==="claude"
+    ? (d.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("")
+    : (d.output_text||"");
   try{ return JSON.parse(metin); }
   catch(e){ throw new Error("Yanıt okunamadı"); }
 }
 
-const gorselBlok=b64=>({type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}});
-
 /* Tek fotoğraf, ya da [önce, kalan] ikilisi. */
 async function fotoAnaliz(gorseller){
   const kalanVar=gorseller.length>1;
-  const icerik=kalanVar
-    ? [{type:"text",text:"1. fotoğraf — yemekten önce:"}, gorselBlok(gorseller[0]),
-       {type:"text",text:"2. fotoğraf — yemekten sonra kalanlar:"}, gorselBlok(gorseller[1]),
-       {type:"text",text:"Yenen miktarın protein ve kalorisini tahmin et."}]
-    /* görsel metinden önce gelince daha iyi sonuç veriyor */
-    : [gorselBlok(gorseller[0]),
-       {type:"text",text:"Bu fotoğraftaki porsiyonun protein ve kalori miktarını tahmin et."}];
-  return claudeIstek(icerik, fotoSema(kalanVar), kalanVar?SISTEM_KALAN:SISTEM_TEK);
+  const parcalar=kalanVar
+    ? [{metin:"1. fotoğraf — yemekten önce:"}, {gorsel:gorseller[0]},
+       {metin:"2. fotoğraf — yemekten sonra kalanlar:"}, {gorsel:gorseller[1]},
+       {metin:"Yenen miktarın protein ve kalorisini tahmin et."}]
+    : [{gorsel:gorseller[0]},
+       {metin:"Bu fotoğraftaki porsiyonun protein ve kalori miktarını tahmin et."}];
+  return yzIstek(parcalar, fotoSema(kalanVar), kalanVar?SISTEM_KALAN:SISTEM_TEK);
 }
 
 /* Uzun kenarı 1024 px'e indirip JPEG'e çevirir: yemek fotoğrafı için
@@ -737,43 +776,41 @@ function fotoSec(){
 }
 
 function anahtarSor(){
+  const sag=aktifSag();
   modalAc(`
-    <h2>API anahtarı</h2>
-    <p class="muted small">Fotoğraf analizi Claude API kullanıyor. Anahtarı
-      <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">Console → API keys</a>'den
-      oluşturman gerekiyor. Claude aboneliği ya da Claude Code oturumu bunun yerine geçmiyor, ayrı bir şey.</p>
+    <h2>${sag.ad} anahtarı</h2>
+    <p class="muted small">Anahtarı
+      <a href="${sag.konsol}" target="_blank" rel="noopener">${sag.konsolAd}</a>'den alabilirsin (${sag.ucretsiz}).</p>
     <p class="muted small">Anahtar yalnızca bu cihazda saklanır; yedek dosyasına yazılmaz.</p>
-    <input class="text" type="password" id="aKey" placeholder="sk-ant-..." value="${apiAnahtar().replace(/"/g,"&quot;")}" style="margin-top:10px">
+    <input class="text" type="password" id="aKey" placeholder="${sag.onek.source.replace("^","")}..." value="${apiAnahtar(sag).replace(/"/g,"&quot;")}" style="margin-top:10px">
     <button class="btn" id="aKaydet">Kaydet</button>
     <button class="btn ghost" id="aVazgec">Vazgeç</button>`);
   document.getElementById("aKaydet").onclick=()=>{
     const v=document.getElementById("aKey").value.trim();
     if(!v){ toast("Anahtar boş"); return; }
-    lsSet(ANAHTAR_KEY,v);
+    lsSet(sag.key,v);
     modalKapat();
-    toast(/^sk-ant-/.test(v)?"Anahtar kaydedildi":"Kaydedildi ama biçim beklenenden farklı");
+    toast(sag.onek.test(v)?"Anahtar kaydedildi":"Kaydedildi ama biçim beklenenden farklı");
     if(state.tab==="data") renderData();
   };
   document.getElementById("aVazgec").onclick=modalKapat;
 }
 
-/* Anahtarı küçük bir istekle sınar; hata varsa API'nin kendi mesajını gösterir. */
+/* Anahtarı küçük bir istekle sınar; hata varsa sağlayıcının kendi mesajını gösterir. */
 async function baglantiSina(){
-  if(!apiAnahtar()){ anahtarSor(); return; }
-  modalAc(`<h2>Sınanıyor</h2><p class="muted small">api.anthropic.com'a küçük bir istek gönderiliyor.</p>`);
+  const sag=aktifSag();
+  if(!apiAnahtar(sag)){ anahtarSor(); return; }
+  modalAc(`<h2>Sınanıyor</h2><p class="muted small">${sag.ad}'a küçük bir istek gönderiliyor.</p>`);
   let govde;
   try{
-    await claudeIstek([{type:"text",text:"ping"}],
+    await yzIstek([{metin:"ping"}],
       {type:"object",properties:{ok:{type:"string"}},required:["ok"]},
       `Sadece {"ok":"evet"} döndür.`, 64);
-    govde=`<h2>Çalışıyor</h2><p class="muted small">Anahtar geçerli, bağlantı kuruldu.</p>`;
+    govde=`<h2>Çalışıyor</h2><p class="muted small">${sag.ad} anahtarı geçerli, bağlantı kuruldu.</p>`;
   }catch(e){
     govde=`<h2>Olmadı</h2><p class="muted small">${String(e.message||e)}</p>
       <p class="muted small" style="margin-top:8px">Anahtar
-        <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">Console → API keys</a>'den
-        oluşturulur; kredi
-        <a href="https://platform.claude.com/settings/billing" target="_blank" rel="noopener">Plans &amp; Billing</a>'den
-        yüklenir.</p>`;
+        <a href="${sag.konsol}" target="_blank" rel="noopener">${sag.konsolAd}</a>'den alınır.</p>`;
   }
   modalAc(govde+`
     <button class="btn quiet" id="sAnahtar">Anahtarı değiştir</button>
@@ -783,11 +820,11 @@ async function baglantiSina(){
 }
 
 function fotoHataSheet(e){
+  const sag=aktifSag();
   modalAc(`<h2>Olmadı</h2>
     <p class="muted small">${String(e.message||e)}</p>
-    <p class="attrib"><a href="https://platform.claude.com/settings/billing" target="_blank" rel="noopener">Plans &amp; Billing</a>
-      · <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">API keys</a></p>
-    <button class="btn quiet" id="fAnahtar">API anahtarını değiştir</button>
+    <p class="attrib"><a href="${sag.konsol}" target="_blank" rel="noopener">${sag.ad} anahtarları</a></p>
+    <button class="btn quiet" id="fAnahtar">Anahtarı değiştir</button>
     <button class="btn ghost" id="fKapat">Kapat</button>`);
   document.getElementById("fAnahtar").onclick=anahtarSor;
   document.getElementById("fKapat").onclick=modalKapat;
@@ -1662,7 +1699,11 @@ function renderData(){
     </div>
     <div class="card">
       <h3>Fotoğraf analizi</h3>
-      <p class="muted small">Yemek fotoğrafından protein ve kalori tahmini için Claude API anahtarı. Yalnızca bu cihazda saklanır, yedek dosyasına yazılmaz.</p>
+      <p class="muted small">Yemek fotoğrafından protein ve kalori tahmini. Anahtar yalnızca bu cihazda saklanır, yedek dosyasına yazılmaz.</p>
+      <div class="seg sm" style="margin-top:10px">
+        ${Object.keys(SAGLAYICI).map(k=>`<button data-sag="${k}" class="${state.saglayici===k?"on":""}">${SAGLAYICI[k].ad}</button>`).join("")}
+      </div>
+      <p class="muted small" style="margin-top:8px">${aktifSag().ad} — ${aktifSag().ucretsiz}</p>
       <div class="kv"><span>Anahtar</span><b>${apiAnahtar()?"kayıtlı":"yok"}</b></div>
       <div class="row" style="gap:8px;margin-top:12px">
         <button class="btn quiet sm" id="apiDuzenle">${apiAnahtar()?"Anahtarı değiştir":"Anahtar gir"}</button>
@@ -1697,6 +1738,9 @@ function renderData(){
   document.getElementById("back").onclick=()=>{ state.tab="home"; render(); };
   document.getElementById("apiDuzenle").onclick=anahtarSor;
   document.getElementById("apiSina").onclick=baglantiSina;
+  view.querySelectorAll("[data-sag]").forEach(b=>b.onclick=async()=>{
+    state.saglayici=b.dataset.sag; await saveAll(); renderData();
+  });
   document.getElementById("goProg2").onclick=()=>{ state.tab="programs"; render(); scrollTo(0,0); };
   document.getElementById("hedef").onchange=async e=>{ const v=+e.target.value; if(v>=50&&v<=400){ state.hedefProtein=v; await saveAll(); toast("Hedef "+v+" g olarak kaydedildi"); } };
   document.getElementById("tgl").onclick=async()=>{ state.otoDosya=!state.otoDosya; await saveAll(); renderData(); };
