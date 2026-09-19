@@ -775,7 +775,10 @@ function renderWorkout(){
       <div id="setler" style="margin-top:12px">
         ${kayit.setler.map((st,i)=>setSatiri(st,i,h,birim)).join("")}
       </div>
-      <button class="btn quiet sm" id="setEkle" style="margin-top:10px">+ Set ekle</button>
+      <div class="row" style="gap:8px;margin-top:10px">
+        <button class="btn quiet sm" id="setSil">− Set çıkar</button>
+        <button class="btn quiet sm" id="setEkle">+ Set ekle</button>
+      </div>
       ${e?`<details style="margin-top:12px"><summary class="muted small">Nasıl yapılır</summary>
         <ol class="steps small" style="margin-top:8px">${e.d.map(a=>`<li>${a}</li>`).join("")}</ol>
         ${o&&o.hatalar?`<h3 style="margin-top:12px">Sık yapılan hatalar</h3>
@@ -829,13 +832,27 @@ function renderWorkout(){
     }
     setiBitir(i,null);
   };
+  const setSilBtn=document.getElementById("setSil");
+  const setDurum=()=>{
+    document.getElementById("setPill").textContent=setEtiketi(kayit,h);
+    setSilBtn.disabled = kayit.setler.length<=1;
+  };
+  setDurum();
   document.getElementById("setEkle").onclick=()=>{
     if(kayit.setler.length>=20){ toast("Bir harekette en fazla 20 set"); return; }
     const son=kayit.setler[kayit.setler.length-1]||{};
     kayit.setler.push({kg:son.kg??null, tekrar:son.tekrar??null, done:false});
     const i=kayit.setler.length-1;
     setKutu.insertAdjacentHTML("beforeend", setSatiri(kayit.setler[i],i,h,birim));
-    document.getElementById("setPill").textContent=setEtiketi(kayit,h);
+    setDurum();
+  };
+  /* Sondaki seti cikarir; en az bir set kalir. */
+  setSilBtn.onclick=()=>{
+    if(kayit.setler.length<=1) return;
+    const cikan=kayit.setler.pop();
+    setKutu.lastElementChild.remove();
+    setDurum();
+    if(cikan.done) toast("İşaretli set çıkarıldı");
   };
   document.getElementById("prevEx").onclick=()=>{ if(state.exIndex>0){state.exIndex--;renderWorkout();scrollTo(0,0);} };
   document.getElementById("nextEx").onclick=()=>{
