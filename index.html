@@ -540,7 +540,6 @@ function renderFood(){
       <button class="btn" id="foto">Fotoğraftan ekle</button>
       <button class="btn quiet" id="elle">Elle ekle</button>
     </div>
-    <input type="file" accept="image/*" capture="environment" id="fotoInput" class="hidden">
 
     <div class="card" style="margin-top:12px">
       <h3>${gunAdi(k)} yedikleri</h3>
@@ -561,13 +560,9 @@ function renderFood(){
     await saveAll(); renderFood();
   });
   document.getElementById("elle").onclick=()=>elleEkleSor(k);
-  document.getElementById("foto").onclick=()=>{
+  document.getElementById("foto").onclick=async()=>{
     if(!apiAnahtar()){ anahtarSor(); return; }
-    document.getElementById("fotoInput").click();
-  };
-  document.getElementById("fotoInput").onchange=ev=>{
-    const f=ev.target.files[0];
-    ev.target.value="";               // aynı fotoğraf tekrar seçilebilsin
+    const f=await fotoSec();
     if(f) fotoSheet(f,k);
   };
 }
@@ -597,41 +592,115 @@ function elleEkleSor(k){
 /* ==========================================================
    FOTOĞRAFTAN BESİN TAHMİNİ
    Yemek fotoğrafı Claude'a gönderilip protein ve kalori tahmini alınır.
-   Tek çevrimiçi özellik; uygulamanın geri kalanı çevrimdışı çalışmaya
-   devam eder.
+   İstersen ikinci bir fotoğrafla (tabakta kalanlar) gerçekten ne kadar
+   yediğini hesaplatabilirsin. Tek çevrimiçi özellik; uygulamanın geri
+   kalanı çevrimdışı çalışmaya devam eder.
 
    API anahtarı ayrı bir localStorage kaydında durur: yedek dosyasına ve
-   uygulama verisine karışmaz. Uygulama statik bir sayfa olduğu için
-   anahtar tarayıcıdan doğrudan api.anthropic.com'a gider; anahtar senin
-   cihazından çıkmaz ama cihazı paylaşan herkes erişebilir.
+   uygulama verisine karışmaz. Uygulama statik bir sayfa olduğu için istek
+   tarayıcıdan doğrudan api.anthropic.com'a gider; anahtar cihazdan çıkmaz
+   ama cihazı paylaşan herkes erişebilir.
    ========================================================== */
 const ANAHTAR_KEY="salonDefteri.apiKey";
 const apiAnahtar=()=>lsGet(ANAHTAR_KEY)||"";
 
-const FOTO_SISTEM=`Sana gönderilen yemek fotoğrafındaki porsiyonun protein ve kalori miktarını tahmin ediyorsun.
-
-Porsiyonu gözünle tahmin etme. Fotoğrafta boyutu bilinen bir nesne ara ve onu ölçek olarak kullan. Öncelik sırası:
+const OLCEK_KURALI=`Porsiyonu gözünle tahmin etme. Fotoğrafta boyutu bilinen bir nesne ara ve onu ölçek olarak kullan. Öncelik sırası:
 1. Çatal, kaşık, bıçak (yemek kaşığı ve çatal ~19 cm, çay kaşığı ~13 cm)
 2. Tabak veya kase (yemek tabağı ~26 cm, kase ~15 cm çap)
 3. Bardak, kupa, kutu içecek (çay bardağı ~8 cm, kutu ~12 cm yükseklik)
 4. El veya parmak (yetişkin avuç içi ~10 cm, başparmak ~6 cm)
-Hangisini kullandığını "olcek" alanında yaz.
+Hangisini kullandığını "olcek" alanında yaz. Ölçek alınacak hiçbir nesne yoksa "olcek" alanına "ölçek nesnesi yok" yaz, tipik bir porsiyon varsay ve "guven" değerini "dusuk" yap.`;
 
-Ölçek alınacak hiçbir nesne yoksa "olcek" alanına "ölçek nesnesi yok" yaz, tipik bir porsiyon varsay ve "guven" değerini "dusuk" yap.
+const SISTEM_TEK=`Sana gönderilen yemek fotoğrafındaki porsiyonun protein ve kalori miktarını tahmin ediyorsun.
+
+${OLCEK_KURALI}
 
 Tabakta birden fazla yiyecek varsa hepsinin toplamını ver; "ad" alanına tabakta ne olduğunu kısaca yaz. Pişirme yağı, sos ve garnitürleri de hesaba kat.
 
 "not" alanına tahmini nasıl yaptığını bir cümleyle açıkla.`;
 
-const FOTO_SEMA={type:"object",properties:{
-  ad:{type:"string",description:"Yemeğin kısa adı"},
-  porsiyon:{type:"string",description:"Tahmini porsiyon, örn. '1 tabak, ~250 g'"},
-  olcek:{type:"string",description:"Ölçek olarak kullanılan nesne"},
-  protein_g:{type:"number"},
-  kalori:{type:"number"},
-  guven:{type:"string",enum:["yuksek","orta","dusuk"]},
-  not:{type:"string"}
-},required:["ad","porsiyon","olcek","protein_g","kalori","guven","not"]};
+const SISTEM_KALAN=`Sana aynı öğünün iki fotoğrafı gönderiliyor: birincisi yemeğe başlamadan önceki tabak, ikincisi yemekten sonra kalanlar.
+
+İkisini karşılaştır ve YENEN miktarın protein ve kalorisini ver - tabağın tamamını değil. Aynı öğün olduğu için ölçek iki fotoğrafta da aynıdır; önce birinci fotoğraftaki toplamı belirle, sonra ikincide ne kaldığını çıkar.
+
+${OLCEK_KURALI}
+
+Yenen oranı "yenen_yuzde" alanına yaz (0-100). Tabak boşaldıysa 100, hiç dokunulmadıysa 0.
+"ad" alanına yemeğin adını, "porsiyon" alanına yenen miktarı yaz (örn. "tabağın ~%70'i, ~220 g").
+"not" alanına iki fotoğrafı nasıl karşılaştırdığını bir cümleyle açıkla.`;
+
+function fotoSema(kalanVar){
+  const alan={
+    ad:{type:"string",description:"Yemeğin kısa adı"},
+    porsiyon:{type:"string",description:"Tahmini miktar"},
+    olcek:{type:"string",description:"Ölçek olarak kullanılan nesne"},
+    protein_g:{type:"number"}, kalori:{type:"number"},
+    guven:{type:"string",enum:["yuksek","orta","dusuk"]},
+    not:{type:"string"}
+  };
+  const gerekli=["ad","porsiyon","olcek","protein_g","kalori","guven","not"];
+  if(kalanVar){ alan.yenen_yuzde={type:"number",description:"Yenen oran, 0-100"}; gerekli.push("yenen_yuzde"); }
+  return {type:"object",properties:alan,required:gerekli};
+}
+
+/* Tek giriş noktası: hata mesajları burada anlaşılır hale getiriliyor. */
+async function claudeIstek(icerik, sema, sistem, maxTokens){
+  const anahtar=apiAnahtar();
+  if(!anahtar) throw new Error("API anahtarı girilmemiş");
+  let yanit;
+  try{
+    yanit=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        "x-api-key":anahtar,
+        "anthropic-version":"2023-06-01",
+        /* tarayıcıdan doğrudan çağrı için gerekli; bu başlık olmadan
+           istek CORS'a takılır ve sunucuya hiç ulaşmaz */
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
+      body:JSON.stringify({
+        model:"claude-opus-5",
+        max_tokens:maxTokens||4000,
+        system:sistem,
+        output_config:{format:{type:"json_schema",schema:sema}},
+        messages:[{role:"user",content:icerik}]
+      })
+    });
+  }catch(e){
+    throw new Error("Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.");
+  }
+  if(!yanit.ok){
+    let ek="";
+    try{ const h=await yanit.json(); ek=(h.error&&h.error.message)||""; }catch(e){}
+    const on={401:"Anahtar kabul edilmedi",403:"Bu anahtarın yetkisi yok",
+              400:"İstek reddedildi",429:"Hız ya da kota sınırına takıldı",
+              529:"Sunucu meşgul, biraz sonra dene"}[yanit.status]
+              || ("API hatası "+yanit.status);
+    /* API'nin kendi açıklaması teşhis için en değerli bilgi, saklama */
+    throw new Error(on+(ek?" — "+ek:""));
+  }
+  const d=await yanit.json();
+  if(d.stop_reason==="refusal") throw new Error("Model bu fotoğrafı değerlendirmedi");
+  const metin=(d.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
+  try{ return JSON.parse(metin); }
+  catch(e){ throw new Error("Yanıt okunamadı"); }
+}
+
+const gorselBlok=b64=>({type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}});
+
+/* Tek fotoğraf, ya da [önce, kalan] ikilisi. */
+async function fotoAnaliz(gorseller){
+  const kalanVar=gorseller.length>1;
+  const icerik=kalanVar
+    ? [{type:"text",text:"1. fotoğraf — yemekten önce:"}, gorselBlok(gorseller[0]),
+       {type:"text",text:"2. fotoğraf — yemekten sonra kalanlar:"}, gorselBlok(gorseller[1]),
+       {type:"text",text:"Yenen miktarın protein ve kalorisini tahmin et."}]
+    /* görsel metinden önce gelince daha iyi sonuç veriyor */
+    : [gorselBlok(gorseller[0]),
+       {type:"text",text:"Bu fotoğraftaki porsiyonun protein ve kalori miktarını tahmin et."}];
+  return claudeIstek(icerik, fotoSema(kalanVar), kalanVar?SISTEM_KALAN:SISTEM_TEK);
+}
 
 /* Uzun kenarı 1024 px'e indirip JPEG'e çevirir: yemek fotoğrafı için
    fazlasıyla yeterli, istek boyutunu ve görsel token maliyetini düşürür. */
@@ -653,82 +722,77 @@ function fotoKucult(dosya, uzunKenar=1024, kalite=0.8){
   });
 }
 
-async function fotoAnaliz(b64){
-  const anahtar=apiAnahtar();
-  if(!anahtar) throw new Error("API anahtarı girilmemiş");
-  const yanit=await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{
-      "content-type":"application/json",
-      "x-api-key":anahtar,
-      "anthropic-version":"2023-06-01",
-      /* tarayıcıdan doğrudan çağrı için gerekli */
-      "anthropic-dangerous-direct-browser-access":"true"
-    },
-    body:JSON.stringify({
-      model:"claude-opus-5",
-      max_tokens:4000,
-      system:FOTO_SISTEM,
-      output_config:{format:{type:"json_schema",schema:FOTO_SEMA}},
-      /* görsel metinden önce gelince daha iyi sonuç veriyor */
-      messages:[{role:"user",content:[
-        {type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},
-        {type:"text",text:"Bu fotoğraftaki porsiyonun protein ve kalori miktarını tahmin et."}
-      ]}]
-    })
+/* Kamera/galeri seçici. Kullanıcı hareketi içinde çağrılmalı. */
+function fotoSec(){
+  return new Promise(coz=>{
+    const inp=document.createElement("input");
+    inp.type="file"; inp.accept="image/*"; inp.capture="environment";
+    inp.onchange=()=>coz(inp.files&&inp.files[0]||null);
+    inp.click();
   });
-  if(!yanit.ok){
-    let ek="";
-    try{ const h=await yanit.json(); ek=(h.error&&h.error.message)||""; }catch(e){}
-    if(yanit.status===401) throw new Error("API anahtarı geçersiz");
-    if(yanit.status===429) throw new Error("Hız sınırına takıldı, biraz sonra dene");
-    throw new Error("API hatası "+yanit.status+(ek?": "+ek:""));
-  }
-  const d=await yanit.json();
-  if(d.stop_reason==="refusal") throw new Error("Model bu fotoğrafı değerlendirmedi");
-  const metin=(d.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
-  try{ return JSON.parse(metin); }
-  catch(e){ throw new Error("Yanıt okunamadı"); }
 }
 
 function anahtarSor(){
   modalAc(`
     <h2>API anahtarı</h2>
-    <p class="muted small">Fotoğraf analizi Claude API kullanıyor. Anahtarını
-      <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">Console</a>'dan alabilirsin.
-      Anahtar yalnızca bu cihazda saklanır; yedek dosyasına yazılmaz.</p>
+    <p class="muted small">Fotoğraf analizi Claude API kullanıyor. Anahtarı
+      <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">Console → API keys</a>'den
+      oluşturman gerekiyor. Claude aboneliği ya da Claude Code oturumu bunun yerine geçmiyor, ayrı bir şey.</p>
+    <p class="muted small">Anahtar yalnızca bu cihazda saklanır; yedek dosyasına yazılmaz.</p>
     <input class="text" type="password" id="aKey" placeholder="sk-ant-..." value="${apiAnahtar().replace(/"/g,"&quot;")}" style="margin-top:10px">
     <button class="btn" id="aKaydet">Kaydet</button>
     <button class="btn ghost" id="aVazgec">Vazgeç</button>`);
   document.getElementById("aKaydet").onclick=()=>{
     const v=document.getElementById("aKey").value.trim();
     if(!v){ toast("Anahtar boş"); return; }
-    lsSet(ANAHTAR_KEY,v); modalKapat(); toast("Anahtar kaydedildi");
+    lsSet(ANAHTAR_KEY,v);
+    modalKapat();
+    toast(/^sk-ant-/.test(v)?"Anahtar kaydedildi":"Kaydedildi ama biçim beklenenden farklı");
     if(state.tab==="data") renderData();
   };
   document.getElementById("aVazgec").onclick=modalKapat;
 }
 
-/* Fotoğrafı analiz edip sonucu düzenlenebilir olarak gösterir. */
-async function fotoSheet(dosya,gunK){
-  modalAc(`<h2>Fotoğraf inceleniyor</h2>
-    <p class="muted small">Porsiyon, fotoğraftaki bir referans nesneye göre ölçekleniyor. Birkaç saniye sürebilir.</p>`);
-  let sonuc;
+/* Anahtarı küçük bir istekle sınar; hata varsa API'nin kendi mesajını gösterir. */
+async function baglantiSina(){
+  if(!apiAnahtar()){ anahtarSor(); return; }
+  modalAc(`<h2>Sınanıyor</h2><p class="muted small">api.anthropic.com'a küçük bir istek gönderiliyor.</p>`);
+  let govde;
   try{
-    sonuc=await fotoAnaliz(await fotoKucult(dosya));
+    await claudeIstek([{type:"text",text:"ping"}],
+      {type:"object",properties:{ok:{type:"string"}},required:["ok"]},
+      `Sadece {"ok":"evet"} döndür.`, 64);
+    govde=`<h2>Çalışıyor</h2><p class="muted small">Anahtar geçerli, bağlantı kuruldu.</p>`;
   }catch(e){
-    modalAc(`<h2>Olmadı</h2>
-      <p class="muted small">${String(e.message||e)}</p>
-      <button class="btn quiet" id="fAnahtar">API anahtarını değiştir</button>
-      <button class="btn ghost" id="fKapat">Kapat</button>`);
-    document.getElementById("fAnahtar").onclick=anahtarSor;
-    document.getElementById("fKapat").onclick=modalKapat;
-    return;
+    govde=`<h2>Olmadı</h2><p class="muted small">${String(e.message||e)}</p>
+      <p class="muted small" style="margin-top:8px">Anahtar
+        <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">Console → API keys</a>'den
+        oluşturulur ve hesapta kredi olması gerekir.</p>`;
   }
+  modalAc(govde+`
+    <button class="btn quiet" id="sAnahtar">Anahtarı değiştir</button>
+    <button class="btn ghost" id="sKapat">Kapat</button>`);
+  document.getElementById("sAnahtar").onclick=anahtarSor;
+  document.getElementById("sKapat").onclick=modalKapat;
+}
+
+function fotoHataSheet(e){
+  modalAc(`<h2>Olmadı</h2>
+    <p class="muted small">${String(e.message||e)}</p>
+    <button class="btn quiet" id="fAnahtar">API anahtarını değiştir</button>
+    <button class="btn ghost" id="fKapat">Kapat</button>`);
+  document.getElementById("fAnahtar").onclick=anahtarSor;
+  document.getElementById("fKapat").onclick=modalKapat;
+}
+
+/* Sonucu düzenlenebilir gösterir. Kalan fotoğrafı henüz çekilmediyse
+   "Kalanını çek" ile ikinci fotoğraf istenip yenen miktar hesaplanır. */
+function fotoSonucSheet(sonuc, durum){
   const guvenTR={yuksek:"yüksek",orta:"orta",dusuk:"düşük"}[sonuc.guven]||sonuc.guven||"";
+  const yuzde=durum.kalanVar&&sonuc.yenen_yuzde!=null?Math.round(sonuc.yenen_yuzde):null;
   modalAc(`
-    <h2>Fotoğraftan</h2>
-    <p class="muted small">${sonuc.porsiyon||""}${guvenTR?" · güven "+guvenTR:""}</p>
+    <h2>${durum.kalanVar?"Yediğin kadarı":"Fotoğraftan"}</h2>
+    <p class="muted small">${yuzde!=null?"Tabağın ~%"+yuzde+"'i · ":""}${sonuc.porsiyon||""}${guvenTR?" · güven "+guvenTR:""}</p>
     <input class="text" id="fAd" value="${String(sonuc.ad||"").replace(/"/g,"&quot;")}" style="margin-top:10px">
     <div class="editgrid" style="grid-template-columns:1fr 1fr">
       <div><label>Protein (g)</label><input type="number" inputmode="decimal" id="fP" value="${Math.round((+sonuc.protein_g||0)*10)/10}"></div>
@@ -738,17 +802,41 @@ async function fotoSheet(dosya,gunK){
     ${sonuc.not?`<p class="muted small">${sonuc.not}</p>`:""}
     <p class="muted small">Tahmindir; yanlışsa üstünden düzelt.</p>
     <button class="btn" id="fEkle">Güne ekle</button>
+    ${durum.kalanVar?"":`<button class="btn quiet" id="fKalan">Hepsini yemediysen: kalanını çek</button>`}
     <button class="btn ghost" id="fIptal">Vazgeç</button>`);
+
   document.getElementById("fEkle").onclick=async()=>{
     const ad=document.getElementById("fAd").value.trim()||"Yemek";
     const pr=+document.getElementById("fP").value||0;
     const kal=+document.getElementById("fK").value||0;
     if(!pr&&!kal){ toast("Protein veya kalori gir"); return; }
-    if(!state.meals[gunK]) state.meals[gunK]=[];
-    state.meals[gunK].push({ad,por:sonuc.porsiyon||"1 porsiyon",p:pr,k:kal,adet:1});
+    if(!state.meals[durum.gunK]) state.meals[durum.gunK]=[];
+    state.meals[durum.gunK].push({ad,por:sonuc.porsiyon||"1 porsiyon",p:pr,k:kal,adet:1});
     await saveAll(); modalKapat(); renderFood(); toast(ad+" eklendi");
   };
+  const kalanBtn=document.getElementById("fKalan");
+  if(kalanBtn) kalanBtn.onclick=async()=>{
+    const dosya=await fotoSec();
+    if(!dosya) return;
+    modalAc(`<h2>Karşılaştırılıyor</h2>
+      <p class="muted small">Önceki fotoğrafla kalanlar birlikte değerlendiriliyor.</p>`);
+    try{
+      const kalanB64=await fotoKucult(dosya);
+      const iki=await fotoAnaliz([durum.oncekiB64, kalanB64]);
+      fotoSonucSheet(iki, Object.assign({},durum,{kalanVar:true}));
+    }catch(e){ fotoHataSheet(e); }
+  };
   document.getElementById("fIptal").onclick=modalKapat;
+}
+
+async function fotoSheet(dosya,gunK){
+  modalAc(`<h2>Fotoğraf inceleniyor</h2>
+    <p class="muted small">Porsiyon, fotoğraftaki bir referans nesneye göre ölçekleniyor. Birkaç saniye sürebilir.</p>`);
+  try{
+    const b64=await fotoKucult(dosya);
+    const sonuc=await fotoAnaliz([b64]);
+    fotoSonucSheet(sonuc,{gunK,oncekiB64:b64,kalanVar:false});
+  }catch(e){ fotoHataSheet(e); }
 }
 
 /* --- ANTRENMAN --- */
@@ -1568,7 +1656,10 @@ function renderData(){
       <h3>Fotoğraf analizi</h3>
       <p class="muted small">Yemek fotoğrafından protein ve kalori tahmini için Claude API anahtarı. Yalnızca bu cihazda saklanır, yedek dosyasına yazılmaz.</p>
       <div class="kv"><span>Anahtar</span><b>${apiAnahtar()?"kayıtlı":"yok"}</b></div>
-      <button class="btn quiet sm" id="apiDuzenle" style="margin-top:12px">${apiAnahtar()?"Anahtarı değiştir":"Anahtar gir"}</button>
+      <div class="row" style="gap:8px;margin-top:12px">
+        <button class="btn quiet sm" id="apiDuzenle">${apiAnahtar()?"Anahtarı değiştir":"Anahtar gir"}</button>
+        <button class="btn quiet sm" id="apiSina" ${apiAnahtar()?"":"disabled"}>Bağlantıyı sına</button>
+      </div>
     </div>
     <div class="card">
       <h3>Dinlenme bildirimi</h3>
@@ -1597,6 +1688,7 @@ function renderData(){
     </div>`;
   document.getElementById("back").onclick=()=>{ state.tab="home"; render(); };
   document.getElementById("apiDuzenle").onclick=anahtarSor;
+  document.getElementById("apiSina").onclick=baglantiSina;
   document.getElementById("goProg2").onclick=()=>{ state.tab="programs"; render(); scrollTo(0,0); };
   document.getElementById("hedef").onchange=async e=>{ const v=+e.target.value; if(v>=50&&v<=400){ state.hedefProtein=v; await saveAll(); toast("Hedef "+v+" g olarak kaydedildi"); } };
   document.getElementById("tgl").onclick=async()=>{ state.otoDosya=!state.otoDosya; await saveAll(); renderData(); };
