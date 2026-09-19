@@ -537,8 +537,9 @@ function renderFood(){
       <div class="row between small muted"><span>${t.p>=hedef?"Hedef tamam":yuvarla(hedef-t.p)+" g kaldı"}</span><span>${Math.round(t.k)} kcal</span></div>
     </div>
 
-    <div class="row" style="gap:8px">
-      <button class="btn" id="foto">Fotoğraftan ekle</button>
+    <button class="btn" id="foto">Fotoğraftan ekle</button>
+    <div class="row" style="gap:8px;margin-top:8px">
+      <button class="btn quiet" id="yaz">Yazarak ekle</button>
       <button class="btn quiet" id="elle">Elle ekle</button>
     </div>
 
@@ -561,6 +562,10 @@ function renderFood(){
     await saveAll(); renderFood();
   });
   document.getElementById("elle").onclick=()=>elleEkleSor(k);
+  document.getElementById("yaz").onclick=()=>{
+    if(!apiAnahtar()){ anahtarSor(); return; }
+    metinSheet(k);
+  };
   document.getElementById("foto").onclick=async()=>{
     if(!apiAnahtar()){ anahtarSor(); return; }
     const f=await fotoSec();
@@ -654,6 +659,22 @@ Yenen kısmı "kalemler" dizisinde yiyecek yiyecek de ayır; "protein_g" ve "kal
 ${NOT_KURALI}
 
 "not" alanına iki fotoğrafı nasıl karşılaştırdığını bir cümleyle açıkla.`;
+
+const SISTEM_METIN=`Kullanıcı ne yediğini yazıyor; protein ve kalori miktarını tahmin ediyorsun.
+
+Yazdığı miktar birimlerini esas al ("bir kase", "iki dilim", "bir avuç", "yarım tabak"). Türkiye'de tipik porsiyonlar:
+- yemek kaşığı ~15 g, çay bardağı ~100 ml, su bardağı ~200 ml
+- bir dilim ekmek ~25 g, bir kase çorba ~250 ml, bir avuç kuruyemiş ~30 g
+- bir porsiyon et/tavuk ~150 g, bir porsiyon pilav/makarna ~180 g, bir orta boy yumurta ~50 g
+
+Miktar hiç belirtilmemişse tipik bir porsiyon varsay ve "guven" değerini "dusuk" yap.
+"olcek" alanına neye dayandığını yaz (örn. "yazdığın miktarlar" ya da "tipik porsiyonlar").
+
+Yazdığı her yiyeceği "kalemler" dizisine ayrı ayrı koy: adı, varsaydığın porsiyonu, proteini ve kalorisi. "protein_g" ve "kalori" bu kalemlerin toplamı olmalı. "ad" alanına öğünün kısa adını yaz. Pişirme yağı ve sosları da hesaba kat.
+
+${NOT_KURALI}
+
+"not" alanına tahmini neye göre yaptığını bir cümleyle açıkla.`;
 
 function fotoSema(kalanVar){
   const alan={
@@ -819,6 +840,16 @@ async function fotoAnaliz(gorseller, ek){
   return yzIstek(parcalar, fotoSema(kalanVar), kalanVar?SISTEM_KALAN:SISTEM_TEK, null, ilerlemeYaz);
 }
 
+/* Fotoğrafsız yol: kullanıcı ne yediğini yazıyor. Şema ve sonuç ekranı
+   fotoğraftakiyle aynı, sadece görsel yerine metin gidiyor. */
+async function metinAnaliz(metin, ek){
+  ek=ek||{};
+  const parcalar=[{metin:"Bugün şunu yedim: "+metin}];
+  if(ek.onceki) parcalar.push({metin:"Önceki tahminin: "+JSON.stringify(ek.onceki)});
+  if(ek.duzeltme) parcalar.push({metin:"Kullanıcının düzeltmesi: "+ek.duzeltme});
+  return yzIstek(parcalar, fotoSema(false), SISTEM_METIN, null, ilerlemeYaz);
+}
+
 /* Uzun kenarı 1024 px'e indirip JPEG'e çevirir: yemek fotoğrafı için
    fazlasıyla yeterli, istek boyutunu ve görsel token maliyetini düşürür. */
 function fotoKucult(dosya, uzunKenar=1024, kalite=0.8){
@@ -914,7 +945,7 @@ function fotoSonucSheet(sonuc, durum){
   const kalemler=Array.isArray(sonuc.kalemler)?sonuc.kalemler:[];
   const yuzde=durum.kalanVar&&sonuc.yenen_yuzde!=null?Math.round(sonuc.yenen_yuzde):null;
   modalAc(`
-    <h2>${durum.kalanVar?"Yediğin kadarı":"Fotoğraftan"}</h2>
+    <h2>${durum.kalanVar?"Yediğin kadarı":(durum.metinMi?"Yazdığından":"Fotoğraftan")}</h2>
     <p class="muted small">${yuzde!=null?"Tabağın ~%"+yuzde+"'i · ":""}${sonuc.porsiyon||""}${guvenTR?" · güven "+guvenTR:""}</p>
     <input class="text" id="fAd" value="${String(sonuc.ad||"").replace(/"/g,"&quot;")}" style="margin-top:10px">
     <div class="editgrid" style="grid-template-columns:1fr 1fr">
@@ -924,12 +955,12 @@ function fotoSonucSheet(sonuc, durum){
     ${kalemler.length>1?`<p class="muted small" style="margin-top:12px">Neler var</p>
       ${kalemler.map(x=>`<div class="kv"><span>${x.ad}<br><span class="muted small">${x.porsiyon||""}</span></span>
         <b>${Math.round((+x.protein_g||0)*10)/10} g · ${Math.round(+x.kalori||0)} kcal</b></div>`).join("")}`:""}
-    <p class="muted small" style="margin-top:10px">Ölçek: ${sonuc.olcek||"—"}</p>
+    <p class="muted small" style="margin-top:10px">${durum.metinMi?"Dayanak":"Ölçek"}: ${sonuc.olcek||"—"}</p>
     ${sonuc.not?`<p class="muted small">${sonuc.not}</p>`:""}
-    ${durum.notu?`<p class="muted small">Notun: ${durum.notu}</p>`:""}
+    ${durum.notu?`<p class="muted small">${durum.metinMi?"Yazdığın":"Notun"}: ${durum.notu}</p>`:""}
     <button class="btn" id="fEkle">Güne ekle</button>
     <button class="btn quiet" id="fDuzelt">Tahmini düzelt</button>
-    ${durum.kalanVar?"":`<button class="btn quiet" id="fKalan">Hepsini yemediysen: kalanını çek</button>`}
+    ${(durum.kalanVar||durum.metinMi)?"":`<button class="btn quiet" id="fKalan">Hepsini yemediysen: kalanını çek</button>`}
     <button class="btn ghost" id="fIptal">Vazgeç</button>`);
 
   document.getElementById("fEkle").onclick=async()=>{
@@ -957,9 +988,9 @@ function fotoSonucSheet(sonuc, durum){
       if(!metin){ toast("Ne düzeltmeli?"); return; }
       modalAc(`<h2>Yeniden hesaplanıyor</h2><p class="muted small">Düzeltmen uygulanıyor.</p>`);
       try{
-        const gorseller=durum.kalanVar&&durum.kalanB64
-          ? [durum.oncekiB64,durum.kalanB64] : [durum.oncekiB64];
-        const yeni=await fotoAnaliz(gorseller,{not:durum.notu,onceki:sonuc,duzeltme:metin});
+        /* Kaynak ne olursa olsun (fotoğraf, iki fotoğraf, metin) aynı yerden
+           yeniden çalıştırılıyor; sayfa kaynağı bilmek zorunda değil. */
+        const yeni=await durum.yeniden({onceki:sonuc,duzeltme:metin});
         fotoSonucSheet(yeni,durum);
       }catch(e){ fotoHataSheet(e, ()=>fotoSonucSheet(sonuc,durum)); }
     };
@@ -976,10 +1007,35 @@ function fotoSonucSheet(sonuc, durum){
     try{
       const kalanB64=await fotoKucult(dosya);
       const iki=await fotoAnaliz([durum.oncekiB64, kalanB64],{not:durum.notu});
-      fotoSonucSheet(iki, Object.assign({},durum,{kalanVar:true,kalanB64}));
+      fotoSonucSheet(iki, Object.assign({},durum,{kalanVar:true,kalanB64,
+        yeniden:ek=>fotoAnaliz([durum.oncekiB64,kalanB64],Object.assign({not:durum.notu},ek))}));
     }catch(e){ fotoHataSheet(e, ()=>fotoSonucSheet(sonuc,durum)); }
   };
   document.getElementById("fIptal").onclick=modalKapat;
+}
+
+/* Fotoğrafsız giriş: ne yediğini yaz, gerisi fotoğraf yoluyla aynı. */
+function metinSheet(gunK){
+  modalAc(`
+    <h2>Ne yedin?</h2>
+    <p class="muted small">Gündelik dille yaz, miktarları belirtirsen tahmin daha isabetli olur.</p>
+    <input class="text" id="mYemek" placeholder="örn. iki dilim ekmek, bir kase yoğurt, bir avuç ceviz" style="margin-top:10px">
+    <p class="muted small" style="margin-top:8px">Örnekler: “bir tabak mercimek çorbası ve yarım ekmek” · “200 g ızgara tavuk, bir kase salata” · “iki yumurtalı omlet, zeytinyağında”</p>
+    <button class="btn" id="mHesapla">Hesapla</button>
+    <button class="btn ghost" id="mVaz">Vazgeç</button>`);
+  const calis=async()=>{
+    const metin=document.getElementById("mYemek").value.trim();
+    if(!metin){ toast("Ne yediğini yaz"); return; }
+    modalAc(`<h2>Hesaplanıyor</h2><p class="muted small">Yazdığın miktarlara göre tahmin ediliyor.</p>`);
+    try{
+      const sonuc=await metinAnaliz(metin);
+      fotoSonucSheet(sonuc,{gunK,metinMi:true,notu:metin,
+        yeniden:ek=>metinAnaliz(metin,ek)});
+    }catch(e){ fotoHataSheet(e, ()=>metinSheet(gunK)); }
+  };
+  document.getElementById("mHesapla").onclick=calis;
+  document.getElementById("mYemek").onkeydown=ev=>{ if(ev.key==="Enter") calis(); };
+  document.getElementById("mVaz").onclick=modalKapat;
 }
 
 /* Analizden önce not sorulur: fotoğrafta görünmeyen ama tahmini değiştiren
@@ -1004,7 +1060,8 @@ async function fotoSheet(dosya,gunK,notu){
   try{
     const b64=await fotoKucult(dosya);
     const sonuc=await fotoAnaliz([b64],{not:notu});
-    fotoSonucSheet(sonuc,{gunK,oncekiB64:b64,kalanVar:false,notu});
+    fotoSonucSheet(sonuc,{gunK,oncekiB64:b64,kalanVar:false,notu,
+      yeniden:ek=>fotoAnaliz([b64],Object.assign({not:notu},ek))});
   }catch(e){
     /* fotoğrafı yeniden çektirmeden aynı kareyle tekrar denesin */
     fotoHataSheet(e, ()=>fotoSheet(dosya,gunK,notu));
