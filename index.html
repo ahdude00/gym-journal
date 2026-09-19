@@ -495,13 +495,16 @@ function sonrakiProgram(){
   const i=state.programs.findIndex(p=>p.id===pid);
   return i<0 ? state.programs[0] : state.programs[(i+1)%state.programs.length];
 }
-function sonKayit(exId){
+/* Bir hareketin en son yapildigi antrenmandaki setleri ve o seansin tarihi. */
+function sonKayitBilgi(exId){
   for(let i=state.sessions.length-1;i>=0;i--){
-    const e=(state.sessions[i].kayitlar||[]).find(k=>k.id===exId);
-    if(e){ const d=e.setler.filter(s=>s.done); if(d.length) return d[d.length-1]; }
+    const s=state.sessions[i];
+    const e=(s.kayitlar||[]).find(k=>k.id===exId);
+    if(e&&e.setler){ const d=e.setler.filter(x=>x.done); if(d.length) return {setler:d,tarih:s.tarih}; }
   }
   return null;
 }
+function sonKayit(exId){ const b=sonKayitBilgi(exId); return b?b.setler[b.setler.length-1]:null; }
 function gunToplam(k){
   const l=state.meals[k]||[];
   return { p:l.reduce((a,x)=>a+x.p*x.adet,0), k:l.reduce((a,x)=>a+x.k*x.adet,0), n:l.length };
@@ -872,11 +875,22 @@ function startSession(prog){
     id:"s"+Date.now(), tarih:new Date().toISOString(),
     gun:prog.id, program:{id:prog.id,ad:prog.ad}, hareketler,
     baslangic:Date.now(), sure:0,
+    /* Gecen antrenmanda ne yaptiysan onunla basla: set sayisi, kilo ve
+       tekrar set set birebir tasinir. Programi o antrenmandan SONRA
+       duzenlediysen programdaki hedef gecerli olur. */
     kayitlar:hareketler.map(h=>{
-      const sk=sonKayit(h.ex), o=oneriOf(h.ex);
-      const kg = h.tip==="kg" ? (sk&&sk.kg!=null?sk.kg:(o.kg!=null?o.kg:null)) : null;
-      const tk = sk&&sk.tekrar!=null ? sk.tekrar : (o.tekrar!=null?o.tekrar:null);
-      return { id:h.ex, tip:h.tip, setler:Array.from({length:h.set},()=>({kg,tekrar:tk,done:false})) };
+      const onceki=sonKayitBilgi(h.ex), o=oneriOf(h.ex);
+      const gecmis = onceki ? onceki.setler : null;
+      /* Program duzenlemesi yalnizca SET SAYISINI belirler; kilo ve tekrar
+         her zaman gecen antrenmandan gelir. */
+      const programDahaYeni = prog.duzenlendi && (!onceki || prog.duzenlendi > Date.parse(onceki.tarih));
+      const adet = (gecmis && !programDahaYeni) ? gecmis.length : h.set;
+      return { id:h.ex, tip:h.tip, setler:Array.from({length:adet},(_,i)=>{
+        const ref = gecmis ? (gecmis[i]||gecmis[gecmis.length-1]) : null;
+        const kg = h.tip==="kg" ? (ref&&ref.kg!=null?ref.kg:(o.kg!=null?o.kg:null)) : null;
+        const tk = ref&&ref.tekrar!=null ? ref.tekrar : (o.tekrar!=null?o.tekrar:null);
+        return {kg,tekrar:tk,done:false};
+      })};
     })
   };
   state.exIndex=0; state.tab="workout"; state.duzenle=null; state.secici=null; state.openEx=null;
@@ -1029,7 +1043,11 @@ function hareketAyarSheet(p,i){
       h.mola=Math.max(0,Math.min(600,+sheet.querySelector("#aMola").value||60));
     };
     sheet.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ oku(); h.tip=b.dataset.t; ciz(); });
-    sheet.querySelector("#aOk").onclick=async()=>{ oku(); await saveAll(); modalKapat(); render(); };
+    sheet.querySelector("#aOk").onclick=async()=>{
+      oku();
+      p.duzenlendi=Date.now();   // program artik gecmisten daha yeni
+      await saveAll(); modalKapat(); render();
+    };
     sheet.querySelector("#aIptal").onclick=()=>{ Object.assign(h,snap); modalKapat(); };
   };
   ciz();
@@ -1078,6 +1096,7 @@ function ekleSheet(exId){
       const p=progById(secilen);
       if(!p){ toast("Program bulunamadı"); return; }
       p.hareketler.push({ex:exId,set:y.set,tekrar:y.tekrar,mola:y.mola,tip:y.tip});
+      p.duzenlendi=Date.now();
       await saveAll();
       modalKapat();
       toast(exAd(exId)+" → "+p.ad);
