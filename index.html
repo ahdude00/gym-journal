@@ -125,15 +125,7 @@ ul.warn{margin:0;padding-left:18px;color:var(--dim)} ul.warn li{margin-bottom:6p
 .editgrid label{display:block;font-size:11px;color:var(--dim);margin-bottom:4px}
 .editgrid input{font-size:18px;padding:8px 4px}
 
-/* besin listesi */
-.grup{font-family:var(--cond);font-size:15px;color:var(--dim);padding:14px 0 4px;border-top:1px solid var(--line);margin-top:6px}
-.grup:first-child{border-top:none;margin-top:0;padding-top:2px}
-.food{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;width:100%;text-align:left;padding:10px 0;border-top:1px solid rgba(46,58,68,.55)}
-.food b{font-weight:500;display:block}
-.food span.por{color:var(--dim);font-size:13px}
-.food .val{font-family:var(--cond);font-size:17px;font-variant-numeric:tabular-nums;text-align:right;min-width:52px}
-.food .val u{display:block;text-decoration:none;font-size:11px;color:var(--dim);font-family:var(--sans)}
-.food .add{width:34px;height:34px;border-radius:9px;background:var(--field);border:1px solid var(--line);font-size:19px;display:flex;align-items:center;justify-content:center;color:var(--brass)}
+/* beslenme kaydı */
 .logrow{display:grid;grid-template-columns:1fr auto 34px;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
 .logrow:first-of-type{border-top:none}
 .logrow .val{font-family:var(--cond);font-size:17px;font-variant-numeric:tabular-nums;text-align:right}
@@ -337,87 +329,10 @@ function varsayilanProgramlar(){
 }
 
 /* ==========================================================
-   2. BESİN TABLOSU  (p = protein g, k = kalori)
-   Değerler yaklaşıktır, ortalama pişmiş porsiyon üzerinden.
-   ========================================================== */
-const FOODS = [
-  // Et, tavuk, balık
-  {g:"Et, tavuk, balık", ad:"Tavuk göğsü", por:"100 g pişmiş", p:30, k:165},
-  {g:"Et, tavuk, balık", ad:"Tavuk but / kanat", por:"100 g pişmiş", p:25, k:210},
-  {g:"Et, tavuk, balık", ad:"Hindi göğsü", por:"100 g pişmiş", p:29, k:150},
-  {g:"Et, tavuk, balık", ad:"Dana biftek", por:"100 g pişmiş", p:26, k:250},
-  {g:"Et, tavuk, balık", ad:"Kıyma / köfte", por:"100 g pişmiş", p:20, k:260},
-  {g:"Et, tavuk, balık", ad:"Kuzu et", por:"100 g pişmiş", p:25, k:290},
-  {g:"Et, tavuk, balık", ad:"Ton balığı, suda", por:"1 kutu (80 g)", p:19, k:90},
-  {g:"Et, tavuk, balık", ad:"Somon", por:"150 g", p:32, k:300},
-  {g:"Et, tavuk, balık", ad:"Palamut / uskumru", por:"150 g", p:30, k:290},
-  {g:"Et, tavuk, balık", ad:"Hamsi", por:"150 g", p:29, k:190},
-  {g:"Et, tavuk, balık", ad:"Levrek / çipura", por:"150 g", p:31, k:200},
-  {g:"Et, tavuk, balık", ad:"Hindi füme / jambon", por:"4 dilim (40 g)", p:10, k:60},
-  {g:"Et, tavuk, balık", ad:"Sucuk", por:"50 g", p:12, k:190},
-
-  // Süt ve yoğurt
-  {g:"Süt ve yoğurt", ad:"Süzme yoğurt", por:"200 g", p:19, k:130},
-  {g:"Süt ve yoğurt", ad:"Normal yoğurt", por:"200 g", p:7, k:120},
-  {g:"Süt ve yoğurt", ad:"Süt, tam yağlı", por:"250 ml", p:8, k:155},
-  {g:"Süt ve yoğurt", ad:"Süt, yarım yağlı", por:"250 ml", p:8, k:120},
-  {g:"Süt ve yoğurt", ad:"Kefir", por:"250 ml", p:9, k:105},
-  {g:"Süt ve yoğurt", ad:"Ayran", por:"1 kutu (300 ml)", p:9, k:110},
-
-  // Peynir ve yumurta
-  {g:"Peynir ve yumurta", ad:"Yumurta", por:"1 adet", p:6.5, k:78},
-  {g:"Peynir ve yumurta", ad:"Beyaz peynir", por:"100 g", p:17, k:260},
-  {g:"Peynir ve yumurta", ad:"Lor peyniri", por:"100 g", p:14, k:100},
-  {g:"Peynir ve yumurta", ad:"Çökelek", por:"100 g", p:15, k:110},
-  {g:"Peynir ve yumurta", ad:"Kaşar peyniri", por:"1 dilim (30 g)", p:7.5, k:110},
-
-  // Baklagil ve sebze
-  {g:"Baklagil ve sebze", ad:"Mercimek çorbası", por:"1 kase", p:9, k:200},
-  {g:"Baklagil ve sebze", ad:"Kuru fasulye", por:"1 porsiyon", p:13, k:250},
-  {g:"Baklagil ve sebze", ad:"Nohut", por:"1 porsiyon", p:14, k:280},
-  {g:"Baklagil ve sebze", ad:"Mercimek yemeği", por:"1 porsiyon", p:12, k:230},
-  {g:"Baklagil ve sebze", ad:"Humus", por:"100 g", p:8, k:220},
-  {g:"Baklagil ve sebze", ad:"Mevsim salata", por:"1 porsiyon", p:2, k:60},
-  {g:"Baklagil ve sebze", ad:"Sebze yemeği (etli)", por:"1 porsiyon", p:15, k:280},
-
-  // Dışarıda yemek
-  {g:"Dışarıda yemek", ad:"Tavuk şiş porsiyon", por:"1 porsiyon", p:45, k:400},
-  {g:"Dışarıda yemek", ad:"Adana / urfa kebap", por:"1 porsiyon", p:35, k:550},
-  {g:"Dışarıda yemek", ad:"Izgara köfte", por:"1 porsiyon", p:30, k:390},
-  {g:"Dışarıda yemek", ad:"Tavuk dürüm", por:"1 adet", p:30, k:550},
-  {g:"Dışarıda yemek", ad:"İskender", por:"1 porsiyon", p:40, k:800},
-  {g:"Dışarıda yemek", ad:"Lahmacun", por:"1 adet", p:12, k:300},
-  {g:"Dışarıda yemek", ad:"Kıymalı pide", por:"1 adet", p:25, k:700},
-  {g:"Dışarıda yemek", ad:"Tost", por:"1 adet", p:15, k:350},
-  {g:"Dışarıda yemek", ad:"Hamburger", por:"1 adet", p:25, k:600},
-  {g:"Dışarıda yemek", ad:"Pizza", por:"2 dilim", p:18, k:550},
-
-  // Karbonhidrat
-  {g:"Karbonhidrat", ad:"Pirinç pilavı", por:"1 porsiyon (150 g)", p:4, k:250},
-  {g:"Karbonhidrat", ad:"Bulgur pilavı", por:"1 porsiyon (150 g)", p:5, k:200},
-  {g:"Karbonhidrat", ad:"Makarna", por:"1 porsiyon (200 g)", p:8, k:300},
-  {g:"Karbonhidrat", ad:"Ekmek", por:"1 dilim", p:4, k:130},
-  {g:"Karbonhidrat", ad:"Tam buğday ekmek", por:"1 dilim", p:4.5, k:120},
-  {g:"Karbonhidrat", ad:"Patates", por:"1 porsiyon (200 g)", p:4, k:180},
-  {g:"Karbonhidrat", ad:"Simit", por:"1 adet", p:8, k:280},
-  {g:"Karbonhidrat", ad:"Yulaf", por:"50 g", p:6.5, k:190},
-
-  // Atıştırmalık
-  {g:"Atıştırmalık", ad:"Badem", por:"30 g", p:6, k:175},
-  {g:"Atıştırmalık", ad:"Ceviz", por:"30 g", p:4.5, k:200},
-  {g:"Atıştırmalık", ad:"Fındık", por:"30 g", p:4.5, k:190},
-  {g:"Atıştırmalık", ad:"Fıstık ezmesi", por:"1 yemek kaşığı", p:5, k:120},
-  {g:"Atıştırmalık", ad:"Muz", por:"1 adet", p:1.5, k:105},
-  {g:"Atıştırmalık", ad:"Elma", por:"1 adet", p:0.5, k:80},
-  {g:"Atıştırmalık", ad:"Zeytin", por:"10 adet", p:1, k:60},
-  {g:"Atıştırmalık", ad:"Bal", por:"1 yemek kaşığı", p:0, k:65}
-];
-
-/* ==========================================================
    3. DURUM VE KAYIT
    ========================================================== */
 const KEY="salonDefteri.v1";
-let state={tab:"home",sessions:[],meals:{},hedefProtein:150,besinTarih:null,arama:"",
+let state={tab:"home",sessions:[],meals:{},hedefProtein:150,besinTarih:null,
   programs:[],active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
   kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false};
 let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,sayacTipi="dinlenme",clockTimer=null,kayitYeri="yok";
@@ -606,9 +521,6 @@ function renderFood(){
   const k=state.besinTarih||gunKey();
   const liste=state.meals[k]||[], t=gunToplam(k), hedef=state.hedefProtein;
   const oran=Math.min(100,Math.round(t.p/hedef*100));
-  const q=(state.arama||"").toLocaleLowerCase("tr");
-  const bulunan=FOODS.filter(f=>!q||f.ad.toLocaleLowerCase("tr").includes(q)||f.g.toLocaleLowerCase("tr").includes(q));
-  let gruplar=[]; bulunan.forEach(f=>{ if(!gruplar.includes(f.g)) gruplar.push(f.g); });
 
   document.getElementById("title").textContent="Beslenme";
   view.innerHTML=`
@@ -624,7 +536,9 @@ function renderFood(){
       <div class="row between small muted"><span>${t.p>=hedef?"Hedef tamam":yuvarla(hedef-t.p)+" g kaldı"}</span><span>${Math.round(t.k)} kcal</span></div>
     </div>
 
-    <div class="card">
+    <button class="btn" id="elle">+ Yemek ekle</button>
+
+    <div class="card" style="margin-top:12px">
       <h3>${gunAdi(k)} yedikleri</h3>
       ${liste.length? liste.map((x,i)=>`
         <div class="logrow">
@@ -632,62 +546,17 @@ function renderFood(){
           <span class="val">${yuvarla(x.p*x.adet)} g<br><span class="muted small" style="font-family:var(--sans)">${Math.round(x.k*x.adet)} kcal</span></span>
           <button class="del" data-sil="${i}">✕</button>
         </div>`).join("")
-      : `<p class="muted small" style="margin:6px 0 0">Bugün henüz bir şey eklemedin. Aşağıdaki tablodan + tuşuna bas.</p>`}
-    </div>
-
-    <div class="card">
-      <div class="row between" style="margin-bottom:10px"><h3>Besin tablosu</h3><button class="pill" id="elle">+ elle ekle</button></div>
-      <input type="search" class="text" id="ara" placeholder="Ara: tavuk, yoğurt, pilav..." value="${state.arama||""}">
-      <p class="muted small" style="margin:8px 0 0">Değerler ortalama porsiyon içindir, yaklaşıktır.</p>
-      <div style="margin-top:6px">
-        ${gruplar.map(g=>`<div class="grup">${g}</div>${bulunan.filter(f=>f.g===g).map(f=>`
-          <div class="food">
-            <span><b>${f.ad}</b><span class="por">${f.por}</span></span>
-            <span class="val">${f.p} g<u>${f.k} kcal</u></span>
-            <button class="add" data-ekle="${FOODS.indexOf(f)}">+</button>
-          </div>`).join("")}`).join("")}
-        ${bulunan.length?"":`<p class="muted small">Aramana uyan besin yok. "elle ekle" ile kendin girebilirsin.</p>`}
-      </div>
+      : `<p class="muted small" style="margin:6px 0 0">Bu güne henüz bir şey eklemedin.</p>`}
     </div>`;
 
-  const ara=document.getElementById("ara");
-  ara.oninput=()=>{ state.arama=ara.value; const p=ara.selectionStart; renderFood(); const y=document.getElementById("ara"); y.focus(); y.setSelectionRange(p,p); };
   document.getElementById("prevD").onclick=()=>{ state.besinTarih=gunKey(new Date(keyToDate(k).getTime()-864e5)); renderFood(); };
   document.getElementById("nextD").onclick=()=>{ if(k<gunKey()){ state.besinTarih=gunKey(new Date(keyToDate(k).getTime()+864e5)); renderFood(); } };
-  view.querySelectorAll("[data-ekle]").forEach(b=>b.onclick=()=>ekleSor(FOODS[+b.dataset.ekle],k));
   view.querySelectorAll("[data-sil]").forEach(b=>b.onclick=async()=>{
     state.meals[k].splice(+b.dataset.sil,1);
     if(!state.meals[k].length) delete state.meals[k];
     await saveAll(); renderFood();
   });
   document.getElementById("elle").onclick=()=>elleEkleSor(k);
-}
-
-function ekleSor(f,k){
-  modalAc(`
-    <h2>${f.ad}</h2>
-    <p class="muted small">${f.por} = ${f.p} g protein · ${f.k} kcal</p>
-    <div class="chips" id="chips">
-      ${[0.5,1,1.5,2,3].map(n=>`<button data-n="${n}" class="${n===1?"on":""}">${n}</button>`).join("")}
-    </div>
-    <p class="muted small" style="margin-top:8px">Kaç porsiyon?</p>
-    <div id="ozet" class="bignum" style="font-size:32px;margin:6px 0 2px">${f.p} <small>g protein · ${f.k} kcal</small></div>
-    <button class="btn" id="mEkle">Güne ekle</button>
-    <button class="btn ghost" id="mIptal">Vazgeç</button>`);
-  let adet=1;
-  const guncelle=()=>{ document.getElementById("ozet").innerHTML=`${yuvarla(f.p*adet)} <small>g protein · ${Math.round(f.k*adet)} kcal</small>`; };
-  document.querySelectorAll("#chips button").forEach(b=>b.onclick=()=>{
-    adet=+b.dataset.n;
-    document.querySelectorAll("#chips button").forEach(x=>x.classList.toggle("on",x===b));
-    guncelle();
-  });
-  document.getElementById("mEkle").onclick=async()=>{
-    if(!state.meals[k]) state.meals[k]=[];
-    state.meals[k].push({ad:f.ad,por:f.por,p:f.p,k:f.k,adet});
-    await saveAll(); modalKapat(); renderFood();
-    toast(`${f.ad} eklendi · +${yuvarla(f.p*adet)} g protein`);
-  };
-  document.getElementById("mIptal").onclick=modalKapat;
 }
 
 function elleEkleSor(k){
@@ -1608,7 +1477,7 @@ function dosyadanYukle(e){
 document.querySelectorAll("nav button").forEach(b=>{
   b.onclick=()=>{
     state.tab=b.dataset.tab;
-    state.openEx=null; state.besinTarih=null; state.arama="";
+    state.openEx=null; state.besinTarih=null;
     state.duzenle=null; state.secici=null;
     render(); scrollTo(0,0);
   };
