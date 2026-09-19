@@ -8,7 +8,7 @@
    ASSETS'i bastan indirir, activate eski cache'i siler. Aksi halde sunucu
    kapaliyken (ya da internet yokken) onceAg cache'e duser ve kullanici
    eski surumu gorur — guncelleme yapilmamis gibi. */
-const CORE  = 'salon-defteri-v4';   // v4: isinma/soguma bolumleri, 3 gunluk program
+const CORE  = 'salon-defteri-v5';   // v5: eliptik isinma, c003-c005 cizimleri
 const MEDYA = 'salon-defteri-medya-v2';   // c001/c002 gorselleri degisti
 const MEDYA_TAVAN = 600;   // bu sayiyi asinca en eski kayitlar atilir
 

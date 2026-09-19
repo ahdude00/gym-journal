@@ -361,9 +361,9 @@ const OVERLAY = {
     ipucu:"Ayaklarını sabitleme, tam oturma pozisyonuna kadar çıkma.",
     hatalar:["Ayakları sabitleyip kalçadan çekmek.","Boynu elle öne çekmek.","Hızlı ve sekerek yapmak."] },
   /* ---- ISINMA ---- */
-  "3672":{ tip:"sure", oneri:{tekrar:180},
+  "2141":{ tip:"sure", oneri:{tekrar:180},
     ipucu:"Nabzı yavaşça yukarı çek. Yarışmıyorsun; konuşabileceğin tempoda kal.",
-    hatalar:["Hızlı başlayıp ısınmayı antrenmana çevirmek.","Dizin ayak parmağını çok geçmesi.","Gövdeyi öne yıkmak."] },
+    hatalar:["Direnci yüksek açıp ısınmayı antrenmana çevirmek.","Tutamaklara asılıp gövdeyi öne yıkmak.","Omuzları kulaklara doğru kaldırmak."] },
   "c003":{ tip:"sure", oneri:{tekrar:40},
     ipucu:"Omurgayı uyandırır. Her yön 3-4 saniye sürsün, sallanma.",
     hatalar:["Hareketi sadece belden yapmak — boyun ve sırt üstü de katılmalı.","Hızlı gidip gelmek.","Ağrı sınırına kadar zorlamak."] },
@@ -484,7 +484,7 @@ function fazGruplari(liste){
    okur ve çalışma ağırlığını unuturdu. */
 function isinmaBolumu(){
   return [
-    {ex:"3672",set:1,tekrar:"180",mola:20,tip:"sure",faz:"isinma"},
+    {ex:"2141",set:1,tekrar:"180",mola:20,tip:"sure",faz:"isinma"},
     {ex:"c003",set:1,tekrar:"40", mola:15,tip:"sure",faz:"isinma"},
     {ex:"1362",set:2,tekrar:"20", mola:15,tip:"sure",faz:"isinma"},
     {ex:"c004",set:2,tekrar:"10", mola:15,tip:"vucut",faz:"isinma"},
@@ -1505,7 +1505,7 @@ function renderWorkout(){
         <div class="stage-cap"><span>${e?kasTR(e.t):""}</span><span>${e?ekipTR(e.q):""}</span></div>
       </div>
       <div class="row between" style="margin-top:12px"><h2>${exAd(h.ex)}</h2><span class="pill" id="setPill">${setEtiketi(kayit,h)}</span></div>
-      <p class="muted small" style="margin-top:4px">${o&&o.ipucu?o.ipucu:(e?bolgeTR(e.c):"")}${sk?" · Geçen sefer: "+(sk.kg?sk.kg+" kg × ":"")+sk.tekrar+" "+birim:" · Kutularda başlangıç önerisi var"}</p>
+      <p class="muted small" style="margin-top:4px">${o&&o.ipucu?o.ipucu:(e?bolgeTR(e.c):"")}${sk?" · Geçen sefer: "+(sk.kg?sk.kg+" kg × ":"")+sk.tekrar+" "+birim:" · İlk kez yapıyorsun — kutulardaki sayılar öneri, değiştirebilirsin"}</p>
       <div id="setler" style="margin-top:12px">
         ${kayit.setler.map((st,i)=>setSatiri(st,i,h,birim)).join("")}
       </div>

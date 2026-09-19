@@ -11,12 +11,17 @@
    Kareleri çıkaran betik: tools/ozel-gif-uret.py
    Medya © Gym visual — dataset medyasından türetilmiştir, atıf aynen geçerli.
 
-   B) Görselsiz duruş hareketleri (c003, c004, c005)
-   Isınma ve soğuma bölümünün üç hareketi dataset'te hiç yok ve pozlarını
-   İÇEREN bir hareket de yok — yani c001/c002'deki gibi kare çıkarılamıyor.
-   Benzemeyen bir hareketin karesini koymak yanıltıcı olurdu; bu yüzden
-   m:null bırakıldı. Uygulama medyasız kayıtta görsel yerine adımları
-   öne çıkaran bir yer tutucu gösteriyor (bkz. sahneIc / plakaIc).
+   B) Çöp adam çizimi olanlar (c003, c004, c005)
+   Bu üç hareket dataset'te hiç yok ve pozlarını İÇEREN bir hareket de yok,
+   yani yukarıdaki gibi kare çıkarılamıyor. 1324 hareket hem isim hem Türkçe
+   adım metni üzerinden tarandı: kedi-deve, duvarda kol kaydırma ve çene
+   içeri çekme geçmiyor; boyun bölgesinde yalnızca iki yana esnetme var.
+   Benzemeyen bir hareketin karesini koymak yanıltıcı olurdu, o yüzden
+   hareketi doğru anlatan sade çöp adam animasyonları çizildi.
+
+   Çizen betik: tools/cop-adam-uret.py
+   DİKKAT: bu üç dosya tamamen o betikte üretiliyor, dataset medyasından
+   türetilmemiştir — Gym visual atıfı c003/c004/c005 için geçerli DEĞİLDİR.
 
    Görseller: images/{id}-{m}.jpg ve videos/{id}-{m}.gif
    Bu dosya data/exercises.js'ten SONRA yüklenir ve ona eklenir;
@@ -61,7 +66,7 @@
       q: "body weight",
       t: "spine",
       s: ["abs", "upper back"],
-      m: null,
+      m: "custom",
       d: [
         "Dört ayak üstüne gel: eller omuz altında, dizler kalça altında.",
         "Nefes verirken sırtını kedi gibi yukarı yuvarla, çeneyi göğse yaklaştır.",
@@ -77,7 +82,7 @@
       q: "body weight",
       t: "upper back",
       s: ["delts", "traps"],
-      m: null,
+      m: "custom",
       d: [
         "Sırtın duvarda dur; topuklar duvardan 10-15 cm açıkta olsun.",
         "Bel, sırtın üstü ve başın arkası duvara değsin — çeneyi hafif içeri çek.",
@@ -93,7 +98,7 @@
       q: "body weight",
       t: "levator scapulae",
       s: [],
-      m: null,
+      m: "custom",
       d: [
         "Sırtüstü yat, dizler bükülü, ayaklar yerde. Baş yerde, yüz tavana baksın.",
         "Çeneni içeri çek — aşağı eğme, geriye kaydır. Ense dibinin uzadığını hisset.",

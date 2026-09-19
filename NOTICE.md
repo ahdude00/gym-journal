@@ -32,6 +32,22 @@ required, obtain your own license directly from Gym visual. **This repository
 does not grant you any rights to the media beyond what Gym visual's terms
 allow** — cloning this repo is not a license.
 
+## Custom records (`c001`–`c005`)
+
+Five exercises have no record of their own in the dataset and are added by
+[`data/custom.js`](data/custom.js). They fall into two groups:
+
+- **`c001`, `c002` — derived from Gym visual media.** Their poses occur *inside*
+  other dataset animations, so the frames were extracted from those
+  (`tools/ozel-gif-uret.py`). These remain **© Gym visual** and everything above
+  applies to them unchanged.
+- **`c003`, `c004`, `c005` — original drawings.** Cat-cow, wall slide and chin
+  tuck do not appear anywhere in the dataset, and no dataset animation contains
+  their poses, so no frame could be extracted. They are drawn from scratch as
+  stick figures by [`tools/cop-adam-uret.py`](tools/cop-adam-uret.py).
+  **These three are not Gym visual media and the notice above does not apply to
+  them.**
+
 ## Dataset (non-media)
 
 The exercise **data** (names, categories, body parts, equipment, targets,
