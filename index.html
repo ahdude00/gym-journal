@@ -356,6 +356,16 @@ summary{cursor:pointer}
   padding:11px 0;border-top:1px solid var(--line)}
 .logrow:first-of-type{border-top:none}
 .logrow .val{font-family:var(--cond);font-size:17px;font-variant-numeric:tabular-nums;text-align:right}
+/* Fotoğraf seçici ve döküm sayfasındaki küçük resimler */
+.fotogrid{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.fotokare{position:relative;width:74px;height:74px;border-radius:var(--r-s);overflow:hidden;
+  border:1px solid var(--line);background:var(--field);flex:none}
+.fotokare img{width:100%;height:100%;object-fit:cover;display:block}
+.fotokare .etiket{position:absolute;left:0;right:0;bottom:0;padding:2px 4px;font-size:10px;
+  text-align:center;background:rgba(0,0,0,.55);color:#fff}
+.fotosil{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;
+  background:rgba(0,0,0,.62);color:#fff;font-size:12px;line-height:1;
+  display:flex;align-items:center;justify-content:center}
 .logrow .lgrad{text-align:left;background:none;border:none;color:inherit;padding:0;width:100%;min-width:0}
 .logrow .lgrad b{font-weight:500}
 .logrow .del{width:34px;height:34px;border-radius:var(--r-s);background:var(--field);border:1px solid var(--line);
@@ -1130,52 +1140,79 @@ function renderFood(){
   document.getElementById("prevD").onclick=()=>{ state.besinTarih=gunKey(new Date(keyToDate(k).getTime()-864e5)); renderFood(); };
   document.getElementById("nextD").onclick=()=>{ if(k<gunKey()){ state.besinTarih=gunKey(new Date(keyToDate(k).getTime()+864e5)); renderFood(); } };
   view.querySelectorAll("[data-sil]").forEach(b=>b.onclick=async()=>{
-    state.meals[k].splice(+b.dataset.sil,1);
+    const [cikan]=state.meals[k].splice(+b.dataset.sil,1);
+    if(cikan) await fotoSil(cikan.id);   /* fotoğrafları da bırakma */
     if(!state.meals[k].length) delete state.meals[k];
     await saveAll(); renderFood();
   });
-  view.querySelectorAll("[data-duz]").forEach(b=>b.onclick=()=>ogunDuzenleSheet(k,+b.dataset.duz));
+  view.querySelectorAll("[data-duz]").forEach(b=>b.onclick=()=>ogunDetaySheet(k,+b.dataset.duz));
   document.getElementById("elle").onclick=()=>elleEkleSor(k);
   document.getElementById("yaz").onclick=()=>{
     if(!apiAnahtar()){ anahtarSor(); return; }
     metinSheet(k);
   };
-  document.getElementById("foto").onclick=async()=>{
+  document.getElementById("foto").onclick=()=>{
     if(!apiAnahtar()){ anahtarSor(); return; }
-    const f=await fotoSec();
-    if(f) fotoNotSheet(f,k);
+    fotoBasla(k);
   };
 }
 
-/* Eklenmiş bir besin kaydını düzeltme. Protein ve kalori TEK porsiyon için
-   tutuluyor, gün toplamı bunları adet ile çarpıyor (bkz. gunToplam) - bu
-   ayrım arayüzde söylenmezse adet alanı yanıltıcı olur. */
-function ogunDuzenleSheet(gunK,i){
+/* Bir besin kaydının ayrıntısı: analizden gelen kalem dökümü, fotoğraflar
+   ve düzenleme alanları tek sayfada. Döküm eskiden yalnızca güne eklemeden
+   önce görünüyor, kayda yazılmadığı için sonra kayboluyordu.
+   Protein ve kalori TEK porsiyon için tutuluyor, gün toplamı bunları adet
+   ile çarpıyor (bkz. gunToplam) - bu ayrım söylenmezse adet yanıltıcı olur. */
+async function ogunDetaySheet(gunK,i){
   const liste=state.meals[gunK]||[], x=liste[i];
   if(!x) return;
+  const kayitli=x.foto?await fotoGetir(x.id):null;
+  const kalemler=Array.isArray(x.kalemler)?x.kalemler:[];
+  const guvenTR={yuksek:"yüksek",orta:"orta",dusuk:"düşük"}[x.guven]||"";
+  const adet=x.adet||1;
+  const fotolar=[];
+  if(kayitli){
+    (kayitli.oncekiler||[]).forEach(b=>fotolar.push({b,etiket:"önce"}));
+    (kayitli.kalanlar||[]).forEach(b=>fotolar.push({b,etiket:"kalan"}));
+  }
   modalAc(`
-    <h2>Kaydı düzenle</h2>
-    <p class="muted small">${gunAdi(gunK)} · ${x.por||"1 porsiyon"}</p>
-    <input class="text" id="dAd" value="${String(x.ad||"").replace(/"/g,"&quot;")}" style="margin:10px 0 4px">
+    <h2>${x.ad}</h2>
+    <p class="muted small">${gunAdi(gunK)} · ${adet===1?(x.por||"1 porsiyon"):adet+" × "+(x.por||"porsiyon")}${guvenTR?" · güven "+guvenTR:""}</p>
+    ${fotolar.length?`<div class="fotogrid">${fotolar.map(f=>`
+      <div class="fotokare"><img src="data:image/jpeg;base64,${f.b}" alt="">
+        <span class="etiket">${f.etiket}</span></div>`).join("")}</div>`:""}
+    ${(x.foto&&!kayitli)?`<p class="muted small" style="margin-top:12px">Fotoğraflar yalnızca aynı gün saklanıyor; bu kaydınkiler silinmiş.</p>`:""}
+    ${kalemler.length?`<p class="muted small" style="margin:14px 0 2px">Neler var</p>
+      ${kalemler.map(y=>`<div class="kv"><span>${y.ad}<br><span class="muted small">${y.porsiyon||""}</span></span>
+        <b>${yuvarla(+y.p||0)} g · ${Math.round(+y.k||0)} kcal</b></div>`).join("")}`:""}
+    ${x.olcek?`<p class="muted small" style="margin-top:10px">Ölçek: ${x.olcek}</p>`:""}
+    ${x.aciklama?`<p class="muted small">${x.aciklama}</p>`:""}
+    ${x.notu?`<p class="muted small">Notun: ${x.notu}</p>`:""}
+    <p class="muted small" style="margin:16px 0 4px">Düzenle</p>
+    <input class="text" id="dAd" value="${String(x.ad||"").replace(/"/g,"&quot;")}">
     <div class="editgrid">
       <div><label>Protein (g)</label><input type="number" inputmode="decimal" id="dP" value="${x.p}"></div>
       <div><label>Kalori</label><input type="number" inputmode="numeric" id="dK" value="${x.k}"></div>
-      <div><label>Adet</label><input type="number" inputmode="numeric" id="dAdet" value="${x.adet||1}"></div>
+      <div><label>Adet</label><input type="number" inputmode="numeric" id="dAdet" value="${adet}"></div>
     </div>
     <p class="muted small" style="margin-top:8px">Protein ve kalori tek porsiyon içindir; gün toplamına adetle çarpılarak girer.</p>
     <button class="btn" id="dKaydet">Kaydet</button>
+    ${(kayitli&&(kayitli.oncekiler||[]).length)?`<button class="btn quiet" id="dKalan">Hepsini yemediysen: kalanını çek</button>`:""}
     <button class="btn danger" id="dSil">Bu kaydı sil</button>
     <button class="btn ghost" id="dVaz">Vazgeç</button>`);
   document.getElementById("dKaydet").onclick=async()=>{
     const ad=document.getElementById("dAd").value.trim()||"Diğer";
     const pr=+document.getElementById("dP").value||0;
     const kal=+document.getElementById("dK").value||0;
-    const adet=Math.max(1,Math.min(99,+document.getElementById("dAdet").value||1));
+    const yeniAdet=Math.max(1,Math.min(99,+document.getElementById("dAdet").value||1));
     if(!pr&&!kal){ toast("Protein veya kalori gir"); return; }
-    Object.assign(x,{ad,p:pr,k:kal,adet});
+    Object.assign(x,{ad,p:pr,k:kal,adet:yeniAdet});
     await saveAll(); modalKapat(); renderFood(); toast("Kayıt güncellendi");
   };
+  const kalanBtn=document.getElementById("dKalan");
+  if(kalanBtn) kalanBtn.onclick=()=>kalanAkisi(gunK, kayitli.oncekiler, x.notu,
+    x.id, x.ad, ()=>ogunDetaySheet(gunK,i));
   document.getElementById("dSil").onclick=async()=>{
+    await fotoSil(x.id);
     liste.splice(i,1);
     if(!liste.length) delete state.meals[gunK];
     await saveAll(); modalKapat(); renderFood(); toast("Kayıt silindi");
@@ -1288,15 +1325,22 @@ const SISTEM_TEK=`Sana gönderilen yemek fotoğrafındaki porsiyonun protein ve 
 
 ${OLCEK_KURALI}
 
-Tabaktaki her yiyeceği "kalemler" dizisine ayrı ayrı yaz: adı, tahmini porsiyonu, proteini ve kalorisi. Tek bir yiyecek varsa da tek elemanlı dizi ver. "protein_g" ve "kalori" alanları kalemlerin toplamı olmalı. "ad" alanına tabakta ne olduğunu kısaca yaz. Pişirme yağı, sos ve garnitürleri de hesaba kat.
+Birden fazla fotoğraf gönderilebilir ve hepsi AYNI öğüne aittir:
+- Fotoğraflar farklı yiyecekleri ya da farklı tabakları gösteriyorsa hepsini TOPLA.
+- Aynı yiyeceğin farklı açılardan çekilmiş halleriyse BİR KEZ say, iki kez ekleme.
+Hangisini yaptığını "not" alanında açıkça söyle.
+
+Tabaktaki her yiyeceği "kalemler" dizisine ayrı ayrı yaz: adı, tahmini porsiyonu (gram olarak da belirt), proteini ve kalorisi. Tek bir yiyecek varsa da tek elemanlı dizi ver. "protein_g" ve "kalori" alanları kalemlerin toplamı olmalı. "ad" alanına öğünde ne olduğunu kısaca yaz. Pişirme yağı, sos ve garnitürleri de hesaba kat.
 
 ${NOT_KURALI}
 
 "not" alanına tahmini nasıl yaptığını bir cümleyle açıkla.`;
 
-const SISTEM_KALAN=`Sana aynı öğünün iki fotoğrafı gönderiliyor: birincisi yemeğe başlamadan önceki tabak, ikincisi yemekten sonra kalanlar.
+const SISTEM_KALAN=`Sana aynı öğünün İKİ GRUP fotoğrafı gönderiliyor: önce yemeğe başlamadan önceki hali, sonra yemekten sonra kalanlar. Her grupta bir ya da birden fazla fotoğraf olabilir.
 
-İkisini karşılaştır ve YENEN miktarın protein ve kalorisini ver - tabağın tamamını değil. Aynı öğün olduğu için ölçek iki fotoğrafta da aynıdır; önce birinci fotoğraftaki toplamı belirle, sonra ikincide ne kaldığını çıkar.
+İkisini karşılaştır ve YENEN miktarın protein ve kalorisini ver - tabağın tamamını değil. Aynı öğün olduğu için ölçek bütün fotoğraflarda aynıdır; önce birinci gruptaki toplamı belirle, sonra ikinci grupta ne kaldığını çıkar.
+
+Bir grup içinde birden fazla fotoğraf varsa: farklı yiyecek ya da farklı tabak gösteriyorlarsa topla, aynı şeyin farklı açısıysa bir kez say.
 
 ${OLCEK_KURALI}
 
@@ -1557,15 +1601,25 @@ function ilerlemeYaz(mesaj){
   if(g) g.innerHTML=`<h2>Hesaplanıyor</h2><p class="muted small">${mesaj}</p>`;
 }
 
-async function fotoAnaliz(gorseller, ek){
+/* oncekiler: öğünün fotoğrafları (1..4). kalanlar: doluysa karşılaştırma
+   kipi - yenen miktar hesaplanır. İkisi de dizi. */
+async function fotoAnaliz(oncekiler, kalanlar, ek){
   ek=ek||{};
-  const kalanVar=gorseller.length>1;
-  const parcalar=kalanVar
-    ? [{metin:"1. fotoğraf — yemekten önce:"}, {gorsel:gorseller[0]},
-       {metin:"2. fotoğraf — yemekten sonra kalanlar:"}, {gorsel:gorseller[1]},
-       {metin:"Yenen miktarın protein ve kalorisini tahmin et."}]
-    : [{gorsel:gorseller[0]},
-       {metin:"Bu fotoğraftaki porsiyonun protein ve kalori miktarını tahmin et."}];
+  const kalanVar=!!(kalanlar&&kalanlar.length);
+  const parcalar=[];
+  if(kalanVar){
+    parcalar.push({metin:`Yemekten ÖNCE çekilen ${oncekiler.length} fotoğraf:`});
+    oncekiler.forEach(b=>parcalar.push({gorsel:b}));
+    parcalar.push({metin:`Yemekten SONRA, kalanların ${kalanlar.length} fotoğrafı:`});
+    kalanlar.forEach(b=>parcalar.push({gorsel:b}));
+    parcalar.push({metin:"Yenen miktarın protein ve kalorisini tahmin et."});
+  }else{
+    parcalar.push({metin:oncekiler.length>1
+      ? `Aynı öğünün ${oncekiler.length} fotoğrafı:`
+      : "Öğünün fotoğrafı:"});
+    oncekiler.forEach(b=>parcalar.push({gorsel:b}));
+    parcalar.push({metin:"Bu öğündeki porsiyonun protein ve kalori miktarını tahmin et."});
+  }
   if(ek.not) parcalar.push({metin:"Kullanıcının notu: "+ek.not});
   if(ek.onceki) parcalar.push({metin:"Önceki tahminin: "+JSON.stringify(ek.onceki)});
   if(ek.duzeltme) parcalar.push({metin:"Kullanıcının düzeltmesi: "+ek.duzeltme});
@@ -1602,14 +1656,101 @@ function fotoKucult(dosya, uzunKenar=1024, kalite=0.8){
   });
 }
 
-/* Kamera/galeri seçici. Kullanıcı hareketi içinde çağrılmalı. */
-function fotoSec(){
+/* Kamera ya da galeri seçici; seçilen dosyaları dizi olarak döndürür.
+   Kullanıcı hareketi içinde çağrılmalı (input.click() senkron olmalı).
+   capture="environment" telefonda doğrudan kamerayı açıyor - galeriye
+   ulaşabilmek için o alanın HİÇ olmaması gerekiyor. multiple ile capture
+   birlikte çalışmadığından kameradan tek tek çekiliyor, galeriden çoklu
+   seçilebiliyor. */
+function fotoSec(kamera){
   return new Promise(coz=>{
     const inp=document.createElement("input");
-    inp.type="file"; inp.accept="image/*"; inp.capture="environment";
-    inp.onchange=()=>coz(inp.files&&inp.files[0]||null);
+    inp.type="file"; inp.accept="image/*";
+    if(kamera) inp.capture="environment"; else inp.multiple=true;
+    inp.onchange=()=>coz(inp.files?[...inp.files]:[]);
+    /* iptal edilirse change hiç gelmez; sayfa açık kaldığı için sorun değil. */
     inp.click();
   });
+}
+
+/* ==========================================================
+   ÖĞÜN FOTOĞRAFLARI (IndexedDB)
+   "Kalanını çek" karşılaştırması ilk fotoğrafların saklanmasını
+   gerektiriyor. localStorage'a sığmazlardı: 1024px bir JPEG ~100-250 KB ve
+   localStorage'ın toplam sınırı ~5 MB. IndexedDB kotası çok daha geniş, o
+   yüzden fotoğraflar oraya; uygulamanın geri kalanı localStorage'da kalıyor.
+
+   Saklama süresi: yalnızca aynı gün. Ertesi açılışta budanıyor, böylece
+   cihazda birikmiyor. Budandıktan sonra o kayıtta "kalanını çek" çıkmaz.
+
+   IndexedDB yoksa ya da reddedilirse (gizli sekme, kapalı depolama) her şey
+   sessizce fotoğrafsız çalışır: analiz yapılır, yalnızca sonradan
+   karşılaştırma sunulmaz. Bu yüzden her çağrı try/catch içinde. */
+const FOTO_DB="salonDefteriFoto", FOTO_DEPO="ogunFoto", FOTO_EN_FAZLA=4;
+function yeniOgunId(){ return "m"+Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+function fotoDBAc(){
+  return new Promise((coz,yan)=>{
+    if(!window.indexedDB) return yan(new Error("IndexedDB yok"));
+    let i;
+    try{ i=indexedDB.open(FOTO_DB,1); }catch(e){ return yan(e); }
+    i.onupgradeneeded=()=>{
+      const db=i.result;
+      if(!db.objectStoreNames.contains(FOTO_DEPO)) db.createObjectStore(FOTO_DEPO,{keyPath:"id"});
+    };
+    i.onsuccess=()=>coz(i.result);
+    i.onerror=()=>yan(i.error||new Error("IndexedDB açılamadı"));
+  });
+}
+function fotoIslem(kip, is){
+  return fotoDBAc().then(db=>new Promise((coz,yan)=>{
+    let istek;
+    const t=db.transaction(FOTO_DEPO,kip);
+    try{ istek=is(t.objectStore(FOTO_DEPO)); }catch(e){ yan(e); return; }
+    /* Sonucu transaction bitince okuyoruz; tek tek isteklere bağlanmak
+       gerekmiyor, hepsi aynı işlemde tamamlanıyor. */
+    t.oncomplete=()=>coz(istek && typeof istek==="object" && "result" in istek ? istek.result : istek);
+    t.onerror=()=>yan(t.error);
+    t.onabort=()=>yan(t.error);
+  }));
+}
+/* IndexedDB her zaman yanit vermiyor: baska bir sekme yukseltmeyi
+   kilitlemisse ya da depolama baskisi varsa istek askida kalabiliyor.
+   Hicbir fotograf islemi arayuzu bloke etmesin diye hepsi sure sinirli -
+   sinir asilirsa fotograf kaydedilmemis sayilir, kaydin kendisi yine
+   eklenir. Bu olmadan "Gune ekle" sonsuza kadar bekliyordu. */
+function fotoSureSinirli(soz, ms){
+  return Promise.race([soz, new Promise((_,yan)=>
+    setTimeout(()=>yan(new Error("IndexedDB yanıt vermedi")), ms||4000))]);
+}
+async function fotoKaydet(id, oncekiler, kalanlar){
+  if(!id) return false;
+  try{
+    await fotoSureSinirli(fotoIslem("readwrite", d=>d.put({
+      id, gun:gunKey(), zaman:Date.now(),
+      oncekiler:oncekiler||[], kalanlar:kalanlar||[]
+    })));
+    return true;
+  }catch(e){ return false; }
+}
+async function fotoGetir(id){
+  if(!id) return null;
+  try{ return (await fotoSureSinirli(fotoIslem("readonly", d=>d.get(id)))) || null; }
+  catch(e){ return null; }
+}
+async function fotoSil(id){
+  if(!id) return;
+  try{ await fotoSureSinirli(fotoIslem("readwrite", d=>d.delete(id))); }catch(e){}
+}
+/* Gün değişince dünün fotoğraflarını at. Kaydın gününe değil fotoğrafın
+   yazıldığı güne bakıyoruz: geçmiş bir güne kayıt eklesen de fotoğrafı o
+   gün boyunca duruyor. */
+async function fotoBuda(){
+  try{
+    const bugun=gunKey();
+    const hepsi=await fotoSureSinirli(fotoIslem("readonly", d=>d.getAll()));
+    const eski=(hepsi||[]).filter(x=>x&&x.gun!==bugun).map(x=>x.id);
+    if(eski.length) await fotoSureSinirli(fotoIslem("readwrite", d=>{ eski.forEach(id=>d.delete(id)); }));
+  }catch(e){}
 }
 
 function anahtarSor(){
@@ -1678,6 +1819,7 @@ function fotoSonucSheet(sonuc, durum){
   const yuzde=durum.kalanVar&&sonuc.yenen_yuzde!=null?Math.round(sonuc.yenen_yuzde):null;
   modalAc(`
     <h2>${durum.kalanVar?"Yediğin kadarı":(durum.metinMi?"Yazdığından":"Fotoğraftan")}</h2>
+    ${durum.kayitId?`<p class="small" style="margin:0 0 6px">Bu miktar <b>${String(durum.kayitAd||"kaydın").replace(/"/g,"&quot;")}</b> kaydının yerine geçecek.</p>`:""}
     <p class="muted small">${yuzde!=null?"Tabağın ~%"+yuzde+"'i · ":""}${sonuc.porsiyon||""}${guvenTR?" · güven "+guvenTR:""}</p>
     <input class="text" id="fAd" value="${String(sonuc.ad||"").replace(/"/g,"&quot;")}" style="margin-top:10px">
     <div class="editgrid" style="grid-template-columns:1fr 1fr">
@@ -1690,7 +1832,7 @@ function fotoSonucSheet(sonuc, durum){
     <p class="muted small" style="margin-top:10px">${durum.metinMi?"Dayanak":"Ölçek"}: ${sonuc.olcek||"—"}</p>
     ${sonuc.not?`<p class="muted small">${sonuc.not}</p>`:""}
     ${durum.notu?`<p class="muted small">${durum.metinMi?"Yazdığın":"Notun"}: ${durum.notu}</p>`:""}
-    <button class="btn" id="fEkle">Güne ekle</button>
+    <button class="btn" id="fEkle">${durum.kayitId?"Kaydı güncelle":"Güne ekle"}</button>
     <button class="btn quiet" id="fDuzelt">Tahmini düzelt</button>
     ${(durum.kalanVar||durum.metinMi)?"":`<button class="btn quiet" id="fKalan">Hepsini yemediysen: kalanını çek</button>`}
     <button class="btn ghost" id="fIptal">Vazgeç</button>`);
@@ -1701,8 +1843,27 @@ function fotoSonucSheet(sonuc, durum){
     const kal=+document.getElementById("fK").value||0;
     if(!pr&&!kal){ toast("Protein veya kalori gir"); return; }
     if(!state.meals[durum.gunK]) state.meals[durum.gunK]=[];
-    state.meals[durum.gunK].push({ad,por:sonuc.porsiyon||"1 porsiyon",p:pr,k:kal,adet:1});
-    await saveAll(); modalKapat(); renderFood(); toast(ad+" eklendi");
+    const liste=state.meals[durum.gunK];
+    const mevcut=durum.kayitId?liste.find(y=>y.id===durum.kayitId):null;
+    const hedef=mevcut||{id:yeniOgunId(),adet:1};
+    /* Fotoğraflar kayda değil IndexedDB'ye yazılıyor; "foto" yalnızca kaç
+       tane olduğunu tutuyor, böylece arayüz IndexedDB'yi açmadan
+       "kalanını çek" sunup sunmayacağını biliyor. Yazma başarısızsa 0
+       kalıyor - özellik sessizce kapanır, kayıt yine eklenir. */
+    let foto=0;
+    const oncekiler=durum.oncekiler||[];
+    if(oncekiler.length && await fotoKaydet(hedef.id, oncekiler, durum.kalanlar||[]))
+      foto=oncekiler.length;
+    Object.assign(hedef, {
+      ad, por:sonuc.porsiyon||hedef.por||"1 porsiyon", p:pr, k:kal,
+      notu:durum.notu||"", foto
+    }, ogunEkleri(sonuc));
+    /* Kalan analizi "ne yedin"i veriyor; o yüzden adet 1'e iniyor, yoksa
+       yenen miktar adetle çarpılıp günü şişirirdi. */
+    if(mevcut) hedef.adet=1;
+    if(!mevcut) liste.push(hedef);
+    await saveAll(); modalKapat(); renderFood();
+    toast(ad+(mevcut?" güncellendi":" eklendi"));
   };
   /* Yanlış bir kalem varsa kullanıcı söylüyor, tahmin yeniden hesaplanıyor.
      Fotoğraf da önceki tahmin de birlikte gönderildiği için model neyi
@@ -1731,19 +1892,138 @@ function fotoSonucSheet(sonuc, durum){
     document.getElementById("dVaz").onclick=()=>fotoSonucSheet(sonuc,durum);
   };
   const kalanBtn=document.getElementById("fKalan");
-  if(kalanBtn) kalanBtn.onclick=async()=>{
-    const dosya=await fotoSec();
-    if(!dosya) return;
-    modalAc(`<h2>Karşılaştırılıyor</h2>
-      <p class="muted small">Önceki fotoğrafla kalanlar birlikte değerlendiriliyor.</p>`);
-    try{
-      const kalanB64=await fotoKucult(dosya);
-      const iki=await fotoAnaliz([durum.oncekiB64, kalanB64],{not:durum.notu});
-      fotoSonucSheet(iki, Object.assign({},durum,{kalanVar:true,kalanB64,
-        yeniden:ek=>fotoAnaliz([durum.oncekiB64,kalanB64],Object.assign({not:durum.notu},ek))}));
-    }catch(e){ fotoHataSheet(e, ()=>fotoSonucSheet(sonuc,durum)); }
-  };
+  if(kalanBtn) kalanBtn.onclick=()=>kalanAkisi(durum.gunK, durum.oncekiler, durum.notu,
+    null, null, ()=>fotoSonucSheet(sonuc,durum));
   document.getElementById("fIptal").onclick=modalKapat;
+}
+
+/* Kalan fotoğraflarını toplayıp karşılaştırmayı çalıştırır. Hem "güne
+   eklemeden önce" hem "ekledikten sonra" aynı yoldan geçiyor; fark
+   yalnızca kayitId'nin dolu olup olmaması. */
+function kalanAkisi(gunK, oncekiler, notu, kayitId, kayitAd, geriDon){
+  fotoSecSheet({
+    baslik:"Kalanını çek",
+    aciklama:`İlk ${oncekiler.length} fotoğrafla karşılaştırılacak. Tabakta kalanların fotoğrafını ekle.`,
+    notEtiketi:"Eklemek istediğin bir şey var mı? Boş bırakabilirsin.",
+    notOrnek:"örn. kalanı kardeşim yedi",
+    eylem:"Karşılaştır",
+    notu:notu||"",
+    vazgec:geriDon,
+    bitince:(kalanlar,yeniNot)=>{
+      const calistir=async()=>{
+        modalAc(`<h2>Karşılaştırılıyor</h2>
+          <p class="muted small">İlk fotoğraflarla kalanlar birlikte değerlendiriliyor.</p>`);
+        try{
+          const sonuc=await fotoAnaliz(oncekiler, kalanlar, {not:yeniNot});
+          fotoSonucSheet(sonuc,{gunK, kalanVar:true, notu:yeniNot, oncekiler, kalanlar,
+            kayitId, kayitAd,
+            yeniden:ek=>fotoAnaliz(oncekiler,kalanlar,Object.assign({not:yeniNot},ek))});
+        }catch(e){ fotoHataSheet(e, calistir); }
+      };
+      calistir();
+    }
+  });
+}
+
+/* Model çıktısından kayda yazılacak ayrıntılar. Kalem başına kısa anahtar
+   (p/k) kullanılıyor, kaydın geri kalanıyla aynı dil. */
+function ogunEkleri(sonuc){
+  const ham=Array.isArray(sonuc.kalemler)?sonuc.kalemler:[];
+  return {
+    kalemler: ham.map(x=>({
+      ad:String(x.ad||""), porsiyon:String(x.porsiyon||""),
+      p:Math.round((+x.protein_g||0)*10)/10, k:Math.round(+x.kalori||0)
+    })),
+    olcek:String(sonuc.olcek||""),
+    guven:String(sonuc.guven||""),
+    aciklama:String(sonuc.not||"")
+  };
+}
+
+/* ==========================================================
+   FOTOĞRAF TOPLAMA SAYFASI
+   Hem yeni öğün hem "kalanını çek" bunu kullanıyor. Fotoğraflar seçilir
+   seçilmez küçültülüyor: küçük resmi hemen gösterebiliyoruz ve modele
+   gidecek veri hazır oluyor.
+   ========================================================== */
+function fotoSecSheet(ayar){
+  const secilen=[];
+  let notu=ayar.notu||"", mesgul=false;
+
+  const ciz=()=>{
+    modalAc(`
+      <h2>${ayar.baslik}</h2>
+      <p class="muted small">${ayar.aciklama}</p>
+      ${secilen.length?`<div class="fotogrid">${secilen.map((b,i)=>`
+        <div class="fotokare"><img src="data:image/jpeg;base64,${b}" alt="">
+          <button class="fotosil" data-fsil="${i}" aria-label="Bu fotoğrafı çıkar">✕</button></div>`).join("")}</div>`
+        :`<p class="muted small" style="margin:12px 0 0">Henüz fotoğraf eklemedin.</p>`}
+      <div class="row" style="gap:8px;margin-top:10px">
+        <button class="btn quiet sm" id="fCek" ${secilen.length>=FOTO_EN_FAZLA?"disabled":""}>Fotoğraf çek</button>
+        <button class="btn quiet sm" id="fGaleri" ${secilen.length>=FOTO_EN_FAZLA?"disabled":""}>Galeriden seç</button>
+      </div>
+      <p class="muted small" style="margin:8px 0 0">${secilen.length} / ${FOTO_EN_FAZLA} fotoğraf${secilen.length>=FOTO_EN_FAZLA?" — sınıra ulaştın":""}</p>
+      <p class="muted small" style="margin:14px 0 6px">${ayar.notEtiketi}</p>
+      <input class="text" id="fNot" value="${String(notu).replace(/"/g,"&quot;")}" placeholder="${ayar.notOrnek}">
+      <button class="btn" id="fBasla" ${secilen.length?"":"disabled"}>${ayar.eylem}</button>
+      <button class="btn ghost" id="fVaz">Vazgeç</button>`);
+
+    const sheet=document.getElementById("modalBody");
+    const notuOku=()=>{ const n=sheet.querySelector("#fNot"); if(n) notu=n.value; };
+    /* fotoSec kullanıcı hareketi içinde çağrılmalı: notuOku senkron, ilk
+       await'ten önce input.click() çalışıyor. */
+    const ekle=async kamera=>{
+      if(mesgul) return;
+      notuOku();
+      const dosyalar=await fotoSec(kamera);
+      if(!dosyalar.length) return;
+      mesgul=true;
+      let tasan=false;
+      for(const dosya of dosyalar){
+        if(secilen.length>=FOTO_EN_FAZLA){ tasan=true; break; }
+        try{ secilen.push(await fotoKucult(dosya)); }
+        catch(e){ toast("Bir fotoğraf okunamadı"); }
+      }
+      mesgul=false;
+      ciz();
+      if(tasan) toast(`En fazla ${FOTO_EN_FAZLA} fotoğraf eklenebilir`);
+    };
+    sheet.querySelector("#fCek").onclick=()=>ekle(true);
+    sheet.querySelector("#fGaleri").onclick=()=>ekle(false);
+    sheet.querySelectorAll("[data-fsil]").forEach(b=>b.onclick=()=>{
+      notuOku(); secilen.splice(+b.dataset.fsil,1); ciz();
+    });
+    sheet.querySelector("#fBasla").onclick=()=>{
+      notuOku();
+      if(!secilen.length){ toast("Önce fotoğraf ekle"); return; }
+      ayar.bitince(secilen.slice(), notu.trim());
+    };
+    sheet.querySelector("#fVaz").onclick=ayar.vazgec||modalKapat;
+  };
+  ciz();
+}
+
+/* Yeni öğün: fotoğrafları topla, notu al, analiz et. */
+function fotoBasla(gunK){
+  fotoSecSheet({
+    baslik:"Fotoğraftan ekle",
+    aciklama:`Aynı öğünün en fazla ${FOTO_EN_FAZLA} fotoğrafını ekleyebilirsin — farklı tabaklar ya da farklı açılar.`,
+    notEtiketi:"Fotoğrafta görünmeyen bir şey varsa yaz. Boş bırakabilirsin.",
+    notOrnek:"örn. yağsız tuzsuz pişti",
+    eylem:"Analiz et",
+    bitince:(fotolar,notu)=>{
+      const calistir=async()=>{
+        modalAc(`<h2>Fotoğraf inceleniyor</h2>
+          <p class="muted small">Porsiyon, fotoğraftaki bir referans nesneye göre ölçekleniyor. Birkaç saniye sürebilir.</p>`);
+        try{
+          const sonuc=await fotoAnaliz(fotolar, null, {not:notu});
+          fotoSonucSheet(sonuc,{gunK, oncekiler:fotolar, kalanVar:false, notu,
+            yeniden:ek=>fotoAnaliz(fotolar,null,Object.assign({not:notu},ek))});
+        }catch(e){ fotoHataSheet(e, calistir); }   /* aynı fotoğraflarla tekrar dene */
+      };
+      calistir();
+    }
+  });
 }
 
 /* Fotoğrafsız giriş: ne yediğini yaz, gerisi fotoğraf yoluyla aynı. */
@@ -1768,36 +2048,6 @@ function metinSheet(gunK){
   document.getElementById("mHesapla").onclick=calis;
   document.getElementById("mYemek").onkeydown=ev=>{ if(ev.key==="Enter") calis(); };
   document.getElementById("mVaz").onclick=modalKapat;
-}
-
-/* Analizden önce not sorulur: fotoğrafta görünmeyen ama tahmini değiştiren
-   bilgi burada veriliyor (yağsız pişti, ikimiz paylaşacağız gibi). */
-function fotoNotSheet(dosya,gunK){
-  modalAc(`
-    <h2>Fotoğraf hazır</h2>
-    <p class="muted small">Fotoğrafta görünmeyen bir şey varsa yaz. Boş bırakabilirsin.</p>
-    <input class="text" id="fNot" placeholder="örn. yağsız tuzsuz pişti" style="margin-top:10px">
-    <p class="muted small" style="margin-top:8px">Örnekler: “yağsız tuzsuz” · “ikimiz paylaşacağız” · “tereyağında kızardı” · “yarısını yiyeceğim”</p>
-    <button class="btn" id="fBasla">Analiz et</button>
-    <button class="btn ghost" id="fVaz">Vazgeç</button>`);
-  const basla=()=>fotoSheet(dosya,gunK,document.getElementById("fNot").value.trim());
-  document.getElementById("fBasla").onclick=basla;
-  document.getElementById("fNot").onkeydown=ev=>{ if(ev.key==="Enter") basla(); };
-  document.getElementById("fVaz").onclick=modalKapat;
-}
-
-async function fotoSheet(dosya,gunK,notu){
-  modalAc(`<h2>Fotoğraf inceleniyor</h2>
-    <p class="muted small">Porsiyon, fotoğraftaki bir referans nesneye göre ölçekleniyor. Birkaç saniye sürebilir.</p>`);
-  try{
-    const b64=await fotoKucult(dosya);
-    const sonuc=await fotoAnaliz([b64],{not:notu});
-    fotoSonucSheet(sonuc,{gunK,oncekiB64:b64,kalanVar:false,notu,
-      yeniden:ek=>fotoAnaliz([b64],Object.assign({not:notu},ek))});
-  }catch(e){
-    /* fotoğrafı yeniden çektirmeden aynı kareyle tekrar denesin */
-    fotoHataSheet(e, ()=>fotoSheet(dosya,gunK,notu));
-  }
 }
 
 /* --- ANTRENMAN --- */
@@ -3160,6 +3410,7 @@ window.addEventListener("pagehide",()=>{ if(state.active) saveAll(); });
 
 (async()=>{
   await loadAll();
+  fotoBuda();   /* dünün öğün fotoğrafları gitsin; beklemeye gerek yok */
   if(state.active){
     saatBaslat();
     ekranAcikTut();
