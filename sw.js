@@ -8,7 +8,7 @@
    ASSETS'i bastan indirir, activate eski cache'i siler. Aksi halde sunucu
    kapaliyken (ya da internet yokken) onceAg cache'e duser ve kullanici
    eski surumu gorur — guncelleme yapilmamis gibi. */
-const CORE  = 'salon-defteri-v8';   // v8: yemek ekleme (galeri, coklu foto, dokum, kalan analizi)
+const CORE  = 'salon-defteri-v9';   // v9: bolum ayrimi kalkti, programlar yenilendi
 /* Medya "once cache" okunuyor: bir kez indirilen gorsel bir daha aga
    sorulmaz. Var olan bir gorseli DEGISTIRDIGINDE bu surumu artir, yoksa
    kullanicida eski gorsel kalir. (Yeni id eklemek icin gerekmez.) */
