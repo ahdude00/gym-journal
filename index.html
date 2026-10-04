@@ -98,7 +98,7 @@
   --ana:var(--accent);                /* ana bolum programin vurgu rengini kullanir */
   --sans:'Barlow',system-ui,-apple-system,'Segoe UI',sans-serif;
   --cond:'Barlow Condensed','Barlow',system-ui,sans-serif;
-  --tabbar:64px;
+  --tabbar:64px; --serit:112px;      /* alt serit yuksekligi (dinlenme sayaci) */
   --r-s:10px; --r-m:14px; --r-l:18px;  /* kose yaricaplari */
   --gecis:.16s cubic-bezier(.4,0,.2,1);
 }
@@ -188,8 +188,31 @@ input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .gecis .liste div b{color:var(--text);font-weight:500}
 .gecis .btn{max-width:330px;background:var(--fz);color:var(--accent-ink)}
 
-.setrow{display:grid;grid-template-columns:56px 1fr 1fr 52px;gap:9px;align-items:center;
-  padding:9px 0;border-top:1px solid var(--line)}
+/* Set izgarasi. Birim etiketleri (kg / tekrar) satirda degil, bir kez
+   ustteki baslik satirinda duruyor - boylece hucrelerde yer aciliyor ve
+   kilo adimlayicisinin dugmeleri 40px'e cikabiliyor. 360px telefonda
+   icerik genisligi 292px: 22 + 6 + 142 + 6 + 62 + 6 + 48 = 292. */
+.sethead,.setrow{display:grid;grid-template-columns:22px 1fr 62px 48px;gap:6px;align-items:center}
+.sethead{padding:2px 0 7px;font-size:11px;color:var(--dim);letter-spacing:.04em}
+.sethead span{text-align:center}
+.sethead span:first-child{text-align:left}
+.setrow{padding:9px 0;border-top:1px solid var(--line);scroll-margin-top:14px}
+.setno{text-align:center}
+
+/* Kilo adimlayici: terli elle de vurulabilsin diye dugmeler tik ile ayni
+   yukseklikte (46px). Rakama dokunmak klavyeyi acar, elle de yazilabilir. */
+.kgbox{display:grid;grid-template-columns:40px 1fr 40px;gap:3px;align-items:center}
+.kgbox button{height:46px;border:1px solid var(--line);border-radius:var(--r-s);
+  background:var(--field);color:var(--text);font-size:21px;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  transition:background var(--gecis),border-color var(--gecis),transform .08s ease}
+.kgbox button:active{transform:scale(.92);background:var(--accent-soft);border-color:var(--accent)}
+.kgbox input{font-size:20px;padding:10px 2px}
+.setrow.done .kgbox button{opacity:.5}
+/* Yalnizca serit acikken: scrollIntoView serit + alt menu payini biraksin,
+   yoksa satir seridin arkasinda kalir. Serit kapaliyken bu payi vermiyoruz,
+   aksi halde bir kiloya dokunup klavye acilinca sayfa bosuna firlar. */
+body.seritli .setrow{scroll-margin-bottom:calc(var(--tabbar) + var(--serit) + 14px)}
 .setrow:first-of-type{border-top:none}
 .setno{font-family:var(--cond);font-size:17px;color:var(--dim)}
 .unit{position:relative}
@@ -204,9 +227,21 @@ input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .pill{display:inline-block;padding:4px 11px;border-radius:999px;border:1px solid var(--line);
   font-size:13px;color:var(--dim);white-space:nowrap}
 .pill.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
-.progress{display:flex;gap:4px;margin:8px 0 12px}
-.progress i{flex:1;height:4px;border-radius:999px;background:var(--line);transition:background var(--gecis)}
-.progress i.on{background:var(--fz,var(--accent))}   /* --fz: hareketin bolum rengi */
+/* Ilerleme cubugu ayni zamanda gezinme: her cizgi o harekete atlar.
+   Cizgi 4px gorunuyor ama dugmenin dokunma alani 24px - salonda tek elle
+   isabet ettirilebilsin, yanlis harekete atlanmasin diye. */
+.progress{display:flex;margin:0 0 4px}
+/* Aradaki bosluk dugmeler arasinda degil dugmenin ICINDE: boylece 16
+   hareketlik bir gunde bile dokunma alani 4px genisliyor ve cizgiler
+   gorsel olarak yine ayri duruyor. */
+.progress button{flex:1;height:24px;padding:0 2px;background:none;border:none;
+  display:flex;align-items:center}
+.progress button::after{content:"";display:block;width:100%;height:4px;border-radius:999px;
+  background:var(--line);transition:background var(--gecis),height var(--gecis)}
+.progress button.on::after{background:var(--fz,var(--accent))}   /* --fz: hareketin bolum rengi */
+/* Bulundugun hareket: "buraya kadar yapildi" ile "su an buradasin" ayirt
+   edilebilsin diye o cizgi kalin duruyor. */
+.progress button.simdi::after{height:7px}
 
 /* protein çubuğu */
 .meter{height:12px;border-radius:999px;background:var(--field);overflow:hidden;margin:9px 0 6px}
@@ -226,6 +261,38 @@ input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .rest .onizleme .plate{width:52px;height:52px}
 .rest .onizleme .nm{flex:1;min-width:0;text-align:left}
 .rest .onizleme .nm b{font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rest .kisa{display:none}
+.rest .acts .boy{flex:none;width:52px;padding-left:0;padding-right:0}
+
+/* Dinlenme sayaci iki boyda calisiyor:
+   - tam ekran: sureli hareketlerin KENDISI (plank, yan plank) - buyuk rakam
+     hareketin suresi, ekrani kaplamasi dogru.
+   - alt serit: setler arasi mola - set listesi gorunur kalsin, kiloyu
+     duzeltmek icin hicbir seyi kapatmak gerekmesin.
+   Fark yalnizca .serit sinifinda; DOM, sayac ve PiP ayni kaliyor.
+   Yan etki: plank bitince ayni eleman tam ekrandan serite gecer, boylece
+   ust uste iki tam ekran katman cikmaz. */
+.rest.serit{
+  inset:auto 0 calc(var(--tabbar) + env(safe-area-inset-bottom)) 0;
+  display:grid;grid-template-columns:auto 1fr;
+  grid-template-areas:"num kisa" "acts acts";
+  align-items:center;gap:10px 12px;
+  /* genis ekranda icerik .wrap ile ayni 560px seride hizalanir */
+  padding:10px max(16px,calc(50% - 280px)) 12px;
+  background:var(--panel);backdrop-filter:none;
+  border-top:1px solid var(--line);box-shadow:var(--golge-2)
+}
+.rest.serit .num{grid-area:num;font-size:34px;min-width:50px;text-align:center}
+.rest.serit .kisa{grid-area:kisa;display:block;min-width:0;font-size:14px;color:var(--dim);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rest.serit .acts{grid-area:acts;margin-top:0;max-width:none}
+/* Dugme metni iki satira kirilirsa serit --serit'ten yuksege cikar ve
+   govdeye verdigimiz alt bosluk yetmez; tek satirda tutuyoruz. */
+.rest.serit .acts .btn{white-space:nowrap;font-size:14px;padding:13px 4px}
+.rest.serit #restLbl,.rest.serit #restNext,
+.rest.serit .onizleme,.rest.serit #restPip{display:none !important}
+/* Serit acikken sayfanin sonu seridin arkasinda kalmasin. */
+body.seritli{padding-bottom:calc(var(--tabbar) + var(--serit) + env(safe-area-inset-bottom))}
 
 .modal{position:fixed;inset:0;background:var(--overlay);backdrop-filter:blur(5px);z-index:60;
   display:flex;align-items:flex-end;justify-content:center;padding:14px}
@@ -274,6 +341,8 @@ summary{cursor:pointer}
   padding:11px 0;border-top:1px solid var(--line)}
 .logrow:first-of-type{border-top:none}
 .logrow .val{font-family:var(--cond);font-size:17px;font-variant-numeric:tabular-nums;text-align:right}
+.logrow .lgrad{text-align:left;background:none;border:none;color:inherit;padding:0;width:100%;min-width:0}
+.logrow .lgrad b{font-weight:500}
 .logrow .del{width:34px;height:34px;border-radius:var(--r-s);background:var(--field);border:1px solid var(--line);
   color:var(--dim);font-size:16px;transition:color var(--gecis),border-color var(--gecis)}
 .logrow .del:hover{color:var(--uyari);border-color:var(--uyari)}
@@ -283,8 +352,20 @@ summary{cursor:pointer}
 .datenav button:hover{background:var(--field)}
 .datenav b{font-family:var(--cond);font-size:19px}
 
-.hist{width:100%;text-align:left;padding:13px 0;border-top:1px solid var(--line)}
+/* Geçmiş kaydı. Başlık açıp kapatan düğme, detay ayrı bir kutu: setler
+   orada düzenlenebildiği için input'lar bir düğmenin içinde duramaz. */
+.hist{border-top:1px solid var(--line)}
 .hist:first-of-type{border-top:none}
+.histbas{width:100%;text-align:left;padding:13px 0;background:none;border:none;color:inherit}
+.histdetay{padding:0 0 4px}
+.hsatir{padding:8px 0;border-top:1px dashed var(--line)}
+.had{display:block;font-size:14px;margin-bottom:7px}
+/* Setler arasi bosluk, set ICINDEKI kg-tekrar boslugundan belirgin
+   olcude genis olmali; yoksa "10 x 12  10 x 11" tek bir dizi gibi
+   okunuyor ve hangi sayinin hangi sete ait oldugu kayboluyor. */
+.hsetler{display:flex;flex-wrap:wrap;gap:8px 16px}
+.hset{display:flex;align-items:center;gap:2px;font-size:12px;color:var(--dim)}
+.hset input{width:54px;font-size:16px;padding:7px 2px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-m);padding:14px 8px;
   text-align:center;box-shadow:var(--golge-1)}
@@ -379,6 +460,7 @@ nav button.on i{background:var(--accent-soft)}
 <div id="rest" class="rest hidden">
   <div class="lbl" id="restLbl">Dinlenme</div>
   <div class="num" id="restNum">90</div>
+  <div class="kisa" id="restKisa"></div>
   <div class="lbl small" id="restNext"></div>
   <div class="onizleme hidden" id="restOnizleme">
     <span class="plate"><img id="restImg" alt=""></span>
@@ -387,6 +469,7 @@ nav button.on i{background:var(--accent-soft)}
   <div class="acts">
     <button class="btn quiet" id="restPlus">+15 sn</button>
     <button class="btn" id="restSkip">Devam et</button>
+    <button class="btn quiet boy" id="restBoy" title="Küçült">▼</button>
   </div>
   <button class="btn ghost sm hidden" id="restPip" style="width:100%;max-width:340px;margin-top:10px">Ayrı pencerede göster</button>
 </div>
@@ -737,8 +820,10 @@ function programlariTazele(){
 const KEY="salonDefteri.v1";
 let state={tab:"home",sessions:[],meals:{},hedefProtein:150,besinTarih:null,tema:"gece",
   programs:[],programSurum:0,active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
-  kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false,saglayici:"gemini",modeller:{},kotaDolu:{}};
+  kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false,ekranAcik:true,saglayici:"gemini",modeller:{},kotaDolu:{}};
 let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,sayacTipi="dinlenme",clockTimer=null,kayitYeri="yok";
+/* Dinlenme bitince ana dugme ne yapsin: null | "hareket" | "bitir" */
+let sayacGecis=null;
 
 function lsGet(k){ try{ return window.localStorage ? localStorage.getItem(k) : null; }catch(e){ return null; } }
 function lsSet(k,v){ try{ if(window.localStorage){ localStorage.setItem(k,v); return true; } }catch(e){} return false; }
@@ -770,6 +855,7 @@ async function loadAll(){
     if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
     if(typeof d.otoDosya==="boolean") state.otoDosya=d.otoDosya;
     if(typeof d.bildirim==="boolean") state.bildirim=d.bildirim;
+    if(typeof d.ekranAcik==="boolean") state.ekranAcik=d.ekranAcik;
     if(d.saglayici&&SAGLAYICI[d.saglayici]) state.saglayici=d.saglayici;
     if(d.modeller&&typeof d.modeller==="object") state.modeller=d.modeller;
     if(d.kotaDolu&&typeof d.kotaDolu==="object") state.kotaDolu=d.kotaDolu;
@@ -798,13 +884,21 @@ async function loadAll(){
   if(kayitYeri==="yok" && lsSet(KEY+".test","1")) kayitYeri="telefon haf\u0131zas\u0131";
 }
 async function saveAll(){
-  const paket=JSON.stringify({v:3,tema:state.tema,otoDosya:state.otoDosya,bildirim:state.bildirim,saglayici:state.saglayici,modeller:state.modeller,kotaDolu:state.kotaDolu,hedefProtein:state.hedefProtein,
+  const paket=JSON.stringify({v:3,tema:state.tema,otoDosya:state.otoDosya,bildirim:state.bildirim,ekranAcik:state.ekranAcik,saglayici:state.saglayici,modeller:state.modeller,kotaDolu:state.kotaDolu,hedefProtein:state.hedefProtein,
     programs:state.programs,programSurum:state.programSurum,sessions:state.sessions,meals:state.meals,
     aktif:state.active,aktifIndex:state.exIndex});
   let ok=false;
   try{ if(window.storage){ await window.storage.set(KEY,paket); ok=true; } }catch(e){}
   if(lsSet(KEY,paket)) ok=true;
   return ok;
+}
+
+/* Ard arda dokunuslarda (kilo adimlayici) her dokunusta diske yazmak
+   yerine son dokunustan kisa sure sonra bir kez yaziyoruz. */
+let kaydetZaman=null;
+function kaydetYakinda(){
+  clearTimeout(kaydetZaman);
+  kaydetZaman=setTimeout(()=>{ kaydetZaman=null; saveAll(); },500);
 }
 
 /* ==========================================================
@@ -857,12 +951,40 @@ function sonKayitBilgi(exId){
   return null;
 }
 function sonKayit(exId){ const b=sonKayitBilgi(exId); return b?b.setler[b.setler.length-1]:null; }
+/* "Geçen sefer" satırı. Son seti değil o antrenmandaki TÜM setleri yazıyor:
+   veri zaten set set duruyordu, tek set göstermek "4 set yaptım, hangisi
+   bu?" sorusunu doğuruyordu. Ağırlık bütün setlerde aynıysa bir kez yazılıp
+   tekrarlar ardına diziliyor - en sık durum bu ve çok daha kısa okunuyor. */
+function gecenSeferMetni(exId, tip){
+  const b=sonKayitBilgi(exId);
+  if(!b || !b.setler.length) return null;
+  const ss=b.setler, tarih=tarihTR(b.tarih);
+  const tk=x=>x.tekrar!=null?x.tekrar:"?";
+  if(tip==="kg"){
+    const kglar=[...new Set(ss.map(x=>x.kg==null?"?":x.kg))];
+    if(kglar.length===1 && kglar[0]!=="?")
+      return `Geçen sefer (${tarih}): ${kglar[0]} kg · ${ss.map(tk).join(" · ")}`;
+    return `Geçen sefer (${tarih}): ${ss.map(x=>(x.kg==null?"?":x.kg)+"×"+tk(x)).join(" · ")}`;
+  }
+  return `Geçen sefer (${tarih}): ${ss.map(tk).join(" · ")}${tip==="sure"?" sn":""}`;
+}
 function gunToplam(k){
   const l=state.meals[k]||[];
   return { p:l.reduce((a,x)=>a+x.p*x.adet,0), k:l.reduce((a,x)=>a+x.k*x.adet,0), n:l.length };
 }
 function yuvarla(n){ return Math.round(n*10)/10; }
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2400); }
+/* Vibration API'de siddet/genlik ayari yok: tarayici yalnizca "titret ve
+   durakla" surelerini kabul ediyor. Daha guclu hissettirmenin tek yolu
+   darbeleri uzatmak ve sayisini artirmak. Desenler tek yerde duruyor ki
+   sayac, bolum gecisi ve bildirim ayni dili konussun.
+   Not: tarayicilar sayfa gizliyken titresimi yok sayiyor - ekran kapaliyken
+   titresimi getiren sey bildirimin kendi deseni (bkz. bildirimGonder). */
+const TITRESIM={
+  sayac:[500,140,500,140,700],   /* dinlenme ya da sure bitti */
+  gecis:[160,90,160,90,420]      /* yeni bolume giriliyor */
+};
+function titret(desen){ try{ if(navigator.vibrate) navigator.vibrate(desen); }catch(e){} }
 function modalAc(html){ document.getElementById("modalBody").innerHTML=html; document.getElementById("modal").classList.remove("hidden"); }
 function modalKapat(){ document.getElementById("modal").classList.add("hidden"); }
 document.getElementById("modal").onclick=e=>{ if(e.target.id==="modal") modalKapat(); };
@@ -972,7 +1094,7 @@ function renderFood(){
       <h3>${gunAdi(k)} yedikleri</h3>
       ${liste.length? liste.map((x,i)=>`
         <div class="logrow">
-          <span><b style="font-weight:500">${x.ad}</b><br><span class="muted small">${x.adet===1?x.por:x.adet+" × "+x.por}</span></span>
+          <button class="lgrad" data-duz="${i}"><b>${x.ad}</b><br><span class="muted small">${(x.adet||1)===1?x.por:x.adet+" × "+x.por}</span></button>
           <span class="val">${yuvarla(x.p*x.adet)} g<br><span class="muted small" style="font-family:var(--sans)">${Math.round(x.k*x.adet)} kcal</span></span>
           <button class="del" data-sil="${i}">✕</button>
         </div>`).join("")
@@ -986,6 +1108,7 @@ function renderFood(){
     if(!state.meals[k].length) delete state.meals[k];
     await saveAll(); renderFood();
   });
+  view.querySelectorAll("[data-duz]").forEach(b=>b.onclick=()=>ogunDuzenleSheet(k,+b.dataset.duz));
   document.getElementById("elle").onclick=()=>elleEkleSor(k);
   document.getElementById("yaz").onclick=()=>{
     if(!apiAnahtar()){ anahtarSor(); return; }
@@ -996,6 +1119,42 @@ function renderFood(){
     const f=await fotoSec();
     if(f) fotoNotSheet(f,k);
   };
+}
+
+/* Eklenmiş bir besin kaydını düzeltme. Protein ve kalori TEK porsiyon için
+   tutuluyor, gün toplamı bunları adet ile çarpıyor (bkz. gunToplam) - bu
+   ayrım arayüzde söylenmezse adet alanı yanıltıcı olur. */
+function ogunDuzenleSheet(gunK,i){
+  const liste=state.meals[gunK]||[], x=liste[i];
+  if(!x) return;
+  modalAc(`
+    <h2>Kaydı düzenle</h2>
+    <p class="muted small">${gunAdi(gunK)} · ${x.por||"1 porsiyon"}</p>
+    <input class="text" id="dAd" value="${String(x.ad||"").replace(/"/g,"&quot;")}" style="margin:10px 0 4px">
+    <div class="editgrid">
+      <div><label>Protein (g)</label><input type="number" inputmode="decimal" id="dP" value="${x.p}"></div>
+      <div><label>Kalori</label><input type="number" inputmode="numeric" id="dK" value="${x.k}"></div>
+      <div><label>Adet</label><input type="number" inputmode="numeric" id="dAdet" value="${x.adet||1}"></div>
+    </div>
+    <p class="muted small" style="margin-top:8px">Protein ve kalori tek porsiyon içindir; gün toplamına adetle çarpılarak girer.</p>
+    <button class="btn" id="dKaydet">Kaydet</button>
+    <button class="btn danger" id="dSil">Bu kaydı sil</button>
+    <button class="btn ghost" id="dVaz">Vazgeç</button>`);
+  document.getElementById("dKaydet").onclick=async()=>{
+    const ad=document.getElementById("dAd").value.trim()||"Diğer";
+    const pr=+document.getElementById("dP").value||0;
+    const kal=+document.getElementById("dK").value||0;
+    const adet=Math.max(1,Math.min(99,+document.getElementById("dAdet").value||1));
+    if(!pr&&!kal){ toast("Protein veya kalori gir"); return; }
+    Object.assign(x,{ad,p:pr,k:kal,adet});
+    await saveAll(); modalKapat(); renderFood(); toast("Kayıt güncellendi");
+  };
+  document.getElementById("dSil").onclick=async()=>{
+    liste.splice(i,1);
+    if(!liste.length) delete state.meals[gunK];
+    await saveAll(); modalKapat(); renderFood(); toast("Kayıt silindi");
+  };
+  document.getElementById("dVaz").onclick=modalKapat;
 }
 
 function elleEkleSor(k){
@@ -1225,19 +1384,27 @@ async function hataMetni(yanit, sag, model){
 /* Dinlenirken sırada ne olduğunu hesaplar: aynı hareketin bir sonraki seti,
    ya da hareket bittiyse sıradaki hareket. Sıradaki hareket başka bir
    bölümdeyse (ısınma bitti, antrenman başlıyor gibi) başlık bunu söyler. */
+/* "gecis" alani dinlenme ekranindaki ana dugmenin ne yapacagini soyluyor:
+   null  -> bu harekette set kaldi, dugme yalnizca sayaci kapatir
+   "hareket" -> hareket bitti, dugme sonraki harekete gecirir
+   "bitir"   -> son hareketin son seti, dugme bitirme ekranini acar
+   Gecisi her zaman kullanici yapiyor; sayac kendiliginden sifirlandiginda
+   hareket DEGISMIYOR, yalnizca sayac kapaniyor. */
 function sonrakiBilgi(s, exIndex, kayit){
   const kalan=kayit.setler.filter(x=>!x.done).length;
   if(kalan>0){
     const h=s.hareketler[exIndex], yapilan=kayit.setler.length-kalan;
     return {baslik:"Sıradaki set", ex:h.ex,
-            alt:`set ${yapilan+1} / ${kayit.setler.length}`};
+            alt:`set ${yapilan+1} / ${kayit.setler.length}`, gecis:null};
   }
   const simdiki=s.hareketler[exIndex], sonraki=s.hareketler[exIndex+1];
-  if(!sonraki) return {baslik:"Son hareket bitti", ex:null, alt:"Antrenmanı bitirebilirsin"};
+  if(!sonraki) return {baslik:"Son hareket bitti", ex:null,
+                       alt:"Antrenmanı bitirebilirsin", gecis:"bitir"};
   const fazDegisti = fazOf(sonraki)!==fazOf(simdiki);
   return {baslik: fazDegisti ? "Sırada: "+FAZ[fazOf(sonraki)].ad : "Sıradaki hareket",
           ex:sonraki.ex,
-          alt:`${sonraki.set} set × ${sonraki.tekrar}${sonraki.tip==="sure"?" sn":""}`};
+          alt:`${sonraki.set} set × ${sonraki.tekrar}${sonraki.tip==="sure"?" sn":""}`,
+          gecis:"hareket"};
 }
 
 /* --- BÖLÜM GEÇİŞİ --- */
@@ -1267,7 +1434,7 @@ function gecisGoster(f){
     f==="soguma" ? "Soğumaya başla" : (f==="isinma" ? "Isınmaya başla" : "Antrenmana başla");
   kutu.classList.remove("hidden");
   /* Telefon cebindeyken de fark edilsin. */
-  if(navigator.vibrate) navigator.vibrate([70,70,70,70,200]);
+  titret(TITRESIM.gecis);
 }
 document.getElementById("gecisOk").onclick=()=>document.getElementById("gecis").classList.add("hidden");
 
@@ -1612,13 +1779,23 @@ async function fotoSheet(dosya,gunK,notu){
 function setSatiri(st,i,h,birim){
   return `
           <div class="setrow ${st.done?"done":""}">
-            <div class="setno">Set ${i+1}</div>
-            <div class="unit">${h.tip==="kg"
-              ? `<input type="number" inputmode="decimal" step="0.5" data-f="kg" data-set="${i}" value="${st.kg??""}"><span>kg</span>`
-              : `<div class="tick" style="border-style:dashed;font-size:13px">${h.tip==="sure"?"süre":"vücut"}</div>`}</div>
-            <div class="unit"><input type="number" inputmode="numeric" data-f="tekrar" data-set="${i}" value="${st.tekrar??""}"><span>${birim}</span></div>
+            <div class="setno">${i+1}</div>
+            ${h.tip==="kg"
+              ? `<div class="kgbox">
+                   <button type="button" data-kg="-1" data-set="${i}" aria-label="2,5 kg azalt">−</button>
+                   <input type="number" inputmode="decimal" step="0.5" data-f="kg" data-set="${i}" value="${st.kg??""}">
+                   <button type="button" data-kg="1" data-set="${i}" aria-label="2,5 kg artır">+</button>
+                 </div>`
+              : `<div class="tick" style="border-style:dashed;font-size:13px">${h.tip==="sure"?"süre":"vücut"}</div>`}
+            <input type="number" inputmode="numeric" data-f="tekrar" data-set="${i}" value="${st.tekrar??""}">
             <button class="tick" data-done="${i}">${st.done?"✓":"○"}</button>
           </div>`;
+}
+/* Ustteki birim satiri. Satirlarin disinda duruyor: "- Set cikar" sondaki
+   cocugu siliyor, basliga dokunmasin. */
+function setBasligi(h,birim){
+  return `<div class="sethead"><span>Set</span>`
+       + `<span>${h.tip==="kg"?"kg":""}</span><span>${birim}</span><span></span></div>`;
 }
 /* Rozet, programdaki hedefi degil ekrandaki gercek set sayisini gosterir. */
 function setEtiketi(kayit,h){
@@ -1673,7 +1850,8 @@ function renderWorkout(){
   }
 
   const s=state.active, h=s.hareketler[state.exIndex], e=EX[h.ex], kayit=s.kayitlar[state.exIndex];
-  const sk=sonKayit(h.ex), o=ov(h.ex), birim=h.tip==="sure"?"sn":"tekrar";
+  const o=ov(h.ex), birim=h.tip==="sure"?"sn":"tekrar";
+  const gecen=gecenSeferMetni(h.ex,h.tip);
   const f=fazOf(h), fb=FAZ[f];
   /* Bu hareket kendi bolumunde kacinci? Serit "Isinma · 3/5" gosterir. */
   const ayniFaz=s.hareketler.filter(x=>fazOf(x)===f);
@@ -1683,15 +1861,18 @@ function renderWorkout(){
     <div class="fazbar ${fb.sinif}"><i>${fb.ikon}</i><b>${fb.ad}</b>
       <span class="sag">${fazSira} / ${ayniFaz.length}</span></div>
     <div class="progress">${s.hareketler.map((x,i)=>
-      `<i class="${FAZ[fazOf(x)].sinif} ${i<=state.exIndex?"on":""}"></i>`).join("")}</div>
+      `<button type="button" data-git="${i}" class="${FAZ[fazOf(x)].sinif} ${i<=state.exIndex?"on":""} ${i===state.exIndex?"simdi":""}"
+        aria-label="${i+1}. hareket: ${String(exAd(x.ex)).replace(/"/g,"&quot;")}"
+        title="${i+1}. ${String(exAd(x.ex)).replace(/"/g,"&quot;")}"></button>`).join("")}</div>
     <div class="card">
       <div class="stage">
         ${sahneIc(e)}
         <div class="stage-cap"><span>${e?kasTR(e.t):""}</span><span>${e?ekipTR(e.q):""}</span></div>
       </div>
       <div class="row between" style="margin-top:12px"><h2>${exAd(h.ex)}</h2><span class="pill" id="setPill">${setEtiketi(kayit,h)}</span></div>
-      <p class="muted small" style="margin-top:4px">${o&&o.ipucu?o.ipucu:(e?bolgeTR(e.c):"")}${sk?" · Geçen sefer: "+(sk.kg?sk.kg+" kg × ":"")+sk.tekrar+" "+birim:" · İlk kez yapıyorsun — kutulardaki sayılar öneri, değiştirebilirsin"}</p>
-      <div id="setler" style="margin-top:12px">
+      <p class="muted small" style="margin-top:4px">${o&&o.ipucu?o.ipucu:(e?bolgeTR(e.c):"")}${gecen?" · "+gecen:" · İlk kez yapıyorsun — kutulardaki sayılar öneri, değiştirebilirsin"}</p>
+      ${setBasligi(h,birim)}
+      <div id="setler">
         ${kayit.setler.map((st,i)=>setSatiri(st,i,h,birim)).join("")}
       </div>
       <div class="row" style="gap:8px;margin-top:10px">
@@ -1736,9 +1917,39 @@ function renderWorkout(){
     saveAll();
     const bilgi=sonrakiBilgi(s,state.exIndex,kayit);
     /* Mola 0 ise (isinma/soguma'da olabilir) dinlenme ekranini hic acma. */
-    if(h.mola>0) startRest(h.mola, bilgi.baslik, bilgi);
+    if(h.mola>0){
+      startRest(h.mola, bilgi.baslik, bilgi);
+      /* Serit ekranin altini kapatiyor ve tam da yeni isaretlenen satirin
+         uzerine gelebiliyor. Siradaki seti (yoksa biten seti) goruntuye
+         aliyoruz; satirin scroll-margin-bottom degeri serit + alt menu
+         payini birakiyor, boylece kiloyu duzeltmek icin seridi kapatmak
+         gerekmiyor. */
+      if(document.getElementById("rest").classList.contains("serit")){
+        /* Son satiri hedefliyoruz: scroll-margin payiyla birlikte TUM set
+           listesi seridin ustune cikiyor, yalnizca siradaki set degil.
+           "nearest" oldugu icin zaten goruntudeyse hic kaydirmaz. */
+        const satirlar=setKutu.querySelectorAll(".setrow");
+        const hedef=satirlar[satirlar.length-1];
+        const yumusak=!matchMedia("(prefers-reduced-motion:reduce)").matches;
+        if(hedef) hedef.scrollIntoView({behavior:yumusak?"smooth":"auto",block:"nearest"});
+      }
+    }
   };
   setKutu.onclick=ev=>{
+    /* Kilo adimlayici. 2.5 kg: dambıl ve plaka artışlarının standart adımı.
+       Yalnızca dokunulan seti değiştirir; başka bir set istersen onun
+       kendi düğmelerini kullanırsın. İşaretli sette de çalışır - yanlış
+       girilen ağırlık sonradan düzeltilebilsin diye. */
+    const adim=ev.target.closest("[data-kg]");
+    if(adim){
+      const i=+adim.dataset.set, st=kayit.setler[i];
+      const yeni=Math.max(0, Math.round(((+st.kg||0)+(+adim.dataset.kg)*2.5)*10)/10);
+      st.kg=yeni;
+      const inp=adim.closest(".setrow").querySelector('[data-f="kg"]');
+      if(inp) inp.value=yeni;
+      kaydetYakinda();
+      return;
+    }
     const b=ev.target.closest("[data-done]");
     if(!b) return;
     const i=+b.dataset.done, st=kayit.setler[i];
@@ -1748,6 +1959,19 @@ function renderWorkout(){
       b.textContent="○";
       saveAll();
       return;
+    }
+    /* Boş set işaretlenmesin: tekrar yazılmadan tiklenirse kayıt sessizce
+       0 hacimle düşer ve istatistik bozulur. Süreli harekette hedef boş
+       kalabilir - startHold zaten programdaki değere düşüyor. */
+    if(h.tip!=="sure"){
+      const eksik = (st.tekrar==null || +st.tekrar<=0) ? "tekrar"
+                  : (h.tip==="kg" && st.kg==null)      ? "kg" : null;
+      if(eksik){
+        const inp=b.closest(".setrow").querySelector('[data-f="'+eksik+'"]');
+        if(inp){ inp.focus(); try{ inp.select(); }catch(e){} }
+        toast(eksik==="kg" ? "Önce ağırlığı gir" : "Önce tekrar sayısını gir");
+        return;
+      }
     }
     /* Plank gibi süreli hareketlerde tik önce sayacı başlatır; set, süre
        dolunca ya da "Bitir"e basılınca geçen süreyle kapanır. */
@@ -1780,6 +2004,13 @@ function renderWorkout(){
     setDurum(); saveAll();
     if(cikan.done) toast("İşaretli set çıkarıldı");
   };
+  /* Ilerleme cubugundan dogrudan atlama: 16 hareketlik bir gunde uzaktaki
+     bir harekete gitmek icin "Sonraki"ye defalarca basmak gerekmesin. */
+  view.querySelectorAll("[data-git]").forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.git;
+    if(i===state.exIndex) return;
+    state.exIndex=i; saveAll(); renderWorkout(); scrollTo(0,0);
+  });
   document.getElementById("prevEx").onclick=()=>{ if(state.exIndex>0){state.exIndex--;saveAll();renderWorkout();scrollTo(0,0);} };
   document.getElementById("nextEx").onclick=()=>{
     if(state.exIndex<s.hareketler.length-1){ state.exIndex++; saveAll(); renderWorkout(); scrollTo(0,0); }
@@ -1860,6 +2091,7 @@ function startSession(prog){
   state.exIndex=0; state.tab="workout"; state.duzenle=null; state.secici=null; state.openEx=null;
   state.active.sonFaz=null;     // ilk hareket hangi bolumdeyse gecis ekrani cikacak
   saatBaslat();
+  ekranAcikTut();
   render(); scrollTo(0,0);
 }
 
@@ -1889,7 +2121,7 @@ function bitirSor(){
   const sv=document.getElementById("mSave"); if(sv) sv.onclick=()=>{ modalKapat(); kaydetVeBitir(); };
   document.getElementById("mDrop").onclick=async()=>{
     modalKapat();
-    state.active=null; clearInterval(clockTimer);
+    state.active=null; clearInterval(clockTimer); ekranBirak();
     /* Diskteki yarım seans kopyasını da sil; yoksa her yenilemede geri gelir. */
     await saveAll();
     state.tab="home"; render(); toast("Antrenman kaydedilmedi");
@@ -1908,6 +2140,7 @@ async function kaydetVeBitir(){
   state.sessions.push(s);
   state.active=null;
   clearInterval(clockTimer);
+  ekranBirak();
   const ok=await saveAll();
   if(state.otoDosya) dosyayaAktar(true);
   state.tab="stats"; render();
@@ -2118,6 +2351,34 @@ function ekleSheet(exId){
 /* --- DİNLENME VE SÜRE SAYACI --- */
 /* Aynı tam ekran sayaç iki iş görüyor: setler arası dinlenme, ve plank gibi
    süreli hareketlerde setin kendisi. Fark etiketlerde ve bitişte olanda. */
+/* --- EKRAN KILIDI ---
+   Antrenman surerken ekranin kararmasini engeller: molada sayaci gormek ya
+   da sonraki seti isaretlemek icin telefonu tekrar acmak gerekmesin.
+   Kilit yalnizca seans surerken tutuluyor - katalogda gezinirken ekrani
+   zorla acik tutmanin karsiligi yok, pili bosa yakar.
+   Tarayici sekme gizlenince kilidi kendiliginden birakiyor, o yuzden geri
+   donuste yeniden isteniyor (asagidaki visibilitychange).
+   API yalnizca HTTPS ve localhost'ta var; file:// ile acildiginda ya da eski
+   tarayicilarda sessizce devre disi kalir, hata gosterilmez. */
+let ekranKilidi=null;
+function ekranKilidiDestekli(){ return "wakeLock" in navigator; }
+async function ekranAcikTut(){
+  if(!state.ekranAcik || !state.active || !ekranKilidiDestekli()) return;
+  if(ekranKilidi) return;
+  let k;
+  /* Istek reddedilebilir: izin yok, pil tasarrufu acik, sekme gizli.
+     Hepsi normal - kullaniciya hata gostermeye deger bir sey degil. */
+  try{ k=await navigator.wakeLock.request("screen"); }catch(e){ return; }
+  /* Istek beklenirken antrenman bitmis olabilir; kilidi tutma. */
+  if(!state.active || !state.ekranAcik){ try{ k.release(); }catch(e){} return; }
+  k.addEventListener("release",()=>{ if(ekranKilidi===k) ekranKilidi=null; });
+  ekranKilidi=k;
+}
+function ekranBirak(){
+  const k=ekranKilidi; ekranKilidi=null;
+  if(k) try{ k.release(); }catch(e){}
+}
+
 /* --- BİLDİRİM ---
    Sayaç bittiğinde uygulama arka plandaysa bildirim gönderir. Android'de
    new Notification() desteklenmiyor, service worker üzerinden göndermek
@@ -2129,7 +2390,7 @@ function bildirimDurum(){
 async function bildirimGonder(baslik,govde){
   if(!("Notification" in window) || Notification.permission!=="granted") return;
   const ayar={body:govde, icon:"icon-192.png", badge:"icon-192.png",
-              tag:"salon-sayac", renotify:true, vibrate:[120,80,120]};
+              tag:"salon-sayac", renotify:true, vibrate:TITRESIM.sayac};
   try{
     const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
     if(reg && reg.showNotification){ await reg.showNotification(baslik,ayar); return; }
@@ -2176,6 +2437,20 @@ async function pipAc(){
 /* Sayaç duvar saatine göre çalışır. Tarayıcı arka plandaki sekmenin
    setInterval'ini kıstığında geri sayım kaymaz; uygulamaya dönünce doğru
    değere atlar. Bitiş anı restBitis'te tutulur, tik sayısında değil. */
+/* Dinlenme seritte mi tam ekranda mi acilsin? Kullanicinin son tercihi
+   uygulama acik kaldigi surece hatirlaniyor; diske yazmaya deger bir ayar
+   degil, salonda bir kez secilir ve o seansta oyle kalir. */
+let seritMod=true;
+function sayacBoy(serit){
+  const k=document.getElementById("rest");
+  k.classList.toggle("serit",!!serit);
+  /* Sayfanin alti seridin arkasinda kalmasin - ama sayaç kapaliyken bosluk
+     eklemenin anlami yok. */
+  document.body.classList.toggle("seritli", !!serit && !k.classList.contains("hidden"));
+  const b=document.getElementById("restBoy");
+  if(b){ b.textContent=serit?"▲":"▼"; b.title=serit?"Büyüt":"Küçült"; }
+}
+
 function sayacCiz(){
   const kalan=Math.max(0, Math.round((restBitis-Date.now())/1000));
   document.getElementById("restNum").textContent=kalan;
@@ -2188,11 +2463,22 @@ function sayacAc(tip,sn,not,bitince,onizleme){
   sayacBas=Date.now();
   restBitis=Date.now()+sn*1000;
   document.getElementById("restLbl").textContent = tip==="sure" ? "Süre" : "Dinlenme";
-  document.getElementById("restSkip").textContent = tip==="sure" ? "Bitir" : "Devam et";
+  /* Dugme, molanin sonunda gidilecek yeri soylesin: "Devam et" bu harekette
+     set kaldigini, "Sonraki hareket" hareketin bittigini anlatiyor. Boylece
+     bir dokunus yetiyor - once sayaci kapatip sonra "Sonraki"ye basmak yok. */
+  sayacGecis = (tip==="dinlenme" && onizleme) ? (onizleme.gecis||null) : null;
+  document.getElementById("restSkip").textContent =
+      tip==="sure"            ? "Bitir"
+    : sayacGecis==="bitir"    ? "Antrenmanı bitir"
+    : sayacGecis==="hareket"  ? "Sonraki hareket"
+    :                           "Devam et";
   const alt=document.getElementById("restNext");
   alt.textContent=not||"";
   onizlemeYaz(onizleme, alt);
   document.getElementById("rest").classList.remove("hidden");
+  /* Süreli hareket sayacı her zaman tam ekran: o saniyeler hareketin
+     kendisi. Dinlenme seritte açılır (ya da kullanıcı büyüttüyse öyle). */
+  sayacBoy(tip==="dinlenme" ? seritMod : false);
   clearInterval(restTimer);
   sayacCiz();
   restTimer=setInterval(sayacCiz,250);
@@ -2202,8 +2488,12 @@ function sayacAc(tip,sn,not,bitince,onizleme){
 function sayacKapat(suresiDoldu){
   clearInterval(restTimer);
   document.getElementById("rest").classList.add("hidden");
+  document.body.classList.remove("seritli");
+  /* Geri cagri yeni bir sayac acabilir (sureli hareket -> dinlenme);
+     eski gecis bilgisi onun uzerine binmesin diye once temizliyoruz. */
+  sayacGecis=null;
   if(suresiDoldu){
-    if(navigator.vibrate) navigator.vibrate([120,80,120]);
+    titret(TITRESIM.sayac);
     if(pipPencere){
       const l=pipPencere.document.getElementById("l");
       if(l) l.textContent="Bitti";
@@ -2223,10 +2513,13 @@ function startRest(sn,not,onizleme){ sayacAc("dinlenme",sn,not,null,onizleme); }
    tam metni restNext üzerinde saklıyoruz. */
 function onizlemeYaz(bilgi, altEl){
   const kutu=document.getElementById("restOnizleme");
+  /* Seritte önizleme kartı görünmüyor; aynı bilgi tek satıra sığdırılıyor. */
+  const kisa=document.getElementById("restKisa");
   const e=bilgi&&bilgi.ex?EX[bilgi.ex]:null;
   if(!bilgi||!e){
     kutu.classList.add("hidden");
     altEl.dataset.tam=altEl.textContent;
+    kisa.textContent=altEl.textContent;
     return;
   }
   kutu.classList.remove("hidden");
@@ -2238,14 +2531,50 @@ function onizlemeYaz(bilgi, altEl){
   document.getElementById("restAd").textContent=e.n;
   document.getElementById("restAlt").textContent=bilgi.alt||"";
   altEl.dataset.tam=(altEl.textContent?altEl.textContent+": ":"")+e.n;
+  kisa.textContent=(altEl.textContent?altEl.textContent+" · ":"")+e.n
+    +(bilgi.alt?" · "+bilgi.alt:"");
 }
 function startHold(sn,not,bitince){ sayacAc("sure",sn,not,bitince); }
-document.getElementById("restSkip").onclick=()=>sayacKapat(false);
+document.getElementById("restSkip").onclick=()=>{
+  /* Gecis bilgisini sayacKapat temizlemeden once aliyoruz. */
+  const gecis=sayacGecis;
+  sayacKapat(false);
+  if(!state.active || !gecis) return;
+  if(gecis==="hareket" && state.exIndex<state.active.hareketler.length-1){
+    state.exIndex++;
+    state.tab="workout";
+    saveAll();
+    render(); scrollTo(0,0);
+  }else if(gecis==="bitir"){
+    state.tab="workout";
+    render();
+    bitirSor();
+  }
+};
+document.getElementById("restBoy").onclick=()=>{
+  const serit=!document.getElementById("rest").classList.contains("serit");
+  if(sayacTipi==="dinlenme") seritMod=serit;
+  sayacBoy(serit);
+};
+/* Seride dokunmak buyutur. Dugmelere dokunus kendi isini yapsin. */
+document.getElementById("rest").onclick=ev=>{
+  const k=document.getElementById("rest");
+  if(!k.classList.contains("serit")) return;
+  if(ev.target.closest("button")) return;
+  if(sayacTipi==="dinlenme") seritMod=false;
+  sayacBoy(false);
+};
 document.getElementById("restPip").onclick=pipAc;
 if(pipDestekli()) document.getElementById("restPip").classList.remove("hidden");
 document.getElementById("restPlus").onclick=()=>{ restBitis+=15000; sayacCiz(); };
-/* Arka plandan dönünce sayaç beklemeden doğru değere atlasın. */
-document.addEventListener("visibilitychange",()=>{ if(!document.hidden && restTimer) sayacCiz(); });
+/* Arka plandan dönünce sayaç beklemeden doğru değere atlasın. Ekran kilidi
+   de burada geri alınıyor: tarayıcı sekme gizlenince onu düşürüyor, yoksa bir
+   kez arka plana alınca özellik sessizce ölürdü. */
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden) return;
+  if(restTimer) sayacCiz();
+  ekranAcikTut();
+});
 
 /* --- HAREKET KATALOĞU --- */
 const ATIF=`<p class="attrib">Hareket görselleri © <a href="https://gymvisual.com/" target="_blank" rel="noopener">Gym visual</a> · veri: exercises-dataset (MIT)</p>`;
@@ -2454,16 +2783,59 @@ function renderHistory(){
   view.innerHTML=`<button class="btn ghost sm" id="back" style="margin-bottom:12px">İstatistiğe dön</button>`+
     (ss.length? `<div class="card">${[...ss].reverse().map(s=>{
       const setSayisi=s.kayitlar.filter(anaMi).reduce((a,k)=>a+k.setler.length,0), acik=state.openHist===s.id;
-      return `<button class="hist" data-h="${s.id}">
-        <div class="row between">
-          <span><b style="font-family:var(--cond);font-size:18px">${tarihTR(s.tarih)}</b><span class="pill" style="margin-left:8px">${s.program?progKisa(s.program.ad):("Gün "+s.gun)}</span></span>
-          <span class="muted small">${mmss(s.sure||0)} · ${setSayisi} set</span>
-        </div>
-        ${acik?`<div class="small muted" style="margin-top:8px">${s.kayitlar.map(k=>`<div style="padding:3px 0">${exAd(k.id)}: ${k.setler.map(x=>(x.kg?x.kg+"kg×":"")+x.tekrar+(k.tip==="sure"?"sn":"")).join(" · ")}</div>`).join("")}</div>`:""}
-      </button>`;}).join("")}</div>`
+      return `<div class="hist">
+        <button class="histbas" data-h="${s.id}">
+          <div class="row between">
+            <span><b style="font-family:var(--cond);font-size:18px">${tarihTR(s.tarih)}</b><span class="pill" style="margin-left:8px">${s.program?progKisa(s.program.ad):("Gün "+s.gun)}</span></span>
+            <span class="muted small">${mmss(s.sure||0)} · ${setSayisi} set</span>
+          </div>
+        </button>
+        ${acik?`<div class="histdetay">
+          ${s.kayitlar.map((k,ki)=>`
+            <div class="hsatir">
+              <span class="had">${exAd(k.id)}</span>
+              <div class="hsetler">${k.setler.map((x,si)=>`
+                <span class="hset">
+                  ${k.tip==="kg"?`<input type="number" inputmode="decimal" step="0.5" data-sd="${s.id}" data-k="${ki}" data-i="${si}" data-f="kg" value="${x.kg??""}">×`:""}
+                  <input type="number" inputmode="numeric" data-sd="${s.id}" data-k="${ki}" data-i="${si}" data-f="tekrar" value="${x.tekrar??""}">${k.tip==="sure"?"sn":""}
+                </span>`).join("")}</div>
+            </div>`).join("")}
+          <p class="muted small" style="margin:12px 0 0">Yanlış girdiğin bir değeri buradan düzeltebilirsin; düzeltme "geçen sefer" önerisine de yansır.</p>
+          <button class="btn danger sm" data-sessil="${s.id}" style="margin-top:10px">Bu antrenmanı sil</button>
+        </div>`:""}
+      </div>`;}).join("")}</div>`
     : `<div class="card"><h3>Henüz kayıt yok</h3><p class="muted small">İlk antrenmanını bitirdiğinde burada listelenir.</p></div>`);
   document.getElementById("back").onclick=()=>{ state.tab="stats"; render(); };
   view.querySelectorAll("[data-h]").forEach(b=>b.onclick=()=>{ state.openHist=state.openHist===b.dataset.h?null:b.dataset.h; renderHistory(); });
+  /* Set değerini düzeltme. change (blur) üzerinden: her tuş vuruşunda diske
+     yazmak gereksiz. Hacim kayıtlardan türetildiği için yeniden hesaplanıyor,
+     yoksa istatistikteki "toplam kaldırılan ağırlık" eski değerde kalırdı. */
+  view.querySelectorAll(".histdetay input").forEach(inp=>inp.onchange=async()=>{
+    const s=state.sessions.find(x=>x.id===inp.dataset.sd); if(!s) return;
+    const k=s.kayitlar[+inp.dataset.k]; if(!k) return;
+    const st=k.setler[+inp.dataset.i]; if(!st) return;
+    const ham=inp.value.trim();
+    const v=ham===""?null:Math.max(0,+ham);
+    st[inp.dataset.f]=(v==null||isNaN(v))?null:v;
+    if(st[inp.dataset.f]!=null) inp.value=st[inp.dataset.f];
+    s.hacim=s.kayitlar.reduce((a,kk)=>a+kk.setler.reduce((b,x)=>b+((x.kg||0)*(x.tekrar||0)),0),0);
+    await saveAll();
+    toast("Kayıt güncellendi");
+  });
+  view.querySelectorAll("[data-sessil]").forEach(b=>b.onclick=()=>{
+    const s=state.sessions.find(x=>x.id===b.dataset.sessil); if(!s) return;
+    modalAc(`
+      <h2>Antrenmanı sil</h2>
+      <p class="muted small">${tarihTR(s.tarih)} · ${s.program?progKisa(s.program.ad):("Gün "+s.gun)} kaydı silinecek. Bu işlem geri alınamaz.</p>
+      <button class="btn danger" id="asEvet">Sil</button>
+      <button class="btn ghost" id="asHayir">Vazgeç</button>`);
+    document.getElementById("asEvet").onclick=async()=>{
+      state.sessions=state.sessions.filter(x=>x.id!==s.id);
+      if(state.openHist===s.id) state.openHist=null;
+      await saveAll(); modalKapat(); renderHistory(); toast("Antrenman silindi");
+    };
+    document.getElementById("asHayir").onclick=modalKapat;
+  });
 }
 
 /* --- VERİ --- */
@@ -2528,6 +2900,13 @@ function renderData(){
       </div>
     </div>
     <div class="card">
+      <h3>Antrenmanda ekran</h3>
+      <p class="muted small">Antrenman sürerken ekran kendiliğinden kararmaz; molada sayaç için telefonu tekrar açman gerekmez. Yalnızca antrenman sürdüğü süre geçerlidir.</p>
+      <div class="switch"><span>Ekran açık kalsın</span><button id="tglEkran" class="${state.ekranAcik?"on":""}"><i></i></button></div>
+      <div class="kv"><span>Tarayıcı desteği</span><b>${ekranKilidiDestekli()?"var":"desteklenmiyor"}</b></div>
+      ${ekranKilidiDestekli()?"":`<p class="muted small" style="margin:8px 0 0">Bu özellik yalnızca HTTPS ya da localhost üzerinden açılan sayfalarda çalışır.</p>`}
+    </div>
+    <div class="card">
       <h3>Dinlenme bildirimi</h3>
       <p class="muted small">Uygulama arka plandayken sayaç bitince bildirim gönderir. Telefonda başka bir uygulamadayken işe yarar.</p>
       <div class="switch"><span>Sayaç bitince bildir</span><button id="tglBildirim" class="${state.bildirim?"on":""}"><i></i></button></div>
@@ -2571,6 +2950,13 @@ function renderData(){
   document.getElementById("goProg2").onclick=()=>{ state.tab="programs"; render(); scrollTo(0,0); };
   document.getElementById("hedef").onchange=async e=>{ const v=+e.target.value; if(v>=50&&v<=400){ state.hedefProtein=v; await saveAll(); toast("Hedef "+v+" g olarak kaydedildi"); } };
   document.getElementById("tgl").onclick=async()=>{ state.otoDosya=!state.otoDosya; await saveAll(); renderData(); };
+  document.getElementById("tglEkran").onclick=async()=>{
+    state.ekranAcik=!state.ekranAcik;
+    await saveAll();
+    if(state.ekranAcik) ekranAcikTut(); else ekranBirak();
+    renderData();
+    toast(state.ekranAcik?"Antrenmanda ekran açık kalacak":"Ekran kilidi kapatıldı");
+  };
   /* İzin isteme kullanıcı hareketi gerektirdiği için tam burada yapılıyor. */
   document.getElementById("tglBildirim").onclick=async()=>{
     if(state.bildirim){ state.bildirim=false; await saveAll(); renderData(); return; }
@@ -2638,6 +3024,7 @@ window.addEventListener("pagehide",()=>{ if(state.active) saveAll(); });
   await loadAll();
   if(state.active){
     saatBaslat();
+    ekranAcikTut();
     /* Sayaç kendiliğinden çalışıyor gibi görünmesin: neden sürdüğünü söyle. */
     const gecen=Math.floor((Date.now()-state.active.baslangic)/60000);
     setTimeout(()=>toast(`Yarım kalan antrenman sürüyor · ${gecen} dk önce başladı`),400);
