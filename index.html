@@ -734,17 +734,20 @@ function gun(id,ad,govde){ return {id, ad, hareketler:[...acilis(), ...govde, ..
    yapılıyor: yüzüstü yatmayı gerektiren rear delt row yerine bankta
    oturup öne eğilerek. Duruş için programdaki tek yüksek dirsekli
    hareket o, bu yüzden listede kalması önemli.
-   Çekiş (pull-up, bent over row, one arm row) ve itiş (shoulder press,
-   push-up) haftada iki güne dağıtıldı; lateral raise ve plank üç günde. */
+   Çekiş (pull-up, bent over row, one arm row), itiş (shoulder press,
+   push-up), arka omuz (0359) ve dead bug haftada iki güne dağıtıldı;
+   lateral raise ve plank üç günde. */
 function varsayilanProgramlar(){
   return [
     gun("1","Gün 1 — Sırt ve biceps",[
       {ex:"0652",set:4,tekrar:"3-5",  mola:120,tip:"vucut"},
       {ex:"0293",set:3,tekrar:"10-12",mola:75, tip:"kg"},
       {ex:"0292",set:3,tekrar:"10-12",mola:90, tip:"kg"},
+      {ex:"0359",set:3,tekrar:"15",   mola:45, tip:"kg"},
       {ex:"0375",set:3,tekrar:"12-15",mola:75, tip:"kg"},
       {ex:"0334",set:4,tekrar:"12-15",mola:60, tip:"kg"},
       {ex:"0294",set:3,tekrar:"10-12",mola:60, tip:"kg"},
+      {ex:"0276",set:3,tekrar:"8",    mola:45, tip:"vucut"},
       {ex:"c001",set:3,tekrar:"40",   mola:45, tip:"sure"}]),
     gun("2","Gün 2 — Bacak, itiş, kol",[
       {ex:"1760",set:3,tekrar:"10-12",mola:90, tip:"kg"},
@@ -770,12 +773,13 @@ function varsayilanProgramlar(){
 }
 
 /* Varsayilan programlarin surumu.
-   v3: bolum ayrimi kalkti ve hareket listesi degisti, bu yuzden ayni
-   id'yi tasiyan uc varsayilan gun yeniden yaziliyor. Kullanicinin kendi
-   olusturdugu programlar farkli id tasidigi icin olduklari gibi kaliyor;
-   gecmis antrenman kayitlari zaten seansin kopyasini tutuyor, onlar da
-   etkilenmiyor. */
-const PROGRAM_SURUM = 3;
+   v3: bolum ayrimi kalkti ve hareket listesi degisti.
+   v4: Gun 1'e destekli reverse fly ve dead bug eklendi.
+   Her surumde ayni id'yi tasiyan uc varsayilan gun yeniden yaziliyor.
+   Kullanicinin kendi olusturdugu programlar farkli id tasidigi icin
+   olduklari gibi kaliyor; gecmis antrenman kayitlari zaten seansin
+   kopyasini tutuyor, onlar da etkilenmiyor. */
+const PROGRAM_SURUM = 4;
 function programlariTazele(){
   if((state.programSurum||1) >= PROGRAM_SURUM) return false;
   const yeni = varsayilanProgramlar();
