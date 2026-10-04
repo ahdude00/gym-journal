@@ -323,6 +323,21 @@ summary{cursor:pointer}
 
 /* program düzenleyici */
 .progrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+/* Sıralama tutamağı. touch-action:none şart: olmazsa tarayıcı parmağı
+   sayfayı kaydırmak için kullanıyor ve sürükleme hiç başlamıyor. */
+.progrow .tut{touch-action:none;cursor:grab}
+.progrow .tut:active{cursor:grabbing}
+.proglist{position:relative}
+.progrow.suruklenen{position:relative;z-index:3;background:var(--panel);
+  border-radius:var(--r-s);box-shadow:var(--golge-2)}
+/* Bırakma çizgisi satırların üzerine değil, listenin kendisine konuyor:
+   satıra inset gölge olarak çizildiğinde sürüklenen satırın opak zemini
+   tam da onun üstüne gelip çizgiyi gizliyordu. z-index tutulan satırdan
+   büyük, böylece her durumda görünüyor. */
+.birakma{position:absolute;left:0;right:0;height:3px;border-radius:999px;
+  background:var(--accent);z-index:4;pointer-events:none}
+.birakma::after{content:"";position:absolute;left:0;top:-3px;width:9px;height:9px;
+  border-radius:50%;background:var(--accent)}
 .progrow:first-of-type{border-top:none}
 .progrow .plate{width:44px;height:44px}
 .progrow .nm{flex:1;min-width:0;text-align:left}
@@ -530,8 +545,10 @@ const ekipTR  = q => EKIP[q] || q;
 function exImg(e){ return "images/" + e.i + "-" + e.m + ".jpg"; }
 function exGif(e){ return "videos/" + e.i + "-" + e.m + ".gif"; }
 function exAd(id){ return EX[id] ? EX[id].n : id; }
-/* c003-c005'in dataset gorseli yok (bkz. data/custom.js). Bos beyaz kutu
-   yerine hareketin bas harfini tasiyan yer tutucu cizilir. */
+/* Şu an kayıtların hepsinde medya var (c003-c005 de dahil: onlara
+   tools/cop-adam-uret.py ile figür çizildi). Aşağıdaki yer tutucu dalı bu
+   yüzden çalışmıyor; medyasız bir kayıt eklenirse diye duruyor, yoksa yol
+   "images/undefined-undefined.jpg" olur ve kırık görsel çıkar. */
 function medyaVar(e){ return !!(e && e.m); }
 function basHarf(e){ return String((e&&e.n)||"?").trim().charAt(0).toUpperCase(); }
 /* Kucuk kare (liste satirlari, dinlenme onizlemesi). */
@@ -545,8 +562,9 @@ function plakaIc(e, boy){
 /* Buyuk gorsel alani (antrenman ekrani, hareket detayi). */
 function sahneIc(e){
   if(medyaVar(e)) return `<div class="media"><img src="${exGif(e)}" alt="${e.n}" onerror="this.style.display='none'"></div>`;
+  /* Bkz. medyaVar: şu an tetiklenmiyor, medyasız kayıt için emniyet. */
   return `<div class="media bos"><b>${basHarf(e)}</b>
-    <span>Bu hareketin dataset görseli yok — aşağıdaki adımları izle.</span></div>`;
+    <span>Bu hareketin görseli yok — aşağıdaki adımları izle.</span></div>`;
 }
 function exAltyazi(id){ const e = EX[id]; return e ? kasTR(e.t) + " · " + ekipTR(e.q) : ""; }
 /* Dataset "bu hareket ağırlıklı mı" bilgisini taşımıyor; ekipmandan tahmin ediyoruz. */
@@ -670,6 +688,14 @@ const OVERLAY = {
     hatalar:["Kalçayı düşürüp normal şınava çevirmek.","Dirsekleri tamamen yana açmak.","Boynu öne uzatıp kambur kalmak."] }
 };
 function ov(id){ return OVERLAY[id] || null; }
+/* Mola kutusunu okur. 0 geçerli bir değer olduğu için "||" ile varsayılana
+   düşmek yanlış; yalnızca kutu boşsa ya da sayı değilse eskisi korunur. */
+function molaOku(ham, eski){
+  const t=String(ham==null?"":ham).trim();
+  if(t==="") return eski==null?60:eski;
+  const n=+t;
+  return isNaN(n) ? (eski==null?60:eski) : Math.max(0,Math.min(600,n));
+}
 function oneriOf(id){ const o = ov(id); return (o && o.oneri) ? o.oneri : { tekrar:10 }; }
 function tipOf(id){ const o = ov(id); return (o && o.tip) ? o.tip : varsayilanTip(EX[id]); }
 
@@ -2157,7 +2183,7 @@ function renderPrograms(){
       <button class="exitem" data-p="${p.id}">
         <span class="nm"><b>${p.ad}</b><span class="muted small">${progOzet(p)}</span></span>
         <span class="muted">Düzenle ›</span></button>`).join("")}</div>`
-    :`<div class="card"><h3>Henüz program yok</h3><p class="muted small" style="margin-top:6px">Yeni bir program oluştur, sonra Hareketler sekmesinden 1324 hareket arasından seçim yap.</p></div>`}
+    :`<div class="card"><h3>Henüz program yok</h3><p class="muted small" style="margin-top:6px">Yeni bir program oluştur, sonra Hareketler sekmesinden ${RAW.length} hareket arasından seçim yap.</p></div>`}
     <button class="btn" id="yeni">Yeni program</button>`;
   document.getElementById("back").onclick=()=>{ state.tab="workout"; render(); scrollTo(0,0); };
   view.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{ state.duzenle=b.dataset.p; render(); scrollTo(0,0); });
@@ -2181,7 +2207,7 @@ function renderProgramDuzenle(){
     </div>
     <div class="card">
       <div class="row between" style="margin-bottom:4px"><h3>Hareketler</h3><span class="muted small">${progOzet(p)}</span></div>
-      ${p.hareketler.length? fazGruplari(p.hareketler.map((h,i)=>({h,i}))
+      <div class="proglist">${p.hareketler.length? fazGruplari(p.hareketler.map((h,i)=>({h,i}))
         .map(x=>Object.assign({},x.h,{__i:x.i}))).map(g=>`
         <div class="fazbar ${FAZ[g.faz].sinif}" style="margin:12px 0 2px"><i>${FAZ[g.faz].ikon}</i>
           <b>${FAZ[g.faz].ad}</b><span class="sag">${g.hareketler.length} hareket</span></div>
@@ -2190,30 +2216,36 @@ function renderProgramDuzenle(){
         return `<div class="progrow">
           ${plakaIc(e)}
           <button class="nm" data-ayar="${i}"><b>${exAd(h.ex)}</b><span class="muted small">${h.set} set · ${h.tekrar}${h.tip==="sure"?" sn":""} · ${h.mola} sn mola</span></button>
-          <button class="iconbtn" data-up="${i}" ${i===0?"disabled":""}>↑</button>
-          <button class="iconbtn" data-down="${i}" ${i===p.hareketler.length-1?"disabled":""}>↓</button>
+          <button class="iconbtn tut" data-tut="${i}" title="Sürükleyerek sırala"
+            aria-label="Sırala: sürükle, ya da yukarı/aşağı ok tuşlarını kullan">≡</button>
           <button class="iconbtn" data-sil="${i}">✕</button>
         </div>`;}).join("")}`).join("")
-      : `<p class="muted small" style="margin:6px 0 0">Bu programda hareket yok.</p>`}
+      : `<p class="muted small" style="margin:6px 0 0">Bu programda hareket yok.</p>`}</div>
       <button class="btn quiet sm" id="ekle" style="margin-top:12px">+ Hareket ekle</button>
     </div>
     <button class="btn danger sm" id="progSil">Bu programı sil</button>`;
 
   document.getElementById("back").onclick=()=>{ state.duzenle=null; render(); scrollTo(0,0); };
   const ad=document.getElementById("pAd");
-  ad.onchange=async()=>{ p.ad=ad.value.trim()||"Program"; await saveAll(); };
+  /* onchange yalnızca odak çıkınca tetikleniyordu: klavyeyi kapatmadan
+     sekme değiştirildiğinde ad kaydedilmeden gidiyordu. Yazarken gecikmeli
+     kaydediyoruz, boş bırakılırsa varsayılana odak çıkınca dönüyor. */
+  ad.oninput=()=>{ p.ad=ad.value; kaydetYakinda(); };
+  ad.onblur=async()=>{ p.ad=ad.value.trim()||"Program"; ad.value=p.ad; await saveAll(); };
   document.getElementById("ekle").onclick=()=>{
     state.secici={progId:p.id}; state.duzenle=null;
     state.tab="guide"; state.kat.limit=60; state.openEx=null;
     render(); scrollTo(0,0);
   };
   view.querySelectorAll("[data-ayar]").forEach(b=>b.onclick=()=>hareketAyarSheet(p,+b.dataset.ayar));
-  const tasi=async(i,j)=>{
+  const tasi=async(i,j,odakla)=>{
     const [x]=p.hareketler.splice(i,1); p.hareketler.splice(j,0,x);
     await saveAll(); render();
+    /* Klavyeyle taşırken odak kaybolmasın; aksi halde her adımda tutamağı
+       yeniden bulmak gerekir. */
+    if(odakla){ const t=view.querySelector('[data-tut="'+j+'"]'); if(t) t.focus(); }
   };
-  view.querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>tasi(+b.dataset.up,+b.dataset.up-1));
-  view.querySelectorAll("[data-down]").forEach(b=>b.onclick=()=>tasi(+b.dataset.down,+b.dataset.down+1));
+  siralamaBagla(p, tasi);
   view.querySelectorAll("[data-sil]").forEach(b=>b.onclick=async()=>{
     p.hareketler.splice(+b.dataset.sil,1); await saveAll(); render();
   });
@@ -2229,6 +2261,91 @@ function renderProgramDuzenle(){
     };
     document.getElementById("sHayir").onclick=modalKapat;
   };
+}
+
+/* Sürükleyerek sıralama.
+   HTML5 drag-and-drop telefonda çalışmıyor, bu yüzden pointer olaylarıyla
+   yapılıyor. Sürükleme sırasında yalnızca tutulan satır parmağı takip
+   ediyor; diğerleri yerinde kalıyor ve bırakma yeri ince bir çizgiyle
+   gösteriliyor. Satırları canlı kaydırmak daha gösterişli olurdu ama liste
+   bölüm başlıklarıyla bölündüğü için o hesap kırılgan oluyor.
+   Tutamak klavyeyle de çalışıyor: yukarı/aşağı ok tuşları hareketi taşır. */
+function siralamaBagla(p, tasi){
+  let satirlar=[], kaynak=-1, hedef=-1, basY=0, aktifSatir=null, cizgi=null;
+  const sayfaY=ev=>ev.clientY+window.scrollY;   /* sürüklerken sayfa kayabilir */
+  const liste=view.querySelector(".proglist");
+  if(!liste) return;
+
+  const temizle=()=>{
+    view.querySelectorAll(".progrow").forEach(r=>{
+      r.classList.remove("suruklenen");
+      r.style.transform="";
+    });
+    if(cizgi){ cizgi.remove(); cizgi=null; }
+  };
+  /* İmleç hangi satırın önüne denk geliyor? Satırlar sürükleme boyunca
+     yerinde durduğu için ölçüler başta bir kez alınıyor. */
+  const hedefHesapla=y=>{
+    for(let i=0;i<satirlar.length;i++) if(y<satirlar[i].orta) return i;
+    return satirlar.length;
+  };
+  /* hedef, kaynak listeden çıkarılmadan ÖNCEki konuma göre; kaynak
+     yukarıdaysa bir basamak kayıyor. */
+  const varisIndeksi=()=>hedef>kaynak?hedef-1:hedef;
+  const isaretle=()=>{
+    if(!cizgi) return;
+    if(varisIndeksi()===kaynak){ cizgi.style.display="none"; return; }  /* yerinde kalacak */
+    cizgi.style.display="block";
+    const son=satirlar[satirlar.length-1];
+    const y = hedef>=satirlar.length ? son.alt : satirlar[hedef].ust;
+    cizgi.style.top=(y-1.5)+"px";
+  };
+
+  view.querySelectorAll("[data-tut]").forEach(tut=>{
+    tut.onpointerdown=ev=>{
+      if(ev.button!=null && ev.button!==0) return;
+      ev.preventDefault();
+      kaynak=+tut.dataset.tut;
+      aktifSatir=tut.closest(".progrow");
+      basY=sayfaY(ev);
+      /* ust/alt listeye göre (çizgiyi konumlandırmak için), orta sayfaya
+         göre (imleçle karşılaştırmak için). İkisi de aynı anda alınıyor. */
+      const lr=liste.getBoundingClientRect();
+      satirlar=[...view.querySelectorAll(".progrow")].map(r=>{
+        const b=r.getBoundingClientRect();
+        return {ust:b.top-lr.top, alt:b.bottom-lr.top, orta:b.top+window.scrollY+b.height/2};
+      });
+      hedef=kaynak;
+      aktifSatir.classList.add("suruklenen");
+      cizgi=document.createElement("div");
+      cizgi.className="birakma";
+      liste.appendChild(cizgi);
+      isaretle();
+      try{ tut.setPointerCapture(ev.pointerId); }catch(e){}
+    };
+    tut.onpointermove=ev=>{
+      if(kaynak<0) return;
+      ev.preventDefault();
+      aktifSatir.style.transform="translateY("+(sayfaY(ev)-basY)+"px)";
+      hedef=hedefHesapla(sayfaY(ev));
+      isaretle();
+    };
+    const bitir=ev=>{
+      if(kaynak<0) return;
+      try{ tut.releasePointerCapture(ev.pointerId); }catch(e){}
+      const k=kaynak, j=Math.max(0,Math.min(p.hareketler.length-1,varisIndeksi()));
+      kaynak=-1;
+      temizle();
+      if(j!==k) tasi(k,j);
+    };
+    tut.onpointerup=bitir;
+    tut.onpointercancel=bitir;
+    tut.onkeydown=ev=>{
+      const i=+tut.dataset.tut;
+      if(ev.key==="ArrowUp" && i>0){ ev.preventDefault(); tasi(i,i-1,true); }
+      else if(ev.key==="ArrowDown" && i<p.hareketler.length-1){ ev.preventDefault(); tasi(i,i+1,true); }
+    };
+  });
 }
 
 /* set / tekrar / mola / sayım tipi düzenleme sayfası */
@@ -2260,7 +2377,10 @@ function hareketAyarSheet(p,i){
     const oku=()=>{
       h.set=Math.max(1,Math.min(20,+sheet.querySelector("#aSet").value||1));
       h.tekrar=sheet.querySelector("#aTek").value.trim()||"10";
-      h.mola=Math.max(0,Math.min(600,+sheet.querySelector("#aMola").value||60));
+      /* 0 geçerli bir mola (ısınma/soğumada molasız geçiş istenebilir ve
+         startSession bunu destekliyor). "||60" sıfırı yutuyordu; boş kutuyu
+         ayrı ele alıyoruz. */
+      h.mola=molaOku(sheet.querySelector("#aMola").value, h.mola);
     };
     sheet.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ oku(); h.tip=b.dataset.t; ciz(); });
     sheet.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{ oku(); h.faz=b.dataset.f; ciz(); });
@@ -2315,7 +2435,7 @@ function ekleSheet(exId){
     const oku=()=>{
       y.set=Math.max(1,Math.min(20,+sheet.querySelector("#nSet").value||3));
       y.tekrar=sheet.querySelector("#nTek").value.trim()||"10";
-      y.mola=Math.max(0,Math.min(600,+sheet.querySelector("#nMola").value||60));
+      y.mola=molaOku(sheet.querySelector("#nMola").value, y.mola);
     };
     sheet.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{ oku(); secilen=b.dataset.p; ciz(); });
     sheet.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ oku(); y.tip=b.dataset.t; ciz(); });
@@ -2704,8 +2824,11 @@ function renderStats(){
   const ortP=gunKeys.length?Math.round(topP/gunKeys.length):0;
   const ortK=gunKeys.length?Math.round(topK/gunKeys.length):0;
 
+  /* Diğer bütün ölçütler gibi burası da yalnızca ana bölümü sayar: ısınma
+     ve soğuma setleri "en iyi set" listesine girince germe hareketleri
+     rekor gibi görünüyordu. */
   const enIyi={};
-  ss.forEach(s=>s.kayitlar.forEach(k=>k.setler.forEach(x=>{
+  ss.forEach(s=>s.kayitlar.filter(anaMi).forEach(k=>k.setler.forEach(x=>{
     const skor=(x.kg||0)*1000+(x.tekrar||0);
     if(!enIyi[k.id]||skor>enIyi[k.id].skor) enIyi[k.id]={skor,kg:x.kg,tekrar:x.tekrar,tip:k.tip||tipOf(k.id)};
   })));
@@ -2989,8 +3112,22 @@ function dosyadanYukle(e){
       const varOlan=new Set(state.sessions.map(s=>s.id)); let eklenen=0;
       gelen.forEach(s=>{ if(s&&s.id&&!varOlan.has(s.id)){ state.sessions.push(s); eklenen++; } });
       state.sessions.sort((a,b)=>new Date(a.tarih)-new Date(b.tarih));
-      let gun=0;
-      if(d.meals) Object.keys(d.meals).forEach(k=>{ if(!state.meals[k]){ state.meals[k]=d.meals[k]; gun++; } });
+      /* Aynı gün iki cihazda girildiyse eskiden gelen kayıt sessizce
+         atılıyordu. Artık birleştiriliyor. Besin kaydının kimliği yok, bu
+         yüzden bütün alanları birebir aynı olan kayıt kopya sayılıyor;
+         gerçekten iki kez yenen aynı şey ikinci kez eklenmez - nadir ve
+         elle telafisi kolay, sessizce veri kaybetmekten iyi. */
+      let gun=0, birlesen=0;
+      const ogunAnahtar=x=>[x.ad,x.por,x.p,x.k,x.adet].join("\u0001");
+      if(d.meals) Object.keys(d.meals).forEach(k=>{
+        const gelen=d.meals[k];
+        if(!Array.isArray(gelen)||!gelen.length) return;
+        if(!state.meals[k]){ state.meals[k]=gelen; gun++; return; }
+        const varOlan=new Set(state.meals[k].map(ogunAnahtar));
+        let eklendi=0;
+        gelen.forEach(x=>{ if(!varOlan.has(ogunAnahtar(x))){ state.meals[k].push(x); eklendi++; } });
+        if(eklendi) birlesen++;
+      });
       let prog=0;
       if(Array.isArray(d.programs)){
         const pid=new Set(state.programs.map(p=>p.id));
@@ -2999,7 +3136,8 @@ function dosyadanYukle(e){
       if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
       migrasyonYap();
       await saveAll();
-      toast(`${eklenen} antrenman, ${gun} beslenme günü, ${prog} program eklendi`);
+      toast(`${eklenen} antrenman, ${gun} beslenme günü, ${prog} program eklendi`
+            + (birlesen?` · ${birlesen} gün birleştirildi`:""));
       state.tab="home"; render();
     }catch(err){ toast("Dosya okunamadı. Doğru json dosyasını seçtiğinden emin ol."); }
   };
