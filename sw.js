@@ -8,7 +8,7 @@
    ASSETS'i bastan indirir, activate eski cache'i siler. Aksi halde sunucu
    kapaliyken (ya da internet yokken) onceAg cache'e duser ve kullanici
    eski surumu gorur — guncelleme yapilmamis gibi. */
-const CORE  = 'salon-defteri-v22';  // v22: Android uygulamasında Health Connect adımları
+const CORE  = 'salon-defteri-v24';  // v24: rapor 23:59'da, adım tanılama
 /* Medya "once cache" okunuyor: bir kez indirilen gorsel bir daha aga
    sorulmaz. Var olan bir gorseli DEGISTIRDIGINDE bu surumu artir, yoksa
    kullanicida eski gorsel kalir. (Yeni id eklemek icin gerekmez.) */
@@ -16,7 +16,7 @@ const MEDYA = 'salon-defteri-medya-v3';   // v3: c003-c005 figur cizimine gecti
 const MEDYA_TAVAN = 600;   // bu sayiyi asinca en eski kayitlar atilir
 
 const ASSETS = [
-  './', './index.html', './manifest.json', './data/exercises.js', './data/custom.js', './data/food.js', './data/legacy-workout-guide.js',
+  './', './index.html', './manifest.json', './data/exercises.js', './data/custom.js', './data/food.js', './data/rapor.js', './data/legacy-workout-guide.js',
   './icon-192.png', './icon-512.png',
   ...['c003','c004','c005','c006','c008','c009','c010'].flatMap(id=>[`./videos/${id}-anim-v2.gif`,`./images/${id}-anim-v2.jpg`]),
   './videos/0659-LEH9jxP.gif', './images/0659-LEH9jxP.jpg'

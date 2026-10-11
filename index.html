@@ -513,6 +513,37 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
 .adimgunler small{font-size:11px;font-weight:700;color:var(--dim)}
 .adimgunler small.bugun{color:var(--text);font-weight:800}
 .adimnot{flex-basis:100%;margin:0;font-size:12px;font-weight:600;color:var(--dim)}
+/* Gün sonu raporu */
+.rapor h3{margin:2px 0 0;font-size:17px;line-height:1.3}
+.raporbas{display:flex;align-items:center;gap:14px}
+.raporpuan{--oran:50%;width:58px;height:58px;flex:none;border-radius:50%;display:flex;align-items:baseline;justify-content:center;padding-top:15px;box-sizing:border-box;
+  background:radial-gradient(closest-side,var(--panel) 78%,transparent 80%),conic-gradient(var(--accent) var(--oran),var(--track) 0)}
+.raporpuan b{font-size:22px;font-weight:800;line-height:1}
+.raporpuan small{font-size:11px;font-weight:700;color:var(--dim)}
+.raporpuan.kucuk{width:42px;height:42px;padding-top:11px}
+.raporpuan.kucuk b{font-size:16px}
+.sheet .raporpuan{background:radial-gradient(closest-side,var(--panel) 78%,transparent 80%),conic-gradient(var(--accent) var(--oran),var(--track) 0)}
+.raporozet{margin:14px 0 6px;font-size:15px;line-height:1.5}
+.raporalan{padding:11px 0;border-top:1px solid var(--line)}
+.raporalan b{font-size:14px}
+.raporalan p{margin:4px 0 0;font-size:14px;color:var(--dim);line-height:1.45}
+.durum{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--field);color:var(--dim)}
+.durum.iyi{background:var(--accent-soft);color:var(--done)}
+.durum.zayif{color:var(--uyari)}
+.raporoneri{margin-top:6px;padding:12px 14px;border-radius:18px;background:var(--field)}
+.raporoneri b{font-size:14px}
+.raporoneri ul{margin:6px 0 0;padding-left:18px;font-size:14px;line-height:1.5}
+.raporoneri li+li{margin-top:4px}
+.raporyarin{display:flex;gap:8px;align-items:flex-start;margin:12px 0 0;font-size:14px;font-weight:700}
+.raporyarin svg{width:18px;height:18px;flex:none;fill:none;stroke:var(--accent);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;margin-top:2px}
+.raporalt{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.raporalt span{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--dim)}
+.raporspin{display:inline-block;width:12px;height:12px;margin-right:8px;border-radius:50%;border:2px solid var(--track);border-top-color:var(--accent);vertical-align:-1px;animation:donus .8s linear infinite}
+@keyframes donus{to{transform:rotate(360deg)}}
+.raporsatir{display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;border-top:1px solid var(--line);text-align:left;color:var(--text)}
+.raporsatir>span:nth-child(2){flex:1;min-width:0}
+.raporsatir b{display:block;font-size:15px}
+.raporsatir .muted{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .satirlink{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:0 18px;
   background:var(--panel);border-radius:22px;color:var(--text);font-size:15px;font-weight:700;text-align:left;margin-bottom:12px}
 .satirlink span{flex:1}
@@ -622,6 +653,7 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
 <script src="data/custom.js"></script>
 <script src="data/legacy-workout-guide.js"></script>
 <script src="data/food.js"></script>
+<script src="data/rapor.js"></script>
 <script>
 /* ==========================================================
    1. HAREKET VERİTABANI
@@ -948,7 +980,7 @@ function programlariTazele(){
    3. DURUM VE KAYIT
    ========================================================== */
 const KEY="salonDefteri.v1";
-let state={tab:"home",sessions:[],favorites:[],meals:{},hedefProtein:150,hedefKalori:2750,hedefAdim:8000,besinTarih:null,tema:"gece",
+let state={tab:"home",sessions:[],favorites:[],meals:{},hedefProtein:150,hedefKalori:2750,hedefAdim:8000,raporlar:{},besinTarih:null,tema:"gece",
   programs:[],programSurum:0,active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
   kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false,ekranAcik:true,saglayici:"gemini",modeller:{},kotaDolu:{}};
 let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,sayacTipi="dinlenme",clockTimer=null,kayitYeri="yok";
@@ -991,6 +1023,7 @@ async function loadAll(){
     if(d.saglayici&&SAGLAYICI[d.saglayici]) state.saglayici=d.saglayici;
     if(d.modeller&&typeof d.modeller==="object") state.modeller=d.modeller;
     if(d.kotaDolu&&typeof d.kotaDolu==="object") state.kotaDolu=d.kotaDolu;
+    if(d.raporlar&&typeof d.raporlar==="object") state.raporlar=d.raporlar;
     if(Array.isArray(d.programs)&&d.programs.length) state.programs=d.programs;
     state.programSurum=+d.programSurum||1;   // kayit varsa en az surum 1'dir
     if(d.tema&&temaAdi(d.tema)) state.tema=temaAdi(d.tema);
@@ -1016,7 +1049,7 @@ async function loadAll(){
   if(kayitYeri==="yok" && lsSet(KEY+".test","1")) kayitYeri="telefon haf\u0131zas\u0131";
 }
 async function saveAll(){
-  const paket=JSON.stringify({v:3,tema:state.tema,otoDosya:state.otoDosya,bildirim:state.bildirim,ekranAcik:state.ekranAcik,saglayici:state.saglayici,modeller:state.modeller,kotaDolu:state.kotaDolu,hedefProtein:state.hedefProtein,hedefKalori:state.hedefKalori,hedefAdim:state.hedefAdim,
+  const paket=JSON.stringify({v:3,tema:state.tema,otoDosya:state.otoDosya,bildirim:state.bildirim,ekranAcik:state.ekranAcik,saglayici:state.saglayici,modeller:state.modeller,kotaDolu:state.kotaDolu,hedefProtein:state.hedefProtein,hedefKalori:state.hedefKalori,hedefAdim:state.hedefAdim,raporlar:state.raporlar,
     programs:state.programs,programSurum:state.programSurum,sessions:state.sessions,meals:state.meals,favorites:state.favorites,
     aktif:state.active,aktifIndex:state.exIndex});
   let ok=false;
@@ -1144,6 +1177,8 @@ function render(){
    adımlarla ilgili hiçbir şey görünmez.
    ========================================================== */
 const ADIM_VAR=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+/* Android kabuğu tarayıcı kimliğine bu eki koyuyor; köprü yüklenmediyse en azından bunu söyleyebilelim. */
+const UYGULAMA_ICINDE=/SalonDefteriAndroid/.test(navigator.userAgent);
 const ADIM_ONBELLEK="salonDefteri.adimlar";
 let adimDurum=(()=>{ try{ return JSON.parse(lsGet(ADIM_ONBELLEK))||{}; }catch(e){ return {}; } })();
 function adimCagir(yontem,veri){
@@ -1154,6 +1189,7 @@ function adimCagir(yontem,veri){
 const ADIM_IKON=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 3.5c1.6 0 2.4 1.6 2.4 3.6S10 11 8.4 11 6 9.3 6 7.3s.9-3.8 2.5-3.8zM15.6 8c1.6 0 2.4 1.7 2.4 3.7s-.9 3.9-2.5 3.9-2.4-1.6-2.4-3.6.9-4 2.5-4zM6.4 13.4l4 .5-.4 3a2 2 0 0 1-4-.5zM13.6 18l4 .6-.4 2a2 2 0 0 1-3.9-.6z"/></svg>`;
 function adimIc(){
   const d=adimDurum, hedef=state.hedefAdim;
+  if(d.okumaHatasi&&!(d.gunler||[]).length) return `<div class="adimust">${ADIM_IKON}<span>Adımlar okunamadı: ${besinHtml(d.okumaHatasi)}</span></div><button class="minibtn" id="adimYenile">Tekrar dene</button>`;
   if(d.hata==="yok") return `<div class="adimust">${ADIM_IKON}<span>Adım sayısı için Health Connect gerekli.</span></div><button class="minibtn" id="adimAyar">Health Connect'i aç</button>`;
   if(d.hata==="guncelleme") return `<div class="adimust">${ADIM_IKON}<span>Health Connect güncellenmeli.</span></div><button class="minibtn" id="adimAyar">Güncelle</button>`;
   if(!d.izin) return `<div class="adimust">${ADIM_IKON}<span>Samsung Health adımlarını burada gör.</span></div><button class="minibtn" id="adimIzin">Adımları bağla</button>`;
@@ -1163,12 +1199,13 @@ function adimIc(){
   return `<div class="adimust">${ADIM_IKON}<span class="et">Adım</span><b>${bugun.toLocaleString("tr-TR")} <small>/ ${hedef.toLocaleString("tr-TR")}</small></b></div>
     <span class="adimcubuk"><i style="width:${Math.min(100,Math.round(bugun/hedef*100))}%"></i></span>
     <div class="adimgunler">${gunler.map(x=>`<span><i class="${x.adim>=hedef?"on":""}" style="height:${Math.max(8,Math.round(x.adim/enB*100))}%"></i><small class="${x.gun===bugunK?"bugun":""}">${GUNLER[keyToDate(x.gun).getDay()]}</small></span>`).join("")}</div>
-    <p class="adimnot">${gunler.length&&gunler.every(x=>!x.adim)?"Adım gelmiyorsa: Samsung Health › Ayarlar › Health Connect'ten adım paylaşımını aç.":"Son 7 gün ortalaması "+ort.toLocaleString("tr-TR")+" adım"}</p>`;
+    <p class="adimnot">${gunler.length&&gunler.every(x=>!x.adim)?"Hiç adım gelmedi. Veri › Adım tanılama'ya bak.":"Son 7 gün ortalaması "+ort.toLocaleString("tr-TR")+" adım"}${d.zaman?" · "+saatDk(d.zaman)+" güncellendi":""}${d.okumaHatasi?" · son deneme başarısız":""}</p>`;
 }
 function adimBagla(){
   const kutu=document.getElementById("adimSatir"); if(!kutu) return;
   kutu.innerHTML=adimIc();
-  const izin=document.getElementById("adimIzin"), ayar=document.getElementById("adimAyar");
+  const izin=document.getElementById("adimIzin"), ayar=document.getElementById("adimAyar"), yen=document.getElementById("adimYenile");
+  if(yen) yen.onclick=()=>adimTazele();
   if(izin) izin.onclick=async()=>{
     try{ const r=await adimCagir("izinIste"); adimDurum.izin=!!r.izin; if(!r.izin) toast("Adım izni verilmedi"); await adimTazele(); }
     catch(e){ toast("İzin istenemedi"); }
@@ -1181,14 +1218,53 @@ async function adimTazele(){
   try{
     const d=await adimCagir("durum");
     adimDurum.hata=d.durum==="hazir"?null:d.durum; adimDurum.izin=!!d.izin;
-    if(d.durum==="hazir"&&d.izin){ const r=await adimCagir("adimlar",{gun:7}); adimDurum.gunler=r.gunler||[]; }
-    lsSet(ADIM_ONBELLEK,JSON.stringify(adimDurum));
-  }catch(e){}
+    if(d.durum==="hazir"&&d.izin){
+      const r=await adimCagir("adimlar",{gun:7});
+      adimDurum.gunler=r.gunler||[]; adimDurum.zaman=Date.now();
+    }
+    adimDurum.okumaHatasi=null;
+  }catch(e){ adimDurum.okumaHatasi=(e&&e.message)||String(e); }
+  lsSet(ADIM_ONBELLEK,JSON.stringify(adimDurum));
   adimOkunuyor=false;
-  if(state.tab==="home") adimBagla();
+  adimBagla();
 }
-/* Uygulamaya geri dönülünce (ör. Samsung Health'e bakıp gelince) tazele. */
-document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&ADIM_VAR&&state.tab==="home") adimTazele(); });
+const saatDk=t=>{ const d=new Date(t); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); };
+/* Uygulama her açıldığında ve her geri dönüldüğünde (ör. Samsung Health'e
+   bakıp gelince) adımlar yeniden okunur; hangi sekmede olunduğu fark etmez. */
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&ADIM_VAR){ adimTazele(); raporOtomatik(); } });
+if(ADIM_VAR) setTimeout(()=>{
+  adimTazele();
+  /* 23:59 hatırlatıcısı: sürüm başına bir kez kur (ilk seferde bildirim izni sorar). */
+  if(lsGet("salonDefteri.hatirlatici")!=="23:59/v1")
+    adimCagir("hatirlaticiKur",{saat:23,dakika:59}).then(()=>lsSet("salonDefteri.hatirlatici","23:59/v1")).catch(()=>{});
+},0);
+async function adimTaniSheet(){
+  modalAc(`<h2>Adım tanılama</h2><p class="muted small">Health Connect'e soruluyor…</p>`);
+  let r;
+  try{ r=await adimCagir("tani"); }
+  catch(e){ modalAc(`<h2>Adım tanılama</h2><p class="muted small">${besinHtml((e&&e.message)||String(e))}</p><p class="muted small">Uygulamanın en son sürümünü kurduğundan emin ol.</p><button class="btn ghost" id="taniKapat">Kapat</button>`); document.getElementById("taniKapat").onclick=modalKapat; return; }
+  const kaynak=r.kaynaklar?Object.keys(r.kaynaklar).map(k=>`<div class="kv"><span>${besinHtml(k==="com.sec.android.app.shealth"?"Samsung Health":k)}</span><b>${(+r.kaynaklar[k]).toLocaleString("tr-TR")}</b></div>`).join(""):"";
+  const ipucu = r.durum!=="hazir" ? "Health Connect bu telefonda kullanılamıyor ya da güncellenmeli."
+    : !r.izin ? "Bu uygulamanın adım okuma izni yok. Aşağıdan Health Connect'i açıp Salon Defteri'ne \"Adımlar\" iznini ver."
+    : r.hata ? "Okurken hata oluştu."
+    : !r.haftaKayit ? "Health Connect'te son 7 günde hiç adım kaydı yok. Samsung Health henüz veri göndermiyor: Samsung Health › Ayarlar › Health Connect › izinlerde \"Adımlar\"ın yazma izni açık olmalı. Açtıktan sonra Samsung Health'i bir kez açıp birkaç dakika bekle."
+    : !r.bugunKayit ? "Önceki günlerde kayıt var ama bugün yok: Samsung Health eşitlemesi gecikiyor olabilir, Samsung Health'i açıp tekrar dene."
+    : r.toplam? "Her şey yolunda görünüyor." : "Kayıt var ama toplam 0: Health Connect › Veri ve erişim › Adımlar › veri kaynakları sırasında Samsung Health'in listede olduğunu kontrol et.";
+  modalAc(`<h2>Adım tanılama</h2>
+    <div class="kv"><span>Health Connect</span><b>${besinHtml(r.durum)}</b></div>
+    <div class="kv"><span>Okuma izni</span><b>${r.izin?"var":"yok"}</b></div>
+    ${r.izin?`<div class="kv"><span>Bugünkü adım kaydı</span><b>${r.bugunKayit||0}</b></div>
+    <div class="kv"><span>Bugünkü toplam</span><b>${(+r.toplam||0).toLocaleString("tr-TR")}</b></div>
+    <div class="kv"><span>Son 7 günde kayıt</span><b>${r.haftaKayit||0}</b></div>
+    ${r.sonKayit?`<div class="kv"><span>En son kayıt</span><b>${besinHtml(new Date(r.sonKayit).toLocaleString("tr-TR"))}</b></div>`:""}
+    ${kaynak}`:""}
+    ${r.hata?`<p class="muted small">${besinHtml(r.hata)}</p>`:""}
+    <p class="small" style="margin-top:12px">${ipucu}</p>
+    <button class="btn quiet" id="taniHc">Health Connect'i aç</button>
+    <button class="btn ghost" id="taniKapat">Kapat</button>`);
+  document.getElementById("taniHc").onclick=()=>adimCagir("ayarlariAc").catch(()=>toast("Açılamadı"));
+  document.getElementById("taniKapat").onclick=modalKapat;
+}
 
 /* Sayfalarda tekrar eden çizgi ikonlar. Renkleri CSS'ten (currentColor
    ya da --renk) aldıkları için her temada kendiliğinden uyuyorlar. */
@@ -1274,7 +1350,8 @@ function renderHome(){
           <div><span class="et" style="--renk:var(--done)">Bu hafta</span><b>${buHafta} <small>/ ${haftaHedef} antrenman</small></b></div>
         </div>
       </div>
-      ${ADIM_VAR?`<div class="adimsatir" id="adimSatir">${adimIc()}</div>`:""}
+      ${ADIM_VAR?`<div class="adimsatir" id="adimSatir">${adimIc()}</div>`
+        :UYGULAMA_ICINDE?`<div class="adimsatir"><div class="adimust">${ADIM_IKON}<span>Adım köprüsü yüklenemedi. Uygulamayı tamamen kapatıp yeniden aç.</span></div></div>`:""}
     </div>
 
     <div class="card">
@@ -1286,6 +1363,8 @@ function renderHome(){
         <button id="hFav"><i>${IKON.yildiz}</i>Favoriler</button>
       </div>
     </div>
+
+    <div class="card rapor" id="raporKart"></div>
 
     <div class="card">
       ${prog?`
@@ -1343,7 +1422,8 @@ function renderHome(){
     if(!state.active) startSession(prog); else { state.tab="workout"; render(); }
   };
   document.getElementById("goData").onclick=git("data");
-  if(ADIM_VAR){ adimBagla(); adimTazele(); }
+  if(ADIM_VAR) adimBagla();
+  raporKartiYenile(); raporOtomatik();
   document.getElementById("hFav").onclick=()=>favorilerSheet(bugun);
   document.getElementById("hElle").onclick=()=>elleEkleSor(bugun);
   document.getElementById("hYaz").onclick=()=>{ if(!apiAnahtar()){ anahtarSor(); return; } metinSheet(bugun); };
@@ -3412,6 +3492,7 @@ function renderData(){
       <p class="muted small">Adımlar Health Connect üzerinden Samsung Health'ten okunur. Varsayılan 8.000.</p>
       <div class="unit" style="max-width:150px"><input type="number" inputmode="numeric" id="hedefAdim" value="${state.hedefAdim}"><span>adım</span></div>
       <button class="btn quiet sm" id="hcAyar" style="margin-top:12px">Health Connect izinlerini aç</button>
+      <button class="btn quiet sm" id="adimTani" style="margin-top:8px">Adım tanılama</button>
     </div>`:""}
     <div class="card">
       <h3>Otomatik kayıt</h3>
@@ -3496,6 +3577,7 @@ function renderData(){
   document.getElementById("goProg2").onclick=()=>{ state.tab="programs"; render(); scrollTo(0,0); };
   if(ADIM_VAR){
     document.getElementById("hedefAdim").onchange=async e=>{ const v=+e.target.value; if(v>=1000&&v<=50000){ state.hedefAdim=v; await saveAll(); toast("Adım hedefi "+v.toLocaleString("tr-TR")); } };
+    document.getElementById("adimTani").onclick=adimTaniSheet;
     document.getElementById("hcAyar").onclick=()=>adimCagir("ayarlariAc").catch(()=>toast("Health Connect ayarları açılamadı"));
   }
   document.getElementById("hedefKcal").onchange=async e=>{ const v=+e.target.value; if(v>=1200&&v<=6000){ state.hedefKalori=v; await saveAll(); toast("Kalori hedefi "+v.toLocaleString("tr-TR")+" kcal"); } };
@@ -3524,7 +3606,7 @@ function renderData(){
 async function dosyayaAktar(sessiz){
   try{
     const photos=sessiz?[]:await fotoSureSinirli(fotoIslem("readonly",d=>d.getAll()),15000);
-    const blob=new Blob([JSON.stringify({v:4,hedefProtein:state.hedefProtein,hedefKalori:state.hedefKalori,hedefAdim:state.hedefAdim,programs:state.programs,sessions:state.sessions,meals:state.meals,favorites:state.favorites,photos},null,1)],{type:"application/json"});
+    const blob=new Blob([JSON.stringify({v:4,hedefProtein:state.hedefProtein,hedefKalori:state.hedefKalori,hedefAdim:state.hedefAdim,raporlar:state.raporlar,programs:state.programs,sessions:state.sessions,meals:state.meals,favorites:state.favorites,photos},null,1)],{type:"application/json"});
     const d=new Date(), ad=`salon-defteri-${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}.json`;
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=ad; a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -3558,6 +3640,10 @@ function dosyadanYukle(e){
       if(Array.isArray(d.programs)){
         const pid=new Set(state.programs.map(p=>p.id));
         d.programs.forEach(p=>{ if(p&&p.id&&!pid.has(p.id)&&Array.isArray(p.hareketler)){ state.programs.push(p); prog++; } });
+      }
+      if(d.raporlar&&typeof d.raporlar==="object"){
+        const R=state.raporlar||(state.raporlar={});
+        Object.keys(d.raporlar).forEach(g=>{ if(!R[g]&&d.raporlar[g]&&d.raporlar[g].ozet) R[g]=d.raporlar[g]; });
       }
       if(Array.isArray(d.favorites)){
         const ids=new Set(state.favorites.map(x=>x.id));

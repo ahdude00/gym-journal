@@ -1,6 +1,8 @@
 package com.ahdude.salondefteri
 
+import android.Manifest
 import android.content.Intent
+import android.os.Build
 import android.net.Uri
 import androidx.activity.result.ActivityResult
 import androidx.health.connect.client.HealthConnectClient
@@ -8,6 +10,8 @@ import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
+import androidx.health.connect.client.request.AggregateRequest
+import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
@@ -15,7 +19,10 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.ActivityCallback
+import com.getcapacitor.PermissionState
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,7 +36,10 @@ import java.time.Period
  * (Samsung Health, Google Fit...) çift saymadan birleştirir.
  * Yalnızca okuma izni ister; hiçbir veri yazmaz ve cihazdan çıkarmaz.
  */
-@CapacitorPlugin(name = "Adim")
+@CapacitorPlugin(
+    name = "Adim",
+    permissions = [Permission(alias = "bildirim", strings = [Manifest.permission.POST_NOTIFICATIONS])]
+)
 class AdimPlugin : Plugin() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val izinler = setOf(HealthPermission.getReadPermission(StepsRecord::class))
@@ -124,5 +134,57 @@ class AdimPlugin : Plugin() {
         } catch (e: Exception) {
             call.reject("Ayarlar açılamadı")
         }
+    }
+
+    /**
+     * Sorun giderme: bugünkü adım kayıtlarını tek tek okur, hangi
+     * uygulamadan geldiklerini ve toplamlarını döndürür.
+     */
+    @PluginMethod
+    fun tani(call: PluginCall) {
+        val s = sdk()
+        val ret = JSObject().put("durum", sdkAdi(s)).put("android", Build.VERSION.SDK_INT)
+        if (s != HealthConnectClient.SDK_AVAILABLE) { call.resolve(ret); return }
+        scope.launch {
+            try {
+                val client = HealthConnectClient.getOrCreate(context)
+                val verilen = client.permissionController.getGrantedPermissions()
+                ret.put("izin", verilen.containsAll(izinler))
+                if (!verilen.containsAll(izinler)) { call.resolve(ret); return@launch }
+                val bugun = LocalDate.now()
+                val aralik = TimeRangeFilter.between(bugun.atStartOfDay(), bugun.plusDays(1).atStartOfDay())
+                val kayitlar = client.readRecords(ReadRecordsRequest(StepsRecord::class, aralik)).records
+                val kaynak = JSObject()
+                kayitlar.groupBy { it.metadata.dataOrigin.packageName }.forEach { (pkg, l) -> kaynak.put(pkg, l.sumOf { it.count }) }
+                val toplam = client.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), aralik))[StepsRecord.COUNT_TOTAL] ?: 0L
+                // Son 7 günde hiç kayıt var mı (Samsung Health eşitlemesi gecikiyor olabilir)
+                val hafta = client.readRecords(ReadRecordsRequest(StepsRecord::class,
+                    TimeRangeFilter.between(bugun.minusDays(6).atStartOfDay(), bugun.plusDays(1).atStartOfDay()))).records
+                ret.put("bugunKayit", kayitlar.size).put("kaynaklar", kaynak).put("toplam", toplam)
+                    .put("haftaKayit", hafta.size)
+                    .put("sonKayit", hafta.maxByOrNull { it.endTime }?.endTime?.toString())
+                call.resolve(ret)
+            } catch (e: Exception) {
+                call.resolve(ret.put("hata", e.javaClass.simpleName + ": " + (e.message ?: "")))
+            }
+        }
+    }
+
+    /** Her gece verilen saatte gün sonu raporu bildirimi kurar (varsayılan 23:59). */
+    @PluginMethod
+    fun hatirlaticiKur(call: PluginCall) {
+        if (Build.VERSION.SDK_INT >= 33 && getPermissionState("bildirim") != PermissionState.GRANTED) {
+            requestPermissionForAlias("bildirim", call, "bildirimSonucu"); return
+        }
+        alarmKur(call)
+    }
+
+    @PermissionCallback
+    fun bildirimSonucu(call: PluginCall) { alarmKur(call) }
+
+    private fun alarmKur(call: PluginCall) {
+        RaporAlarm.kur(context, call.getInt("saat") ?: 23, call.getInt("dakika") ?: 59)
+        val izin = Build.VERSION.SDK_INT < 33 || getPermissionState("bildirim") == PermissionState.GRANTED
+        call.resolve(JSObject().put("bildirim", izin))
     }
 }
