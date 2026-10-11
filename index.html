@@ -498,6 +498,21 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
 .kutu .noktalar{display:flex;gap:4px;margin-top:10px}
 .kutu .noktalar i{flex:1;height:8px;border-radius:999px;background:var(--track)}
 .kutu .noktalar i.on{background:var(--renk)}
+.adimsatir{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.adimust{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.adimust svg{width:22px;height:22px;flex:none;fill:var(--accent)}
+.adimust .et{font-weight:700;color:var(--dim)}
+.adimust b{margin-left:auto;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.adimust b small{font-size:13px;font-weight:600;color:var(--dim)}
+.adimcubuk{flex-basis:100%;display:block;height:8px;border-radius:999px;background:var(--track);overflow:hidden}
+.adimcubuk i{display:block;height:100%;border-radius:999px;background:var(--accent)}
+.adimgunler{flex-basis:100%;display:flex;gap:8px;height:60px;margin-top:4px}
+.adimgunler span{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%}
+.adimgunler i{display:block;width:100%;max-width:22px;border-radius:999px;background:var(--track);min-height:5px}
+.adimgunler i.on{background:var(--accent)}
+.adimgunler small{font-size:11px;font-weight:700;color:var(--dim)}
+.adimgunler small.bugun{color:var(--text);font-weight:800}
+.adimnot{flex-basis:100%;margin:0;font-size:12px;font-weight:600;color:var(--dim)}
 .satirlink{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:0 18px;
   background:var(--panel);border-radius:22px;color:var(--text);font-size:15px;font-weight:700;text-align:left;margin-bottom:12px}
 .satirlink span{flex:1}
@@ -933,7 +948,7 @@ function programlariTazele(){
    3. DURUM VE KAYIT
    ========================================================== */
 const KEY="salonDefteri.v1";
-let state={tab:"home",sessions:[],favorites:[],meals:{},hedefProtein:150,hedefKalori:2750,besinTarih:null,tema:"gece",
+let state={tab:"home",sessions:[],favorites:[],meals:{},hedefProtein:150,hedefKalori:2750,hedefAdim:8000,besinTarih:null,tema:"gece",
   programs:[],programSurum:0,active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
   kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false,ekranAcik:true,saglayici:"gemini",modeller:{},kotaDolu:{}};
 let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,sayacTipi="dinlenme",clockTimer=null,kayitYeri="yok";
@@ -969,7 +984,7 @@ async function loadAll(){
     state.meals=d.meals||{};
     state.favorites=Array.isArray(d.favorites)?d.favorites:[];
     if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
-    if(d.hedefKalori) state.hedefKalori=d.hedefKalori;
+    if(d.hedefKalori) state.hedefKalori=d.hedefKalori; if(d.hedefAdim) state.hedefAdim=d.hedefAdim;
     if(typeof d.otoDosya==="boolean") state.otoDosya=d.otoDosya;
     if(typeof d.bildirim==="boolean") state.bildirim=d.bildirim;
     if(typeof d.ekranAcik==="boolean") state.ekranAcik=d.ekranAcik;
@@ -1001,7 +1016,7 @@ async function loadAll(){
   if(kayitYeri==="yok" && lsSet(KEY+".test","1")) kayitYeri="telefon haf\u0131zas\u0131";
 }
 async function saveAll(){
-  const paket=JSON.stringify({v:3,tema:state.tema,otoDosya:state.otoDosya,bildirim:state.bildirim,ekranAcik:state.ekranAcik,saglayici:state.saglayici,modeller:state.modeller,kotaDolu:state.kotaDolu,hedefProtein:state.hedefProtein,hedefKalori:state.hedefKalori,
+  const paket=JSON.stringify({v:3,tema:state.tema,otoDosya:state.otoDosya,bildirim:state.bildirim,ekranAcik:state.ekranAcik,saglayici:state.saglayici,modeller:state.modeller,kotaDolu:state.kotaDolu,hedefProtein:state.hedefProtein,hedefKalori:state.hedefKalori,hedefAdim:state.hedefAdim,
     programs:state.programs,programSurum:state.programSurum,sessions:state.sessions,meals:state.meals,favorites:state.favorites,
     aktif:state.active,aktifIndex:state.exIndex});
   let ok=false;
@@ -1121,6 +1136,60 @@ function render(){
     history:renderHistory,data:renderData,programs:renderPrograms}[state.tab]||renderHome)();
 }
 
+/* ==========================================================
+   ADIMLAR (yalnızca Android uygulamasında)
+   android-app/ altındaki Capacitor kabuğu bu sayfayı açar ve "Adim"
+   eklentisiyle Health Connect'ten günlük adımları verir. Samsung Health
+   adımlarını Health Connect'e aktarır. Tarayıcıda ADIM_VAR false olur ve
+   adımlarla ilgili hiçbir şey görünmez.
+   ========================================================== */
+const ADIM_VAR=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const ADIM_ONBELLEK="salonDefteri.adimlar";
+let adimDurum=(()=>{ try{ return JSON.parse(lsGet(ADIM_ONBELLEK))||{}; }catch(e){ return {}; } })();
+function adimCagir(yontem,veri){
+  const C=window.Capacitor;
+  if(C.Plugins&&C.Plugins.Adim&&C.Plugins.Adim[yontem]) return C.Plugins.Adim[yontem](veri||{});
+  return C.nativePromise("Adim",yontem,veri||{});
+}
+const ADIM_IKON=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 3.5c1.6 0 2.4 1.6 2.4 3.6S10 11 8.4 11 6 9.3 6 7.3s.9-3.8 2.5-3.8zM15.6 8c1.6 0 2.4 1.7 2.4 3.7s-.9 3.9-2.5 3.9-2.4-1.6-2.4-3.6.9-4 2.5-4zM6.4 13.4l4 .5-.4 3a2 2 0 0 1-4-.5zM13.6 18l4 .6-.4 2a2 2 0 0 1-3.9-.6z"/></svg>`;
+function adimIc(){
+  const d=adimDurum, hedef=state.hedefAdim;
+  if(d.hata==="yok") return `<div class="adimust">${ADIM_IKON}<span>Adım sayısı için Health Connect gerekli.</span></div><button class="minibtn" id="adimAyar">Health Connect'i aç</button>`;
+  if(d.hata==="guncelleme") return `<div class="adimust">${ADIM_IKON}<span>Health Connect güncellenmeli.</span></div><button class="minibtn" id="adimAyar">Güncelle</button>`;
+  if(!d.izin) return `<div class="adimust">${ADIM_IKON}<span>Samsung Health adımlarını burada gör.</span></div><button class="minibtn" id="adimIzin">Adımları bağla</button>`;
+  const gunler=d.gunler||[], bugunK=gunKey(), bugun=(gunler.find(x=>x.gun===bugunK)||{adim:0}).adim;
+  const gecmis=gunler.filter(x=>x.gun!==bugunK), ort=gecmis.length?Math.round(gecmis.reduce((a,x)=>a+x.adim,0)/gecmis.length):0;
+  const enB=Math.max(hedef,...gunler.map(x=>x.adim));
+  return `<div class="adimust">${ADIM_IKON}<span class="et">Adım</span><b>${bugun.toLocaleString("tr-TR")} <small>/ ${hedef.toLocaleString("tr-TR")}</small></b></div>
+    <span class="adimcubuk"><i style="width:${Math.min(100,Math.round(bugun/hedef*100))}%"></i></span>
+    <div class="adimgunler">${gunler.map(x=>`<span><i class="${x.adim>=hedef?"on":""}" style="height:${Math.max(8,Math.round(x.adim/enB*100))}%"></i><small class="${x.gun===bugunK?"bugun":""}">${GUNLER[keyToDate(x.gun).getDay()]}</small></span>`).join("")}</div>
+    <p class="adimnot">${gunler.length&&gunler.every(x=>!x.adim)?"Adım gelmiyorsa: Samsung Health › Ayarlar › Health Connect'ten adım paylaşımını aç.":"Son 7 gün ortalaması "+ort.toLocaleString("tr-TR")+" adım"}</p>`;
+}
+function adimBagla(){
+  const kutu=document.getElementById("adimSatir"); if(!kutu) return;
+  kutu.innerHTML=adimIc();
+  const izin=document.getElementById("adimIzin"), ayar=document.getElementById("adimAyar");
+  if(izin) izin.onclick=async()=>{
+    try{ const r=await adimCagir("izinIste"); adimDurum.izin=!!r.izin; if(!r.izin) toast("Adım izni verilmedi"); await adimTazele(); }
+    catch(e){ toast("İzin istenemedi"); }
+  };
+  if(ayar) ayar.onclick=()=>adimCagir("ayarlariAc").catch(()=>toast("Açılamadı"));
+}
+let adimOkunuyor=false;
+async function adimTazele(){
+  if(!ADIM_VAR||adimOkunuyor) return; adimOkunuyor=true;
+  try{
+    const d=await adimCagir("durum");
+    adimDurum.hata=d.durum==="hazir"?null:d.durum; adimDurum.izin=!!d.izin;
+    if(d.durum==="hazir"&&d.izin){ const r=await adimCagir("adimlar",{gun:7}); adimDurum.gunler=r.gunler||[]; }
+    lsSet(ADIM_ONBELLEK,JSON.stringify(adimDurum));
+  }catch(e){}
+  adimOkunuyor=false;
+  if(state.tab==="home") adimBagla();
+}
+/* Uygulamaya geri dönülünce (ör. Samsung Health'e bakıp gelince) tazele. */
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&ADIM_VAR&&state.tab==="home") adimTazele(); });
+
 /* Sayfalarda tekrar eden çizgi ikonlar. Renkleri CSS'ten (currentColor
    ya da --renk) aldıkları için her temada kendiliğinden uyuyorlar. */
 const IKON={
@@ -1165,7 +1234,8 @@ function haftaGrafik(gunler,hedef,enB){
 function renderHome(){
   const bugun=gunKey(), t=gunToplam(bugun), hedef=state.hedefProtein, hedefK=state.hedefKalori;
   const oran=Math.min(100,Math.round(t.p/hedef*100)), oranK=Math.min(100,Math.round(t.k/hedefK*100));
-  const prog=state.active?state.active.program:sonrakiProgram();
+  /* Süren antrenmanda program kopyası hareket listesini taşımıyor; liste seansın kendisinde. */
+  const prog=state.active?{...state.active.program,hareketler:state.active.hareketler||[]}:sonrakiProgram();
   const hb=haftaBasi(new Date());
   const buHafta=state.sessions.filter(s=>new Date(s.tarih)>=hb).length;
   const haftaHedef=Math.max(1,state.programs.filter(p=>!p.opsiyonel).length);
@@ -1204,6 +1274,7 @@ function renderHome(){
           <div><span class="et" style="--renk:var(--done)">Bu hafta</span><b>${buHafta} <small>/ ${haftaHedef} antrenman</small></b></div>
         </div>
       </div>
+      ${ADIM_VAR?`<div class="adimsatir" id="adimSatir">${adimIc()}</div>`:""}
     </div>
 
     <div class="card">
@@ -1272,6 +1343,7 @@ function renderHome(){
     if(!state.active) startSession(prog); else { state.tab="workout"; render(); }
   };
   document.getElementById("goData").onclick=git("data");
+  if(ADIM_VAR){ adimBagla(); adimTazele(); }
   document.getElementById("hFav").onclick=()=>favorilerSheet(bugun);
   document.getElementById("hElle").onclick=()=>elleEkleSor(bugun);
   document.getElementById("hYaz").onclick=()=>{ if(!apiAnahtar()){ anahtarSor(); return; } metinSheet(bugun); };
@@ -3335,6 +3407,12 @@ function renderData(){
       <p class="muted small">187 cm, 83 kg, 26 yaş ve haftada 3 antrenman için korunma kalorisi yaklaşık 2.750 kcal (Mifflin-St Jeor). Kilo almak için +250, vermek için −400 civarı ayarla.</p>
       <div class="unit" style="max-width:150px"><input type="number" inputmode="numeric" id="hedefKcal" value="${state.hedefKalori}"><span>kcal</span></div>
     </div>
+    ${ADIM_VAR?`<div class="card">
+      <h3>Günlük adım hedefi</h3>
+      <p class="muted small">Adımlar Health Connect üzerinden Samsung Health'ten okunur. Varsayılan 8.000.</p>
+      <div class="unit" style="max-width:150px"><input type="number" inputmode="numeric" id="hedefAdim" value="${state.hedefAdim}"><span>adım</span></div>
+      <button class="btn quiet sm" id="hcAyar" style="margin-top:12px">Health Connect izinlerini aç</button>
+    </div>`:""}
     <div class="card">
       <h3>Otomatik kayıt</h3>
       <p class="muted small">Veriler telefon hafızasına yazılır ve uygulama açılınca otomatik okunur. İstersen antrenman bitince İndirilenler klasörüne yedek dosya da iner.</p>
@@ -3416,6 +3494,10 @@ function renderData(){
     await saveAll(); renderData(); toast(e.target.value+" seçildi");
   };
   document.getElementById("goProg2").onclick=()=>{ state.tab="programs"; render(); scrollTo(0,0); };
+  if(ADIM_VAR){
+    document.getElementById("hedefAdim").onchange=async e=>{ const v=+e.target.value; if(v>=1000&&v<=50000){ state.hedefAdim=v; await saveAll(); toast("Adım hedefi "+v.toLocaleString("tr-TR")); } };
+    document.getElementById("hcAyar").onclick=()=>adimCagir("ayarlariAc").catch(()=>toast("Health Connect ayarları açılamadı"));
+  }
   document.getElementById("hedefKcal").onchange=async e=>{ const v=+e.target.value; if(v>=1200&&v<=6000){ state.hedefKalori=v; await saveAll(); toast("Kalori hedefi "+v.toLocaleString("tr-TR")+" kcal"); } };
   document.getElementById("hedef").onchange=async e=>{ const v=+e.target.value; if(v>=50&&v<=400){ state.hedefProtein=v; await saveAll(); toast("Hedef "+v+" g olarak kaydedildi"); } };
   document.getElementById("tgl").onclick=async()=>{ state.otoDosya=!state.otoDosya; await saveAll(); renderData(); };
@@ -3442,7 +3524,7 @@ function renderData(){
 async function dosyayaAktar(sessiz){
   try{
     const photos=sessiz?[]:await fotoSureSinirli(fotoIslem("readonly",d=>d.getAll()),15000);
-    const blob=new Blob([JSON.stringify({v:4,hedefProtein:state.hedefProtein,hedefKalori:state.hedefKalori,programs:state.programs,sessions:state.sessions,meals:state.meals,favorites:state.favorites,photos},null,1)],{type:"application/json"});
+    const blob=new Blob([JSON.stringify({v:4,hedefProtein:state.hedefProtein,hedefKalori:state.hedefKalori,hedefAdim:state.hedefAdim,programs:state.programs,sessions:state.sessions,meals:state.meals,favorites:state.favorites,photos},null,1)],{type:"application/json"});
     const d=new Date(), ad=`salon-defteri-${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}.json`;
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=ad; a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -3490,7 +3572,7 @@ function dosyadanYukle(e){
         }catch(e){fotoSorunu=true;}
       }
       if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
-      if(d.hedefKalori) state.hedefKalori=d.hedefKalori;
+      if(d.hedefKalori) state.hedefKalori=d.hedefKalori; if(d.hedefAdim) state.hedefAdim=d.hedefAdim;
       migrasyonYap();
       await saveAll();
       toast(`${eklenen} antrenman, ${gun} beslenme günü, ${prog} program eklendi`
