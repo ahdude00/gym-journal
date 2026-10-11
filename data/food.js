@@ -171,16 +171,39 @@ function fotoPaylasSheet(photos,name,day){
   });
   document.getElementById('fotoKapat').onclick=modalKapat;
 }
-async function fotoArsiviSheet(){
-  let stored;try{stored=await fotoSureSinirli(fotoIslem('readonly',d=>d.getAll()));}catch(e){toast('Fotoğraf arşivi okunamadı');return;}
-  const cards=[];
-  Object.keys(state.meals).sort().reverse().forEach(day=>(state.meals[day]||[]).forEach((meal,i)=>{
-    const photo=stored.find(x=>x.id===meal.id);if(photo?.oncekiler?.length)cards.push({day,meal,i,photo});
+/* Fotoğraflı öğünler, en yeni gün başta. sinir: bu günden (dahil) sonrası. */
+async function fotoluOgunler(sinir){
+  const stored=await fotoSureSinirli(fotoIslem('readonly',d=>d.getAll()));
+  const byId=new Map(stored.map(x=>[x.id,x])),out=[];
+  Object.keys(state.meals).filter(d=>!sinir||d>=sinir).sort().reverse().forEach(day=>(state.meals[day]||[]).forEach((meal,i)=>{
+    const photo=meal.id&&byId.get(meal.id);if(photo?.oncekiler?.length)out.push({day,meal,i,photo});
   }));
-  modalAc(`<h2>Besin Takip — Fotoğraf arşivi</h2><p class="muted small">Fotoğraflar bu cihazda saklanır. Fotoğrafları da içeren yedek alabilirsin.</p>
-    <div class="food-archive">${cards.map((x,i)=>`<button class="food-archive-card" data-archive="${i}"><img src="data:image/jpeg;base64,${x.photo.oncekiler[0]}" loading="lazy" alt="${besinHtml(x.meal.ad)}"><b>${besinHtml(x.meal.ad)}</b><span class="muted small">${besinHtml(x.day)}</span></button>`).join('')}</div>
-    ${cards.length?'':'<p class="muted small">Henüz saklanan fotoğraf yok. Önceden silinen fotoğraflar geri getirilemez.</p>'}
+  return out;
+}
+const haftaSiniri=()=>gunKey(new Date(Date.now()-6*864e5));
+let arsivDonem='hafta';
+async function fotoArsiviSheet(donem){
+  if(typeof donem==='string')arsivDonem=donem;
+  let cards;try{cards=await fotoluOgunler(arsivDonem==='hafta'?haftaSiniri():'');}catch(e){toast('Fotoğraf arşivi okunamadı');return;}
+  const gunler=[];cards.forEach((x,i)=>{const g=gunler[gunler.length-1];if(g&&g.day===x.day)g.ids.push(i);else gunler.push({day:x.day,ids:[i]});});
+  modalAc(`<h2>Fotoğraf arşivi</h2><p class="muted small">Fotoğraflar bu cihazda saklanır. Fotoğrafları da içeren yedek alabilirsin.</p>
+    <div class="seg" style="margin:12px 0 4px"><button data-donem="hafta" class="${arsivDonem==='hafta'?'on':''}">Son 7 gün</button><button data-donem="tum" class="${arsivDonem==='tum'?'on':''}">Tümü</button></div>
+    ${gunler.map(g=>{const t=gunToplam(g.day);return `<div class="arsivgun"><b>${besinHtml(gunAdi(g.day))}</b><span>${Math.round(t.p)} g protein · ${Math.round(t.k).toLocaleString('tr-TR')} kcal</span></div>
+      <div class="food-archive">${g.ids.map(i=>{const x=cards[i];return `<button class="food-archive-card" data-archive="${i}"><img src="data:image/jpeg;base64,${x.photo.oncekiler[0]}" loading="lazy" alt="${besinHtml(x.meal.ad)}"><b>${besinHtml(x.meal.ad)}</b><span class="muted small">${Math.round(x.meal.p*(x.meal.adet||1))} g protein${x.photo.kalanlar?.length?' · kalan var':''}</span></button>`;}).join('')}</div>`;}).join('')}
+    ${cards.length?'':`<p class="muted small" style="margin-top:12px">${arsivDonem==='hafta'?'Son 7 günde fotoğrafı çekilmiş öğün yok.':'Henüz saklanan fotoğraf yok. Önceden silinen fotoğraflar geri getirilemez.'}</p>`}
     <button class="btn ghost" id="arsivKapat">Kapat</button>`);
+  document.querySelectorAll('[data-donem]').forEach(el=>el.onclick=()=>fotoArsiviSheet(el.dataset.donem));
   document.querySelectorAll('[data-archive]').forEach(el=>el.onclick=()=>{const x=cards[+el.dataset.archive];ogunDetaySheet(x.day,x.i);});
   document.getElementById('arsivKapat').onclick=modalKapat;
+}
+/* Beslenme ekranındaki "Son 7 gün" fotoğraf şeridi; IndexedDB okunduktan sonra dolar. */
+async function haftaFotoSeridi(){
+  const kutu=document.getElementById('haftaFoto');if(!kutu)return;
+  let cards;try{cards=await fotoluOgunler(haftaSiniri());}catch(e){return;}
+  if(!cards.length||!document.body.contains(kutu))return;
+  kutu.innerHTML=`<div class="kbas" style="margin-bottom:12px"><h3>Son 7 gün</h3><button class="ek" id="haftaTum" style="color:var(--accent);font-weight:800;font-size:13px">Tümünü gör</button></div>
+    <div class="fotoserit">${cards.map((x,i)=>`<button data-hf="${i}"><img src="data:image/jpeg;base64,${x.photo.oncekiler[0]}" loading="lazy" alt="${besinHtml(x.meal.ad)}"><b>${besinHtml(x.meal.ad)}</b><span>${besinHtml(gunAdi(x.day))}</span></button>`).join('')}</div>`;
+  kutu.hidden=false;
+  kutu.querySelectorAll('[data-hf]').forEach(el=>el.onclick=()=>{const x=cards[+el.dataset.hf];ogunDetaySheet(x.day,x.i);});
+  document.getElementById('haftaTum').onclick=()=>fotoArsiviSheet('hafta');
 }
