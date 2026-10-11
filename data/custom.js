@@ -116,3 +116,10 @@ window.EXDATA.push({"i":"c006","n":"Evde hafif ısınma","c":"cardio","q":"body 
 {"i":"c008","n":"Yan yatışta gövde açma — open book","c":"back","q":"body weight","t":"upper back","s":[],"d":["Yan yat; dizlerini büküp üst üste tut, kollarını önünde uzat.","Üstteki kolunu geriye açarken göğsünü rahatça döndür; dizler birlikte kalsın.","Zorlamadan başlangıca dön; her taraf için 6 tekrar yap.","Cat-cow, bu hareket ve wall slide bölümüne geçişlerle yaklaşık 8 dakika ayır."]},
 {"i":"c009","n":"Kapı eşiğinde hafif göğüs esnetme","c":"chest","q":"body weight","t":"pectorals","s":["delts"],"d":["Önkolunu sağlam kapı eşiğine rahat bir yükseklikte yerleştir.","Küçük bir adımla öne geç; göğüste hafif gerilme yeterli.","20–30 saniye tut; her tarafta iki kez uygula. Bir set iki tarafı kapsar.","Omuzda sıkışma veya ağrı olursa dur; zorlamadan nefes al."]},
 {"i":"c010","n":"Rahat yürüyüş ve sakin nefes","c":"cardio","q":"body weight","t":"cardiovascular system","s":[],"d":["Ev içinde rahat tempoda yürü.","Son birkaç dakikada rahat bir pozisyonda sakin ve doğal nefes al; nefesini tutma.","Bu kapanış bölümüne toplam 9 dakika ayır. Seans yaklaşık 30 dakika; süreyi doldurmak için ekstra şınav ekleme."]});
+
+/* Exact existing wall press-up plus original, repo-style 3D recovery illustrations. */
+for (const id of ["c006","c008","c009","c010"]) {
+  const e=window.EXDATA.find(x=>x.i===id); if(e) e.m="recovery-v1";
+}
+const wall=window.EXDATA.find(x=>x.i==="c007");
+if(wall){wall.m="LEH9jxP";wall.mediaId="0659";}

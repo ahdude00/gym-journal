@@ -55,6 +55,18 @@ Five exercises have no record of their own in the dataset and are added by
   **These three are not Gym visual media and the notice above does not apply to
   them.**
 
+## Original recovery animations (`c006`, `c008`, `c009`, `c010`)
+
+The `*-recovery-v1.gif` and matching JPEG files are original procedural 3D
+illustrations generated with `tools/recovery-gifs/`. They use a white background,
+grayscale figure, black shorts and the same 180×180 display format for visual
+consistency. They are **not the Gym visual character** and do not derive from
+Gym visual media. Three.js is used under its MIT license, retained in
+`tools/recovery-gifs/vendor/LICENSE`.
+
+`c007` points to the existing `0659-LEH9jxP` wall press-up GIF/JPEG without
+modification; those files remain Gym visual media under the terms above.
+
 ## Dataset (non-media)
 
 The exercise **data** (names, categories, body parts, equipment, targets,

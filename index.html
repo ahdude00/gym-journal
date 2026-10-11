@@ -593,7 +593,7 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
 <div id="modal" class="modal hidden"><div class="sheet" id="modalBody"></div></div>
 
 <script src="data/exercises.js"></script>
-<script src="data/custom.js"></script>
+<script src="data/custom.js?v=18"></script>
 <script src="data/legacy-workout-guide.js"></script>
 <script src="data/food.js"></script>
 <script>
@@ -671,6 +671,11 @@ function varsayilanTip(e){ return e&&e.tip ? e.tip : (e && (e.q === "body weight
 /* Çekirdek hareketler için elle yazılmış Türkçe ipucu, sık hatalar ve
    başlangıç önerisi — dataset'te bu üç alan yok. Anahtar = dataset id. */
 const OVERLAY = {
+  "c006":{tip:"sure",oneri:{tekrar:300},ipucu:"GIF rahat yürüyüş bölümünü gösterir; omuz ve bilek hareketlerini açıklamadaki gibi ekle."},
+  "c007":{tip:"vucut",oneri:{tekrar:8},ipucu:"GIF duvar şınavını gösterir. Kolay gelirse dizler yerde seçeneğini kullan; en az 4–5 tekrar yedekte kalsın."},
+  "c008":{tip:"vucut",oneri:{tekrar:6},ipucu:"Dizler üst üste ve sabit kalsın; üst kolu açarken göğsünü rahat, ağrısız aralıkta döndür. İki tarafı da yap."},
+  "c009":{tip:"sure",oneri:{tekrar:20},ipucu:"Hafif gerilme yeterli; kapı eşiğine dayanan önkol sabit kalsın. İki tarafı da uygula."},
+  "c010":{tip:"sure",oneri:{tekrar:540},ipucu:"GIF sakin nefes bölümünü gösterir. Önce rahat yürüyüş yap, sonra doğal nefesle kapanışı tamamla."},
   "0289":{ tip:"kg", oneri:{kg:10,tekrar:8},
     ipucu:"Barbell yerine dambıl: omuz için daha güvenli.",
     hatalar:["Dirsekleri 90 derece yana açmak — omuzu zorlar.","Kalçayı bench'ten kaldırmak.","Aşağıda zıplatarak sektirmek."] },
