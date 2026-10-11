@@ -593,7 +593,7 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
 <div id="modal" class="modal hidden"><div class="sheet" id="modalBody"></div></div>
 
 <script src="data/exercises.js"></script>
-<script src="data/custom.js?v=18"></script>
+<script src="data/custom.js"></script>
 <script src="data/legacy-workout-guide.js"></script>
 <script src="data/food.js"></script>
 <script>
@@ -671,11 +671,6 @@ function varsayilanTip(e){ return e&&e.tip ? e.tip : (e && (e.q === "body weight
 /* Çekirdek hareketler için elle yazılmış Türkçe ipucu, sık hatalar ve
    başlangıç önerisi — dataset'te bu üç alan yok. Anahtar = dataset id. */
 const OVERLAY = {
-  "c006":{tip:"sure",oneri:{tekrar:300},ipucu:"GIF rahat yürüyüş bölümünü gösterir; omuz ve bilek hareketlerini açıklamadaki gibi ekle."},
-  "c007":{tip:"vucut",oneri:{tekrar:8},ipucu:"GIF duvar şınavını gösterir. Kolay gelirse dizler yerde seçeneğini kullan; en az 4–5 tekrar yedekte kalsın."},
-  "c008":{tip:"vucut",oneri:{tekrar:6},ipucu:"Dizler üst üste ve sabit kalsın; üst kolu açarken göğsünü rahat, ağrısız aralıkta döndür. İki tarafı da yap."},
-  "c009":{tip:"sure",oneri:{tekrar:20},ipucu:"Hafif gerilme yeterli; kapı eşiğine dayanan önkol sabit kalsın. İki tarafı da uygula."},
-  "c010":{tip:"sure",oneri:{tekrar:540},ipucu:"GIF sakin nefes bölümünü gösterir. Önce rahat yürüyüş yap, sonra doğal nefesle kapanışı tamamla."},
   "0289":{ tip:"kg", oneri:{kg:10,tekrar:8},
     ipucu:"Barbell yerine dambıl: omuz için daha güvenli.",
     hatalar:["Dirsekleri 90 derece yana açmak — omuzu zorlar.","Kalçayı bench'ten kaldırmak.","Aşağıda zıplatarak sektirmek."] },
@@ -927,7 +922,7 @@ function programlariTazele(){
    3. DURUM VE KAYIT
    ========================================================== */
 const KEY="salonDefteri.v1";
-let state={tab:"home",sessions:[],favorites:[],meals:{},hedefProtein:150,besinTarih:null,tema:"gece",
+let state={tab:"home",sessions:[],favorites:[],meals:{},hedefProtein:150,hedefKalori:2750,besinTarih:null,tema:"gece",
   programs:[],programSurum:0,active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
   kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false,ekranAcik:true,saglayici:"gemini",modeller:{},kotaDolu:{}};
 let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,sayacTipi="dinlenme",clockTimer=null,kayitYeri="yok";
@@ -963,6 +958,7 @@ async function loadAll(){
     state.meals=d.meals||{};
     state.favorites=Array.isArray(d.favorites)?d.favorites:[];
     if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
+    if(d.hedefKalori) state.hedefKalori=d.hedefKalori;
     if(typeof d.otoDosya==="boolean") state.otoDosya=d.otoDosya;
     if(typeof d.bildirim==="boolean") state.bildirim=d.bildirim;
     if(typeof d.ekranAcik==="boolean") state.ekranAcik=d.ekranAcik;
@@ -994,7 +990,7 @@ async function loadAll(){
   if(kayitYeri==="yok" && lsSet(KEY+".test","1")) kayitYeri="telefon haf\u0131zas\u0131";
 }
 async function saveAll(){
-  const paket=JSON.stringify({v:3,tema:state.tema,otoDosya:state.otoDosya,bildirim:state.bildirim,ekranAcik:state.ekranAcik,saglayici:state.saglayici,modeller:state.modeller,kotaDolu:state.kotaDolu,hedefProtein:state.hedefProtein,
+  const paket=JSON.stringify({v:3,tema:state.tema,otoDosya:state.otoDosya,bildirim:state.bildirim,ekranAcik:state.ekranAcik,saglayici:state.saglayici,modeller:state.modeller,kotaDolu:state.kotaDolu,hedefProtein:state.hedefProtein,hedefKalori:state.hedefKalori,
     programs:state.programs,programSurum:state.programSurum,sessions:state.sessions,meals:state.meals,favorites:state.favorites,
     aktif:state.active,aktifIndex:state.exIndex});
   let ok=false;
@@ -1156,8 +1152,8 @@ function haftaGrafik(gunler,hedef,enB){
 
 /* --- ANA SAYFA --- */
 function renderHome(){
-  const bugun=gunKey(), t=gunToplam(bugun), hedef=state.hedefProtein;
-  const oran=Math.min(100,Math.round(t.p/hedef*100));
+  const bugun=gunKey(), t=gunToplam(bugun), hedef=state.hedefProtein, hedefK=state.hedefKalori;
+  const oran=Math.min(100,Math.round(t.p/hedef*100)), oranK=Math.min(100,Math.round(t.k/hedefK*100));
   const prog=state.active?state.active.program:sonrakiProgram();
   const hb=haftaBasi(new Date());
   const buHafta=state.sessions.filter(s=>new Date(s.tarih)>=hb).length;
@@ -1188,14 +1184,24 @@ function renderHome(){
     <div class="card">
       <div class="kbas"><h3>Bugünün hedefleri</h3></div>
       <div class="halkakart">
-        <svg viewBox="0 0 200 200" role="img" aria-label="Protein yüzde ${oran}, bu hafta ${buHafta} antrenman, ${tutan} gün protein hedefi tuttu">
-          ${halkaIc(88,t.p/hedef,"var(--prot)")}${halkaIc(64,buHafta/haftaHedef,"var(--done)")}${halkaIc(40,gecen?tutan/gecen:0,"var(--kcal)")}
+        <svg viewBox="0 0 200 200" role="img" aria-label="Protein yüzde ${oran}, kalori yüzde ${oranK}, bu hafta ${buHafta} antrenman">
+          ${halkaIc(88,t.p/hedef,"var(--prot)")}${halkaIc(64,t.k/hedefK,"var(--kcal)")}${halkaIc(40,buHafta/haftaHedef,"var(--done)")}
         </svg>
         <div class="lejant">
           <div><span class="et" style="--renk:var(--prot)">Protein</span><b>${yuvarla(t.p)} <small>/ ${hedef} g</small></b></div>
+          <div><span class="et" style="--renk:var(--kcal)">Kalori</span><b>${Math.round(t.k).toLocaleString("tr-TR")} <small>/ ${hedefK.toLocaleString("tr-TR")} kcal</small></b></div>
           <div><span class="et" style="--renk:var(--done)">Bu hafta</span><b>${buHafta} <small>/ ${haftaHedef} antrenman</small></b></div>
-          <div><span class="et" style="--renk:var(--kcal)">Hedef tutan gün</span><b>${tutan} <small>/ ${gecen} gün</small></b></div>
         </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="kbas" style="margin-bottom:14px"><h3>Yemek ekle</h3><span class="ek">${t.n?t.n+" kayıt":"Bugün boş"}</span></div>
+      <div class="eylemler">
+        <button class="ana" id="hFoto"><i>${IKON.kamera}</i>Fotoğraf</button>
+        <button id="hYaz"><i>${IKON.yazi}</i>Yazarak</button>
+        <button id="hElle"><i>${IKON.kalem}</i>Elle</button>
+        <button id="hFav"><i>${IKON.yildiz}</i>Favoriler</button>
       </div>
     </div>
 
@@ -1228,7 +1234,8 @@ function renderHome(){
       <button class="kutu" id="tKcal" style="--renk:var(--kcal)">
         <span class="ust">${IKON.alev}Kalori</span>
         <span class="deger">${Math.round(t.k).toLocaleString("tr-TR")}</span>
-        <span class="alt">kcal · ${t.n} kayıt</span>
+        <span class="alt">${t.k>=hedefK?"Hedef tamam":Math.round(hedefK-t.k).toLocaleString("tr-TR")+" kcal kaldı"}</span>
+        <span class="cubuk"><i style="width:${oranK}%"></i></span>
       </button>
       <button class="kutu" id="tGun" style="--renk:var(--accent)">
         <span class="ust">${IKON.tik}Hedef günleri</span>
@@ -1254,10 +1261,17 @@ function renderHome(){
     if(!state.active) startSession(prog); else { state.tab="workout"; render(); }
   };
   document.getElementById("goData").onclick=git("data");
+  document.getElementById("hFav").onclick=()=>favorilerSheet(bugun);
+  document.getElementById("hElle").onclick=()=>elleEkleSor(bugun);
+  document.getElementById("hYaz").onclick=()=>{ if(!apiAnahtar()){ anahtarSor(); return; } metinSheet(bugun); };
+  document.getElementById("hFoto").onclick=()=>{ if(!apiAnahtar()){ anahtarSor(); return; } fotoBasla(bugun); };
 }
 
 /* --- BESLENME --- */
 function renderFood(){
+  /* Öğün ekleme pencereleri kayıttan sonra renderFood() çağırıyor; ekleme
+     Özet'ten yapıldıysa kullanıcı Özet'te kalmalı. */
+  if(state.tab!=="food") return render();
   const k=state.besinTarih||gunKey();
   const liste=state.meals[k]||[], t=gunToplam(k), hedef=state.hedefProtein;
   const L=Math.PI*97, yay=Math.min(1,t.p/hedef)*L;
@@ -1281,7 +1295,7 @@ function renderFood(){
       </div>
       <div class="uclu">
         <div><b>${t.p>=hedef?"Tamam":yuvarla(hedef-t.p)+" g"}</b><span>kalan protein</span></div>
-        <div><b style="color:var(--kcal)">${Math.round(t.k).toLocaleString("tr-TR")}</b><span>kcal</span></div>
+        <div><b style="color:var(--kcal)">${Math.round(t.k).toLocaleString("tr-TR")}</b><span>/ ${state.hedefKalori.toLocaleString("tr-TR")} kcal</span></div>
         <div><b>${t.n}</b><span>kayıt</span></div>
       </div>
     </div>
@@ -3303,6 +3317,11 @@ function renderData(){
       <div class="unit" style="max-width:150px"><input type="number" inputmode="numeric" id="hedef" value="${state.hedefProtein}"><span>g</span></div>
     </div>
     <div class="card">
+      <h3>Günlük kalori hedefi</h3>
+      <p class="muted small">187 cm, 83 kg, 26 yaş ve haftada 3 antrenman için korunma kalorisi yaklaşık 2.750 kcal (Mifflin-St Jeor). Kilo almak için +250, vermek için −400 civarı ayarla.</p>
+      <div class="unit" style="max-width:150px"><input type="number" inputmode="numeric" id="hedefKcal" value="${state.hedefKalori}"><span>kcal</span></div>
+    </div>
+    <div class="card">
       <h3>Otomatik kayıt</h3>
       <p class="muted small">Veriler telefon hafızasına yazılır ve uygulama açılınca otomatik okunur. İstersen antrenman bitince İndirilenler klasörüne yedek dosya da iner.</p>
       <div class="switch"><span>Bitirince dosyaya da yaz</span><button id="tgl" class="${state.otoDosya?"on":""}"><i></i></button></div>
@@ -3383,6 +3402,7 @@ function renderData(){
     await saveAll(); renderData(); toast(e.target.value+" seçildi");
   };
   document.getElementById("goProg2").onclick=()=>{ state.tab="programs"; render(); scrollTo(0,0); };
+  document.getElementById("hedefKcal").onchange=async e=>{ const v=+e.target.value; if(v>=1200&&v<=6000){ state.hedefKalori=v; await saveAll(); toast("Kalori hedefi "+v.toLocaleString("tr-TR")+" kcal"); } };
   document.getElementById("hedef").onchange=async e=>{ const v=+e.target.value; if(v>=50&&v<=400){ state.hedefProtein=v; await saveAll(); toast("Hedef "+v+" g olarak kaydedildi"); } };
   document.getElementById("tgl").onclick=async()=>{ state.otoDosya=!state.otoDosya; await saveAll(); renderData(); };
   document.getElementById("tglEkran").onclick=async()=>{
@@ -3408,7 +3428,7 @@ function renderData(){
 async function dosyayaAktar(sessiz){
   try{
     const photos=sessiz?[]:await fotoSureSinirli(fotoIslem("readonly",d=>d.getAll()),15000);
-    const blob=new Blob([JSON.stringify({v:4,hedefProtein:state.hedefProtein,programs:state.programs,sessions:state.sessions,meals:state.meals,favorites:state.favorites,photos},null,1)],{type:"application/json"});
+    const blob=new Blob([JSON.stringify({v:4,hedefProtein:state.hedefProtein,hedefKalori:state.hedefKalori,programs:state.programs,sessions:state.sessions,meals:state.meals,favorites:state.favorites,photos},null,1)],{type:"application/json"});
     const d=new Date(), ad=`salon-defteri-${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}.json`;
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=ad; a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -3456,6 +3476,7 @@ function dosyadanYukle(e){
         }catch(e){fotoSorunu=true;}
       }
       if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
+      if(d.hedefKalori) state.hedefKalori=d.hedefKalori;
       migrasyonYap();
       await saveAll();
       toast(`${eklenen} antrenman, ${gun} beslenme günü, ${prog} program eklendi`
