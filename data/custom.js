@@ -102,10 +102,17 @@
       d: [
         "Sırtüstü yat, dizler bükülü, ayaklar yerde. Baş yerde, yüz tavana baksın.",
         "Çeneni içeri çek — aşağı eğme, geriye kaydır. Ense dibinin uzadığını hisset.",
-        "Çene içerideyken başını 2 cm kadar yerden kaldır ve 5 saniye tut.",
-        "Başı yavaşça indir, çeneyi bırak. Bir tekrar bu kadar.",
-        "Boyun önünde titreme normaldir. Ense dibi sıkışıyorsa çeneyi daha çok içeri al."
+        "Başını yerde tutarak çeneyi hafifçe geri çek ve 5 saniye bekle.",
+        "Çeneyi rahat bırak. Bir tekrar bu kadar.",
+        "Zorlama. Ağrı veya ense dibinde sıkışma olursa dur; hareket aralığını küçült."
       ]
     }
   );
 })();
+
+/* Opsiyonel ev seansı: medyasız hareketler, adımlar ve yer tutucu kullanılır. */
+window.EXDATA.push({"i":"c006","n":"Evde hafif ısınma","c":"cardio","q":"body weight","t":"cardiovascular system","s":[],"d":["Ev içinde rahat tempoda yürü; toplam 5 dakika ayır.","Omuzlarını nazikçe çevir ve bileklerini rahat aralıkta hareket ettir.","Konuşabileceğin tempoda kal; yorulmayı hedefleme."]},
+{"i":"c007","n":"Kolay şınav — duvarda veya dizler yerde","c":"chest","q":"body weight","t":"pectorals","s":["triceps","delts"],"d":["Duvarda şınavla başla; rahat gelirse dizler yerde şınav yapabilirsin.","Eller omuz genişliğinden biraz açık; gövdeni kontrollü tut.","Dirseklerini tamamen yana açmadan göğsünü desteğe yaklaştır ve geri it.","8–12 tekrar yap, en az 4–5 tekrar yedekte kalsın. İki set arasında 90 saniye dinlen.","Belirgin göğüs, omuz veya triceps yorgunluğu varsa bu hareketi atla."]},
+{"i":"c008","n":"Yan yatışta gövde açma — open book","c":"back","q":"body weight","t":"upper back","s":[],"d":["Yan yat; dizlerini büküp üst üste tut, kollarını önünde uzat.","Üstteki kolunu geriye açarken göğsünü rahatça döndür; dizler birlikte kalsın.","Zorlamadan başlangıca dön; her taraf için 6 tekrar yap.","Cat-cow, bu hareket ve wall slide bölümüne geçişlerle yaklaşık 8 dakika ayır."]},
+{"i":"c009","n":"Kapı eşiğinde hafif göğüs esnetme","c":"chest","q":"body weight","t":"pectorals","s":["delts"],"d":["Önkolunu sağlam kapı eşiğine rahat bir yükseklikte yerleştir.","Küçük bir adımla öne geç; göğüste hafif gerilme yeterli.","20–30 saniye tut; her tarafta iki kez uygula. Bir set iki tarafı kapsar.","Omuzda sıkışma veya ağrı olursa dur; zorlamadan nefes al."]},
+{"i":"c010","n":"Rahat yürüyüş ve sakin nefes","c":"cardio","q":"body weight","t":"cardiovascular system","s":[],"d":["Ev içinde rahat tempoda yürü.","Son birkaç dakikada rahat bir pozisyonda sakin ve doğal nefes al; nefesini tutma.","Bu kapanış bölümüne toplam 9 dakika ayır. Seans yaklaşık 30 dakika; süreyi doldurmak için ekstra şınav ekleme."]});

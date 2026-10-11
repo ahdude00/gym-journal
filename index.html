@@ -643,8 +643,8 @@ const OVERLAY = {
 
   /* ---- SOĞUMA ---- */
   "c005":{ tip:"vucut", oneri:{tekrar:8},
-    ipucu:"Öne baş duruşunun asıl ilacı. Kolay görünür, ilk haftalar titrersin.",
-    hatalar:["Çeneyi aşağı eğmek — geriye kaydırılacak.","Başı yüksek kaldırmak; 2 cm yeter.","Nefesi tutmak."] },
+    ipucu:"Çeneyi nazikçe geriye çek; baş yerde kalsın. Rahat ve ağrısız aralıkta çalış.",
+    hatalar:["Çeneyi aşağı eğmek — geriye kaydırılacak.","Başı yerden kaldırarak zorlamak.","Nefesi tutmak."] },
   "1259":{ tip:"sure", oneri:{tekrar:30},
     ipucu:"Göğüs ve ön omuzu açar. Kürekleri sık, göğsü ileri it.",
     hatalar:["Beli kavislendirerek germeyi bele taşımak.","Omuzları kulaklara kaldırmak.","Nefesi tutup zorlamak."] },
@@ -728,61 +728,55 @@ function kapanis(){
 }
 function gun(id,ad,govde){ return {id, ad, hareketler:[...acilis(), ...govde, ...kapanis()]}; }
 
-/* Üç program: makinesiz (yalnızca dambıl, bench, barfiks demiri ve vücut
-   ağırlığı), tek liste halinde.
-   Arka omuz / üst sırt işi 0359 (destekli tek kol reverse fly) ile
-   yapılıyor: yüzüstü yatmayı gerektiren rear delt row yerine bankta
-   oturup öne eğilerek. Duruş için programdaki tek yüksek dirsekli
-   hareket o, bu yüzden listede kalması önemli.
-   Çekiş (pull-up, bent over row, one arm row), itiş (shoulder press,
-   push-up), arka omuz (0359) ve dead bug haftada iki güne dağıtıldı;
-   lateral raise ve plank üç günde. */
+/* Omuz, sırt ve kol öncelikli üç ana gün; pazar ana döngüye dahil değil.
+   Çalışma setleri: 17 / 21 / 19. Isınma ve kapanış ayrıca eklenir. */
 function varsayilanProgramlar(){
   return [
-    gun("1","Gün 1 — Sırt ve biceps",[
-      {ex:"0652",set:4,tekrar:"3-5",  mola:120,tip:"vucut"},
-      {ex:"0293",set:3,tekrar:"10-12",mola:75, tip:"kg"},
+    gun("1","Gün 1 — Sırt, omuz ve biceps",[
+      {ex:"0652",set:3,tekrar:"3-5",  mola:120,tip:"vucut"},
       {ex:"0292",set:3,tekrar:"10-12",mola:90, tip:"kg"},
-      {ex:"0359",set:3,tekrar:"15",   mola:45, tip:"kg"},
-      {ex:"0375",set:3,tekrar:"12-15",mola:75, tip:"kg"},
-      {ex:"0334",set:4,tekrar:"12-15",mola:60, tip:"kg"},
+      {ex:"0359",set:3,tekrar:"12-15",mola:60, tip:"kg"},
+      {ex:"0334",set:3,tekrar:"12-20",mola:60, tip:"kg"},
       {ex:"0294",set:3,tekrar:"10-12",mola:60, tip:"kg"},
-      {ex:"0276",set:3,tekrar:"8",    mola:45, tip:"vucut"},
-      {ex:"c001",set:3,tekrar:"40",   mola:45, tip:"sure"}]),
+      {ex:"0276",set:2,tekrar:"8",    mola:45, tip:"vucut"}]),
     gun("2","Gün 2 — Bacak, itiş, kol",[
       {ex:"1760",set:3,tekrar:"10-12",mola:90, tip:"kg"},
       {ex:"1459",set:3,tekrar:"10-12",mola:90, tip:"kg"},
       {ex:"0404",set:3,tekrar:"8-10", mola:120,tip:"kg"},
       {ex:"0662",set:3,tekrar:"8-12", mola:90, tip:"vucut"},
-      {ex:"0334",set:4,tekrar:"12-15",mola:60, tip:"kg"},
-      {ex:"2189",set:3,tekrar:"10-12",mola:60, tip:"kg"},
-      {ex:"0313",set:3,tekrar:"10-12",mola:60, tip:"kg"},
-      {ex:"0276",set:3,tekrar:"8",    mola:45, tip:"vucut"},
-      {ex:"c001",set:3,tekrar:"40",   mola:45, tip:"sure"}]),
-    gun("3","Gün 3 — Çekiş ve omuz",[
-      {ex:"0652",set:4,tekrar:"3-5",  mola:120,tip:"vucut"},
-      {ex:"0293",set:3,tekrar:"10-12",mola:75, tip:"kg"},
-      {ex:"0292",set:3,tekrar:"10-12",mola:90, tip:"kg"},
+      {ex:"0334",set:3,tekrar:"12-20",mola:60, tip:"kg"},
+      {ex:"0313",set:2,tekrar:"10-15",mola:60, tip:"kg"},
+      {ex:"2189",set:2,tekrar:"10-15",mola:75, tip:"kg"},
+      {ex:"c001",set:2,tekrar:"30-40",mola:45, tip:"sure"}]),
+    gun("3","Gün 3 — Omuz, sırt ve triceps",[
       {ex:"0404",set:3,tekrar:"8-10", mola:120,tip:"kg"},
-      {ex:"0662",set:3,tekrar:"8-12", mola:90, tip:"vucut"},
-      {ex:"0334",set:4,tekrar:"12-15",mola:60, tip:"kg"},
-      {ex:"0359",set:3,tekrar:"15",   mola:45, tip:"kg"},
-      {ex:"0351",set:3,tekrar:"10-12",mola:60, tip:"kg"},
-      {ex:"c001",set:2,tekrar:"40",   mola:45, tip:"sure"}])
+      {ex:"0652",set:3,tekrar:"3-5",  mola:120,tip:"vucut"},
+      {ex:"0293",set:3,tekrar:"10-12",mola:90, tip:"kg"},
+      {ex:"0662",set:2,tekrar:"8-12", mola:90, tip:"vucut"},
+      {ex:"0334",set:3,tekrar:"12-20",mola:60, tip:"kg"},
+      {ex:"0359",set:2,tekrar:"12-15",mola:60, tip:"kg"},
+      {ex:"0351",set:3,tekrar:"10-12",mola:60, tip:"kg"}]),
+    {id:"pazar",ad:"Pazar — Opsiyonel ev seansı",opsiyonel:true,
+      not:"Yaklaşık 30 dk · Zorluk 3–4/10. Şınavda en az 4–5 tekrar yedekte kalsın. Belirgin yorgunluk varsa şınavı atla. Kaçırınca telafi gerekmez.",
+      hareketler:[
+        {ex:"c006",set:1,tekrar:"300",mola:0,tip:"sure"},
+        {ex:"c007",set:2,tekrar:"8-12",mola:90,tip:"vucut"},
+        {ex:"c003",set:1,tekrar:"6-8",mola:30,tip:"vucut"},
+        {ex:"c008",set:1,tekrar:"6",mola:30,tip:"vucut"},
+        {ex:"c004",set:2,tekrar:"8",mola:30,tip:"vucut"},
+        {ex:"c009",set:2,tekrar:"20-30",mola:30,tip:"sure"},
+        {ex:"c010",set:1,tekrar:"540",mola:0,tip:"sure"}
+      ]}
   ];
 }
 
-/* Varsayilan programlarin surumu.
-   v3: bolum ayrimi kalkti ve hareket listesi degisti.
-   v4: Gun 1'e destekli reverse fly ve dead bug eklendi.
-   Her surumde ayni id'yi tasiyan uc varsayilan gun yeniden yaziliyor.
-   Kullanicinin kendi olusturdugu programlar farkli id tasidigi icin
-   olduklari gibi kaliyor; gecmis antrenman kayitlari zaten seansin
-   kopyasini tutuyor, onlar da etkilenmiyor. */
-const PROGRAM_SURUM = 4;
+/* v5: 60 dk hedefli ana günler ve opsiyonel pazar. Özel programlar ve
+   geçmiş seans kopyaları korunur; varsayılan programlar güncellenir. */
+const PROGRAM_SURUM = 5;
 function programlariTazele(){
   if((state.programSurum||1) >= PROGRAM_SURUM) return false;
   const yeni = varsayilanProgramlar();
+  yeni.forEach(p=>{ p.duzenlendi=Date.now(); });
   const eskiAB = state.programs.length===2
     && state.programs.every(p=>p.id==="A"||p.id==="B")
     && !state.programs.some(p=>p.duzenlendi);
@@ -903,18 +897,25 @@ function haftaBasi(d){ const x=new Date(d); x.setDate(x.getDate()-((x.getDay()+6
 function progById(id){ return state.programs.find(p=>p.id===id)||null; }
 function yeniProgId(){ return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
 function progOzet(p){
-  return p.hareketler.length+" hareket \u00b7 "
+  return (p.opsiyonel?"Opsiyonel · ":"")+p.hareketler.length+" hareket \u00b7 "
        + p.hareketler.reduce((a,h)=>a+(+h.set||0),0)+" set";
 }
 function progKisa(ad){ return String(ad||"").split("\u2014")[0].trim()||"Program"; }
-/* Son antrenmandan sonraki program; liste sonunda basa doner. */
+/* Opsiyonel seanslar ana gün sırasını değiştirmez. */
 function sonrakiProgram(){
-  if(!state.programs.length) return null;
-  const son=state.sessions.length?state.sessions[state.sessions.length-1]:null;
-  if(!son) return state.programs[0];
+  const ana=state.programs.filter(p=>!p.opsiyonel);
+  if(!ana.length) return null;
+  const son=[...state.sessions].reverse().find(s=>ana.some(p=>p.id===((s.program&&s.program.id)||s.gun)));
+  if(!son) return ana[0];
   const pid=(son.program&&son.program.id)||son.gun;
-  const i=state.programs.findIndex(p=>p.id===pid);
-  return i<0 ? state.programs[0] : state.programs[(i+1)%state.programs.length];
+  const i=ana.findIndex(p=>p.id===pid);
+  return ana[(i+1)%ana.length];
+}
+function programNotu(p){
+  const not=p.not || (p.id==='2'
+    ? '60 dk hedefi · Hammer curl ve triceps’i dönüşümlü yap: birer set, ardından 60–75 sn dinlenme. Tek kol hareketlerini iki tarafta tamamla.'
+    : ['1','3'].includes(p.id) ? '60 dk hedefi · Tek kol hareketlerini ve dead bug’ı iki tarafta tamamla. Ana hareketlerde 90–120 sn, yardımcı hareketlerde 45–60 sn dinlen.' : '');
+  return not ? '<p class="muted small" style="margin:8px 0">'+String(not).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</p>' : '';
 }
 /* Bir hareketin en son yapildigi antrenmandaki setleri ve o seansin tarihi. */
 function sonKayitBilgi(exId){
@@ -2002,6 +2003,7 @@ function renderWorkout(){
     view.innerHTML=`
       <div class="card">
         <div class="row between"><h2>${prog.ad}</h2><span class="pill on">Sıradaki</span></div>
+        ${programNotu(prog)}
         <p class="muted small" style="margin:6px 0 4px">${state.sessions.length?"Son antrenman: "+tarihTR(state.sessions[state.sessions.length-1].tarih):"İlk antrenmanın. Kutulardaki değerler başlangıç önerisi — kolay gelirse artır."}</p>
         ${prog.hareketler.length? prog.hareketler.map(h=>{
             const e=EX[h.ex], sk=sonKayit(h.ex), o=oneriOf(h.ex), br=h.tip==="sure"?" sn":"";
@@ -2033,6 +2035,7 @@ function renderWorkout(){
   const gecen=gecenSeferMetni(h.ex,h.tip);
   document.getElementById("title").textContent=progKisa(s.program.ad);
   view.innerHTML=`
+    ${programNotu(s.program)}
     <p class="muted small" style="margin:0 0 6px">Hareket ${state.exIndex+1} / ${s.hareketler.length}</p>
     <div class="progress">${s.hareketler.map((x,i)=>
       `<button type="button" data-git="${i}" class="${i<=state.exIndex?"on":""} ${i===state.exIndex?"simdi":""}"
@@ -2221,14 +2224,15 @@ function renderWorkout(){
 /* Bir hareket icin seans kaydi. adet verilmezse gecen antrenmandaki set
    sayisi, o da yoksa programdaki hedef kullanilir. Kilo ve tekrar her zaman
    gecen antrenmandan set set tasinir. */
-function kayitOlustur(h,adet){
-  const onceki=sonKayitBilgi(h.ex), o=oneriOf(h.ex);
+function kayitOlustur(h,adet,hedefleriKullan=false){
+  const onceki=hedefleriKullan ? null : sonKayitBilgi(h.ex), o=oneriOf(h.ex);
   const gecmis = onceki ? onceki.setler : null;
   const n = adet!=null ? adet : (gecmis ? gecmis.length : h.set);
   return { id:h.ex, tip:h.tip, setler:Array.from({length:n},(_,i)=>{
     const ref = gecmis ? (gecmis[i]||gecmis[gecmis.length-1]) : null;
     const kg = h.tip==="kg" ? (ref&&ref.kg!=null?ref.kg:(o.kg!=null?o.kg:null)) : null;
-    const tk = ref&&ref.tekrar!=null ? ref.tekrar : (o.tekrar!=null?o.tekrar:null);
+    const hedef=String(h.tekrar||"").match(/^\d+/);
+    const tk = ref&&ref.tekrar!=null ? ref.tekrar : (hedef ? +hedef[0] : (o.tekrar!=null?o.tekrar:null));
     return {kg,tekrar:tk,done:false};
   })};
 }
@@ -2245,7 +2249,7 @@ function startSession(prog){
   }));
   state.active={
     id:"s"+Date.now(), tarih:new Date().toISOString(),
-    gun:prog.id, program:{id:prog.id,ad:prog.ad}, hareketler,
+    gun:prog.id, program:{id:prog.id,ad:prog.ad,not:prog.not,opsiyonel:prog.opsiyonel}, hareketler,
     baslangic:Date.now(), sure:0,
     /* Gecen antrenmanda ne yaptiysan onunla basla: set sayisi, kilo ve
        tekrar set set birebir tasinir. Programi o antrenmandan SONRA
@@ -2255,7 +2259,7 @@ function startSession(prog){
          her zaman gecen antrenmandan gelir. */
       const onceki=sonKayitBilgi(h.ex);
       const programDahaYeni = prog.duzenlendi && (!onceki || prog.duzenlendi > Date.parse(onceki.tarih));
-      return kayitOlustur(h, programDahaYeni ? h.set : null);
+      return kayitOlustur(h, prog.opsiyonel || programDahaYeni ? h.set : null, !!prog.opsiyonel);
     })
   };
   state.exIndex=0; state.tab="workout"; state.duzenle=null; state.secici=null; state.openEx=null;
@@ -2345,6 +2349,7 @@ function renderProgramDuzenle(){
     <button class="btn ghost sm" id="back" style="margin-bottom:12px">Programlara dön</button>
     <div class="card">
       <h3>Program adı</h3>
+      ${programNotu(p)}
       <input class="text" id="pAd" value="${String(p.ad).replace(/"/g,"&quot;")}" style="margin-top:8px">
     </div>
     <div class="card">
