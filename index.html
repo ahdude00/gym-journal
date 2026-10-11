@@ -544,6 +544,12 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
 .raporsatir>span:nth-child(2){flex:1;min-width:0}
 .raporsatir b{display:block;font-size:15px}
 .raporsatir .muted{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ozetnav{margin:-4px 0 12px}
+.ozetgun{width:auto!important;height:auto!important;min-height:44px;border-radius:999px!important;background:transparent!important;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 12px;color:var(--text)}
+.ozetgun span{font-size:12px;font-weight:700;color:var(--accent)}
+.ozetgun[disabled]{opacity:1}
+.datenav button[disabled]{opacity:.35}
 .satirlink{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:0 18px;
   background:var(--panel);border-radius:22px;color:var(--text);font-size:15px;font-weight:700;text-align:left;margin-bottom:12px}
 .satirlink span{flex:1}
@@ -1187,23 +1193,26 @@ function adimCagir(yontem,veri){
   return C.nativePromise("Adim",yontem,veri||{});
 }
 const ADIM_IKON=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 3.5c1.6 0 2.4 1.6 2.4 3.6S10 11 8.4 11 6 9.3 6 7.3s.9-3.8 2.5-3.8zM15.6 8c1.6 0 2.4 1.7 2.4 3.7s-.9 3.9-2.5 3.9-2.4-1.6-2.4-3.6.9-4 2.5-4zM6.4 13.4l4 .5-.4 3a2 2 0 0 1-4-.5zM13.6 18l4 .6-.4 2a2 2 0 0 1-3.9-.6z"/></svg>`;
-function adimIc(){
-  const d=adimDurum, hedef=state.hedefAdim;
+function adimIc(gun){
+  const d=adimDurum, hedef=state.hedefAdim, secK=gun||gunKey();
   if(d.okumaHatasi&&!(d.gunler||[]).length) return `<div class="adimust">${ADIM_IKON}<span>Adımlar okunamadı: ${besinHtml(d.okumaHatasi)}</span></div><button class="minibtn" id="adimYenile">Tekrar dene</button>`;
   if(d.hata==="yok") return `<div class="adimust">${ADIM_IKON}<span>Adım sayısı için Health Connect gerekli.</span></div><button class="minibtn" id="adimAyar">Health Connect'i aç</button>`;
   if(d.hata==="guncelleme") return `<div class="adimust">${ADIM_IKON}<span>Health Connect güncellenmeli.</span></div><button class="minibtn" id="adimAyar">Güncelle</button>`;
   if(!d.izin) return `<div class="adimust">${ADIM_IKON}<span>Samsung Health adımlarını burada gör.</span></div><button class="minibtn" id="adimIzin">Adımları bağla</button>`;
-  const gunler=d.gunler||[], bugunK=gunKey(), bugun=(gunler.find(x=>x.gun===bugunK)||{adim:0}).adim;
+  /* Seçilen günle biten 7 gün; Health Connect son 30 günü veriyor. */
+  const tum=d.gunler||[], bugunK=secK, sec=tum.find(x=>x.gun===secK);
+  if(!sec&&tum.length&&secK<tum[0].gun) return `<div class="adimust">${ADIM_IKON}<span>Bu gün için adım verisi yok (Health Connect son 30 günü veriyor).</span></div>`;
+  const gunler=tum.filter(x=>x.gun<=secK).slice(-7), bugun=(sec||{adim:0}).adim;
   const gecmis=gunler.filter(x=>x.gun!==bugunK), ort=gecmis.length?Math.round(gecmis.reduce((a,x)=>a+x.adim,0)/gecmis.length):0;
   const enB=Math.max(hedef,...gunler.map(x=>x.adim));
   return `<div class="adimust">${ADIM_IKON}<span class="et">Adım</span><b>${bugun.toLocaleString("tr-TR")} <small>/ ${hedef.toLocaleString("tr-TR")}</small></b></div>
     <span class="adimcubuk"><i style="width:${Math.min(100,Math.round(bugun/hedef*100))}%"></i></span>
     <div class="adimgunler">${gunler.map(x=>`<span><i class="${x.adim>=hedef?"on":""}" style="height:${Math.max(8,Math.round(x.adim/enB*100))}%"></i><small class="${x.gun===bugunK?"bugun":""}">${GUNLER[keyToDate(x.gun).getDay()]}</small></span>`).join("")}</div>
-    <p class="adimnot">${gunler.length&&gunler.every(x=>!x.adim)?"Hiç adım gelmedi. Veri › Adım tanılama'ya bak.":"Son 7 gün ortalaması "+ort.toLocaleString("tr-TR")+" adım"}${d.zaman?" · "+saatDk(d.zaman)+" güncellendi":""}${d.okumaHatasi?" · son deneme başarısız":""}</p>`;
+    <p class="adimnot">${gunler.length&&gunler.every(x=>!x.adim)?"Hiç adım gelmedi. Veri › Adım tanılama'ya bak.":"Önceki 6 gün ortalaması "+ort.toLocaleString("tr-TR")+" adım"}${d.zaman?" · "+saatDk(d.zaman)+" güncellendi":""}${d.okumaHatasi?" · son deneme başarısız":""}</p>`;
 }
 function adimBagla(){
   const kutu=document.getElementById("adimSatir"); if(!kutu) return;
-  kutu.innerHTML=adimIc();
+  kutu.innerHTML=adimIc(ozetGun());
   const izin=document.getElementById("adimIzin"), ayar=document.getElementById("adimAyar"), yen=document.getElementById("adimYenile");
   if(yen) yen.onclick=()=>adimTazele();
   if(izin) izin.onclick=async()=>{
@@ -1219,7 +1228,7 @@ async function adimTazele(){
     const d=await adimCagir("durum");
     adimDurum.hata=d.durum==="hazir"?null:d.durum; adimDurum.izin=!!d.izin;
     if(d.durum==="hazir"&&d.izin){
-      const r=await adimCagir("adimlar",{gun:7});
+      const r=await adimCagir("adimlar",{gun:30});
       adimDurum.gunler=r.gunler||[]; adimDurum.zaman=Date.now();
     }
     adimDurum.okumaHatasi=null;
@@ -1307,21 +1316,32 @@ function haftaGrafik(gunler,hedef,enB){
 }
 
 /* --- ANA SAYFA --- */
+/* Özet'te gösterilen gün: state.ozetTarih (geçmiş bir gün) ya da bugün. */
+function ozetGun(){ const b=gunKey(); return state.ozetTarih&&state.ozetTarih<b?state.ozetTarih:b; }
+function ozetGunDegistir(delta){
+  const yeni=gunKey(new Date(keyToDate(ozetGun()).getTime()+delta*864e5));
+  if(yeni>gunKey()) return;
+  state.ozetTarih=yeni===gunKey()?null:yeni; renderHome();
+}
 function renderHome(){
-  const bugun=gunKey(), t=gunToplam(bugun), hedef=state.hedefProtein, hedefK=state.hedefKalori;
+  const gercekBugun=gunKey(), bugun=ozetGun(), bugunMu=bugun===gercekBugun;
+  const t=gunToplam(bugun), hedef=state.hedefProtein, hedefK=state.hedefKalori;
   const oran=Math.min(100,Math.round(t.p/hedef*100)), oranK=Math.min(100,Math.round(t.k/hedefK*100));
   /* Süren antrenmanda program kopyası hareket listesini taşımıyor; liste seansın kendisinde. */
   const prog=state.active?{...state.active.program,hareketler:state.active.hareketler||[]}:sonrakiProgram();
-  const hb=haftaBasi(new Date());
-  const buHafta=state.sessions.filter(s=>new Date(s.tarih)>=hb).length;
+  const hb=haftaBasi(keyToDate(bugun)), hs=new Date(hb.getTime()+7*864e5);
+  const buHafta=state.sessions.filter(s=>{ const x=new Date(s.tarih); return x>=hb&&x<hs&&gunKey(x)<=bugun; }).length;
   const haftaHedef=Math.max(1,state.programs.filter(p=>!p.opsiyonel).length);
-  const sonAnt=state.sessions.length?state.sessions[state.sessions.length-1]:null;
+  /* Seçilen günün sonuna kadarki en son antrenman */
+  const oncekiler=state.sessions.filter(s=>gunKey(new Date(s.tarih))<=bugun);
+  const sonAnt=oncekiler.length?oncekiler[oncekiler.length-1]:null;
+  const gunSeans=state.sessions.filter(s=>gunKey(new Date(s.tarih))===bugun);
   // bu haftanın günleri
   const gunler=[];
   let topP=0,say=0;
   for(let i=0;i<7;i++){
     const d=new Date(hb.getTime()+i*864e5), k=gunKey(d);
-    const gelecek=k>bugun, g=gelecek?{p:0,n:0}:gunToplam(k);
+    const gelecek=k>gercekBugun, g=gelecek?{p:0,n:0}:gunToplam(k);
     gunler.push({etiket:GUNLER[d.getDay()], p:g.p, bugun:k===bugun, gelecek});
     if(!gelecek&&g.n){ topP+=g.p; say++; }
   }
@@ -1335,11 +1355,17 @@ function renderHome(){
   if(prog&&!asil.length) asil=prog.hareketler||[];
   const kucuk=asil.slice(0,4), fazla=asil.length-kucuk.length;
 
-  document.getElementById("ust").textContent=uzunTarih();
+  document.getElementById("ust").textContent=uzunTarih(keyToDate(bugun));
   document.getElementById("title").textContent="Özet";
   view.innerHTML=`
+    <div class="datenav ozetnav">
+      <button id="oGeri" aria-label="Önceki gün"><svg class="ok" viewBox="0 0 24 24" style="stroke:var(--text)" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+      <button class="ozetgun" id="oBugun" ${bugunMu?"disabled":""}><b>${gunAdi(bugun)}</b>${bugunMu?"":`<span>Bugüne dön</span>`}</button>
+      <button id="oIleri" aria-label="Sonraki gün" ${bugunMu?"disabled":""}>${IKON.ok.replace('class="ok"','class="ok" style="stroke:var(--text)"')}</button>
+    </div>
+
     <div class="card">
-      <div class="kbas"><h3>Bugünün hedefleri</h3></div>
+      <div class="kbas"><h3>${bugunMu?"Bugünün hedefleri":gunAdi(bugun)+" · hedefler"}</h3></div>
       <div class="halkakart">
         <svg viewBox="0 0 200 200" role="img" aria-label="Protein yüzde ${oran}, kalori yüzde ${oranK}, bu hafta ${buHafta} antrenman">
           ${halkaIc(88,t.p/hedef,"var(--prot)")}${halkaIc(64,t.k/hedefK,"var(--kcal)")}${halkaIc(40,buHafta/haftaHedef,"var(--done)")}
@@ -1347,7 +1373,7 @@ function renderHome(){
         <div class="lejant">
           <div><span class="et" style="--renk:var(--prot)">Protein</span><b>${yuvarla(t.p)} <small>/ ${hedef} g</small></b></div>
           <div><span class="et" style="--renk:var(--kcal)">Kalori</span><b>${Math.round(t.k).toLocaleString("tr-TR")} <small>/ ${hedefK.toLocaleString("tr-TR")} kcal</small></b></div>
-          <div><span class="et" style="--renk:var(--done)">Bu hafta</span><b>${buHafta} <small>/ ${haftaHedef} antrenman</small></b></div>
+          <div><span class="et" style="--renk:var(--done)">${bugunMu?"Bu hafta":"O hafta"}</span><b>${buHafta} <small>/ ${haftaHedef} antrenman</small></b></div>
         </div>
       </div>
       ${ADIM_VAR?`<div class="adimsatir" id="adimSatir">${adimIc()}</div>`
@@ -1355,7 +1381,7 @@ function renderHome(){
     </div>
 
     <div class="card">
-      <div class="kbas" style="margin-bottom:14px"><h3>Yemek ekle</h3><span class="ek">${t.n?t.n+" kayıt":"Bugün boş"}</span></div>
+      <div class="kbas" style="margin-bottom:14px"><h3>${bugunMu?"Yemek ekle":gunAdi(bugun)+" · yemek ekle"}</h3><span class="ek">${t.n?t.n+" kayıt":(bugunMu?"Bugün boş":"Kayıt yok")}</span></div>
       <div class="eylemler">
         <button class="ana" id="hFoto"><i>${IKON.kamera}</i>Fotoğraf</button>
         <button id="hYaz"><i>${IKON.yazi}</i>Yazarak</button>
@@ -1366,7 +1392,11 @@ function renderHome(){
 
     <div class="card rapor" id="raporKart"></div>
 
-    <div class="card">
+    ${!bugunMu?`<div class="card">
+      <div class="kbas"><h3>${gunAdi(bugun)} · antrenman</h3></div>
+      ${gunSeans.length?gunSeans.map(s=>`<div class="kv"><span>${besinHtml(progBaslik((s.program&&s.program.ad)||"Antrenman"))}</span><b>${Math.round((s.sure||0)/60)} dk · ${Math.round(s.hacim||0).toLocaleString("tr-TR")} kg</b></div>`).join("")
+        :`<p class="muted small" style="margin:8px 0 0">Bu gün antrenman yok.</p>`}
+    </div>`:`<div class="card">
       ${prog?`
       <div class="kbas"><span class="ek">${state.active?"Süren antrenman":"Sıradaki antrenman"}</span><span class="pill on">${progKisa(prog.ad)}</span></div>
       <h2 style="margin-top:8px">${progBaslik(prog.ad)}</h2>
@@ -1376,13 +1406,13 @@ function renderHome(){
       :`<h3>Sıradaki antrenman</h3>
       <p class="muted small" style="margin:6px 0 0">Henüz bir programın yok.</p>
       <button class="btn" id="goWorkout" style="margin-top:14px">Program oluştur</button>`}
-    </div>
+    </div>`}
 
     <div class="kutular">
       <button class="kutu" id="tProt" style="--renk:var(--prot)">
         <span class="ust">${IKON.catal}Protein</span>
         <span class="deger">${yuvarla(t.p)} <small>g</small></span>
-        <span class="alt">${t.p>=hedef?"Hedef tamam":yuvarla(hedef-t.p)+" g kaldı"}</span>
+        <span class="alt">${t.p>=hedef?"Hedef tamam":yuvarla(hedef-t.p)+(bugunMu?" g kaldı":" g eksik")}</span>
         <span class="cubuk"><i style="width:${oran}%"></i></span>
       </button>
       <button class="kutu" id="tSon" style="--renk:var(--done)">
@@ -1395,29 +1425,34 @@ function renderHome(){
       <button class="kutu" id="tKcal" style="--renk:var(--kcal)">
         <span class="ust">${IKON.alev}Kalori</span>
         <span class="deger">${Math.round(t.k).toLocaleString("tr-TR")}</span>
-        <span class="alt">${t.k>=hedefK?"Hedef tamam":Math.round(hedefK-t.k).toLocaleString("tr-TR")+" kcal kaldı"}</span>
+        <span class="alt">${t.k>=hedefK?"Hedef tamam":Math.round(hedefK-t.k).toLocaleString("tr-TR")+(bugunMu?" kcal kaldı":" kcal eksik")}</span>
         <span class="cubuk"><i style="width:${oranK}%"></i></span>
       </button>
       <button class="kutu" id="tGun" style="--renk:var(--accent)">
         <span class="ust">${IKON.tik}Hedef günleri</span>
         <span class="deger">${tutan} <small>/ ${gecen}</small></span>
-        <span class="alt">bu hafta protein</span>
+        <span class="alt">${bugunMu?"bu hafta":"o hafta"} protein</span>
         <span class="noktalar">${gunler.map(x=>`<i class="${!x.gelecek&&x.p>=hedef?"on":""}"></i>`).join("")}</span>
       </button>
     </div>
 
     <div class="card">
-      <div class="kbas"><h3>Bu hafta protein</h3><span class="ek">${say?"ort. "+ortP+" g":""}</span></div>
+      <div class="kbas"><h3>${bugunMu?"Bu hafta":"O hafta"} protein</h3><span class="ek">${say?"ort. "+ortP+" g":""}</span></div>
       ${haftaGrafik(gunler,hedef,enB)}
     </div>
 
     <button class="satirlink" id="goData"><span>Veri, yedek ve görünüm</span>${IKON.ok}</button>`;
   const git=tab=>()=>{ state.tab=tab; render(); scrollTo(0,0); };
-  document.getElementById("tProt").onclick=git("food");
-  document.getElementById("tKcal").onclick=git("food");
+  const besine=()=>{ state.besinTarih=bugunMu?null:bugun; state.tab="food"; render(); scrollTo(0,0); };
+  document.getElementById("tProt").onclick=besine;
+  document.getElementById("tKcal").onclick=besine;
+  document.getElementById("oGeri").onclick=()=>ozetGunDegistir(-1);
+  document.getElementById("oIleri").onclick=()=>ozetGunDegistir(1);
+  document.getElementById("oBugun").onclick=()=>{ state.ozetTarih=null; renderHome(); };
   document.getElementById("tSon").onclick=git("history");
   document.getElementById("tGun").onclick=git("stats");
-  document.getElementById("goWorkout").onclick=()=>{
+  const gw=document.getElementById("goWorkout");
+  if(gw) gw.onclick=()=>{
     if(!prog){ state.tab="programs"; render(); scrollTo(0,0); return; }
     if(!state.active) startSession(prog); else { state.tab="workout"; render(); }
   };
@@ -3675,11 +3710,21 @@ function dosyadanYukle(e){
 document.querySelectorAll("nav button").forEach(b=>{
   b.onclick=()=>{
     state.tab=b.dataset.tab;
-    state.openEx=null; state.besinTarih=null;
+    state.openEx=null; state.besinTarih=null; state.ozetTarih=null;
     state.duzenle=null; state.secici=null;
     render(); scrollTo(0,0);
   };
 });
+/* Özet'te sağa kaydır: önceki gün, sola kaydır: sonraki gün. Dikey kaydırmayla karışmasın diye
+   yatay hareketin belirgin olması gerekiyor. */
+(function(){
+  let x0=null,y0=0,t0=0;
+  view.addEventListener("touchstart",e=>{ if(state.tab!=="home"||e.touches.length!==1||document.querySelector(".modal:not(.hidden)")){x0=null;return;}
+    x0=e.touches[0].clientX; y0=e.touches[0].clientY; t0=Date.now(); },{passive:true});
+  view.addEventListener("touchend",e=>{ if(x0==null) return;
+    const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null;
+    if(Date.now()-t0<600&&Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*2) ozetGunDegistir(dx>0?-1:1); },{passive:true});
+})();
 /* Uygulama arka plana alınırken ya da kapanırken yarım antrenmanı yaz. */
 document.addEventListener("visibilitychange",()=>{ if(document.hidden && state.active) saveAll(); });
 window.addEventListener("pagehide",()=>{ if(state.active) saveAll(); });

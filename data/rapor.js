@@ -167,9 +167,12 @@ function raporOtomatik(){
 }
 
 /* Özet'te hangi gün gösterilecek: bugünün raporu, yoksa dünün. */
+function raporSecili(){ return typeof ozetGun === "function" ? ozetGun() : gunKey(); }
 function raporGosterilecekGun(){
   const R = raporGunleri(), bugun = gunKey(), dun = gunKey(new Date(Date.now() - 864e5));
   if (raporCalisiyor) return raporCalisiyor;
+  const sec = raporSecili();
+  if (sec !== bugun) return R[sec] ? sec : null;   // Özet'te geçmiş bir gün seçili
   if (R[bugun]) return bugun;
   if (R[dun]) return dun;
   return null;
@@ -192,14 +195,15 @@ function raporKartIc(hata){
       <p class="muted small" style="margin:10px 0 0"><span class="raporspin"></span>${besinHtml(raporIlerleme || "Rapor hazırlanıyor")}…</p>`;
   }
   if (!gun){
-    const bugun = gunKey(), veri = gunKayitSayisi(bugun) > 0;
+    const bugun = raporSecili(), gecmis = bugun !== gunKey(), veri = gunKayitSayisi(bugun) > 0;
     const anahtar = !!apiAnahtar();
     return `<div class="kbas"><h3>Gün sonu raporu</h3><button class="ek" id="raporGecmis" style="color:var(--accent);font-weight:800;font-size:13px">Geçmiş</button></div>
       <p class="muted small" style="margin:8px 0 12px">${hata ? "Hazırlanamadı: " + besinHtml(hata)
         : !anahtar ? "Rapor için yapay zekâ anahtarı gerekiyor (yemek analizindekiyle aynı)."
+        : gecmis ? (veri ? "Bu günün raporu yok." : "Bu gün için kayıt yok.")
         : !veri ? "Bugün henüz kayıt yok."
         : `Bugünün raporu ${RAPOR_SAAT}:${RAPOR_DAKIKA}'da kendiliğinden hazırlanır.`}</p>
-      ${veri || !anahtar ? `<button class="btn quiet sm" id="raporSimdi">${anahtar ? "Şimdi hazırla" : "Anahtar gir"}</button>` : ""}`;
+      ${veri || !anahtar ? `<button class="btn quiet sm" id="raporSimdi">${!anahtar ? "Anahtar gir" : gecmis ? "Bu günün raporunu hazırla" : "Şimdi hazırla"}</button>` : ""}`;
   }
   const rap = R[gun], yeni = gun === gunKey() && gunKayitSayisi(gun) > (rap.kayit || 0);
   const saat = new Date(rap.olusturma);
@@ -215,7 +219,7 @@ function raporKartiYenile(hata){
   const kutu = document.getElementById("raporKart"); if (!kutu) return;
   kutu.innerHTML = raporKartIc(hata);
   const simdi = document.getElementById("raporSimdi"), yenile = document.getElementById("raporYenile"), gecmis = document.getElementById("raporGecmis");
-  if (simdi) simdi.onclick = () => apiAnahtar() ? raporOlustur(gunKey()) : anahtarSor();
+  if (simdi) simdi.onclick = () => apiAnahtar() ? raporOlustur(raporSecili()) : anahtarSor();
   if (yenile) yenile.onclick = () => raporOlustur(raporGosterilecekGun());
   if (gecmis) gecmis.onclick = raporGecmisiSheet;
 }
