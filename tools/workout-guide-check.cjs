@@ -19,6 +19,20 @@ const server=http.createServer((req,res)=>{
     page.on('pageerror',e=>errors.push(e.message));
     const url=`http://127.0.0.1:${server.address().port}`;
     await page.goto(url);await page.waitForFunction(()=>state.programs.length);
+    await page.evaluate(()=>navigator.serviceWorker.ready);
+    await page.waitForFunction(()=>navigator.serviceWorker.controller);
+    assert.equal(await page.evaluate(()=>GUIDE.length),302);
+    assert(await page.evaluate(()=>GUIDE.every(e=>WG_MEDIA[e.i]&&e.source==='Workout Guide')));
+    await page.evaluate(()=>{state.tab='guide';renderGuide();});
+    assert(await page.locator('.excard .plate img').evaluateAll(images=>images.every(i=>i.getAttribute('src').endsWith('.svg'))));
+    await page.locator('#kAra').fill('Butterfly');
+    assert.match(await page.locator('.excard').first().innerText(),/Butterfly Stretch/);
+    await page.locator('.excard').first().click();
+    await page.waitForFunction(()=>Array.from(document.querySelectorAll('.wg-seq img')).every(i=>i.complete&&i.naturalWidth===512));
+    await page.locator('#add').click();
+    assert.match(await page.locator('#modalBody').innerText(),/Butterfly Stretch/);
+    assert.equal(await page.evaluate(()=>tipOf('wg-butterfly-stretch')),'sure');
+    await page.evaluate(()=>modalKapat());
     await page.evaluate(()=>{state.openEx='0334';renderExDetay();});
     await page.waitForFunction(()=>Array.from(document.querySelectorAll('.wg-seq img')).every(i=>i.complete&&i.naturalWidth===512));
     assert.equal(await page.locator('.wg-seq img').count(),4);
@@ -36,12 +50,15 @@ const server=http.createServer((req,res)=>{
     assert(await page.evaluate(()=>varsayilanProgramlar().slice(0,3).every(p=>p.hareketler.slice(3,-1).every(h=>WG_MEDIA[h.ex]))));
     await page.evaluate(()=>{state.openEx='c005';renderExDetay();});
     assert.equal(await page.locator('.wg-seq').count(),0);
+    assert(await page.locator('.media img').evaluate(i=>i.getAttribute('src').endsWith('.gif')));
     await page.evaluate(()=>navigator.serviceWorker.ready);
     await page.waitForFunction(()=>navigator.serviceWorker.controller);
     await context.setOffline(true);await page.reload();await page.waitForFunction(()=>state.programs.length);
     await page.evaluate(()=>{state.openEx='0334';renderExDetay();});
     await page.waitForFunction(()=>Array.from(document.querySelectorAll('.wg-seq img')).every(i=>i.complete&&i.naturalWidth===512));
+    await page.evaluate(()=>{state.openEx='wg-butterfly-stretch';renderExDetay();});
+    await page.waitForFunction(()=>Array.from(document.querySelectorAll('.wg-seq img')).every(i=>i.complete&&i.naturalWidth===512));
     assert.deepEqual(errors,[]);
-    console.log('PASS: SVG loading, 3-frame sequence, mobile layout, reduced motion, variant notes, core program coverage, corrective fallback and offline PWA.');
+    console.log('PASS: full 302-exercise catalog, SVG-only picker, new exercise search/add, timed defaults, 3-frame sequence, mobile/reduced motion, legacy program coverage, corrective fallback and offline PWA.');
   }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

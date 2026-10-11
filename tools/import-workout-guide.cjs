@@ -51,6 +51,31 @@ for(const exercise of exercises){
   used.add(item.slug);
   map[exercise.i]={slug:item.slug,frames:[1,2,3].map(n=>`assets/workout-guide/${item.slug}/frame-${n}.svg`),note:override?.[1]||''};
 }
+// Keep legacy IDs in EX for saved programs/history; expose the full new catalog separately.
+const precache=[...new Set(Object.values(map).flatMap(x=>x.frames))];
+const muscle={Chest:'pectorals',Shoulders:'delts','Rear Delts':'delts','Upper Back':'upper back',
+  'Posterior Chain':'posterior chain',Hamstrings:'hamstrings',Back:'lats',Lats:'lats',Biceps:'biceps',
+  Quads:'quads',Glutes:'glutes',Calves:'calves',Forearms:'forearms',Triceps:'triceps',Core:'abs',
+  Legs:'quads','Lower Back':'spine',Adductors:'adductors',Mobility:'mobility',Hips:'glutes'};
+const region={Chest:'chest',Shoulders:'shoulders','Rear Delts':'shoulders','Upper Back':'back',
+  'Posterior Chain':'upper legs',Hamstrings:'upper legs',Back:'back',Lats:'back',Biceps:'upper arms',
+  Quads:'upper legs',Glutes:'upper legs',Calves:'lower legs',Forearms:'lower arms',Triceps:'upper arms',
+  Core:'waist',Legs:'upper legs','Lower Back':'back',Adductors:'upper legs',Mobility:'mobility',Hips:'upper legs'};
+const gear={Barbell:'barbell',Dumbbell:'dumbbell',Machine:'leverage machine',Cable:'cable',
+  Bodyweight:'body weight',Cardio:'cardio',Plate:'weighted',Kettlebell:'kettlebell',
+  'Pull-up Bar':'pull-up bar',Bench:'bench',Wall:'wall',Chair:'chair',Doorway:'doorway',Towel:'towel',
+  Box:'box','Stability Ball':'stability ball','Resistance Band':'resistance band'};
+const fullCatalog=catalog.map(item=>{
+  const id='wg-'+item.slug;
+  used.add(item.slug);
+  map[id]={slug:item.slug,frames:[1,2,3].map(n=>`assets/workout-guide/${item.slug}/frame-${n}.svg`),note:''};
+  const old=exercises.find(x=>map[x.i]?.slug===item.slug&&!map[x.i].note&&item.slug!=='negative-pull-up');
+  const tip=/duration/.test(item.exerciseType)?'sure':item.exerciseType==='weight_reps'?'kg':'vucut';
+  return {i:id,n:item.name,c:item.equipment==='Cardio'?'cardio':region[item.primaryMuscle]||'mobility',
+    q:gear[item.equipment]||'body weight',t:muscle[item.primaryMuscle]||item.primaryMuscle.toLowerCase(),
+    s:item.secondaryMuscles.map(x=>muscle[x]||x.toLowerCase()),d:old?.d||[],tip,
+    oneri:{tekrar:tip==='sure'?30:10},source:'Workout Guide'};
+});
 const destination=path.join(root,'assets/workout-guide');fs.mkdirSync(destination,{recursive:true});
 for(const slug of used){
   const dir=path.join(destination,slug);fs.mkdirSync(dir,{recursive:true});
@@ -62,5 +87,5 @@ for(const file of ['LICENSE-ASSETS','LICENSES.md','ATTRIBUTION.md']){
 }
 const revision=require('node:child_process').execFileSync('git',['-C',checkout,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
 fs.writeFileSync(path.join(destination,'sources.json'),JSON.stringify({repository:'https://github.com/bryllim/workout-guide',revision,modified:false,exercises:catalog.filter(x=>used.has(x.slug))},null,2));
-fs.writeFileSync(path.join(root,'data/workout-guide.js'),'/* Unmodified SVGs © Bryl Lim / Everkinetic, CC BY-SA 4.0. See assets/workout-guide. */\nglobalThis.WG_MEDIA='+JSON.stringify(map,null,2)+';\n');
-console.log(`${Object.keys(map).length} exercise IDs mapped to ${used.size} Workout Guide exercises (${used.size*3} SVGs).`);
+fs.writeFileSync(path.join(root,'data/workout-guide.js'),'/* Unmodified SVGs © Bryl Lim / Everkinetic, CC BY-SA 4.0. See assets/workout-guide. */\nglobalThis.WG_MEDIA='+JSON.stringify(map,null,2)+';\nglobalThis.WG_CATALOG='+JSON.stringify(fullCatalog,null,2)+';\nglobalThis.WG_PRECACHE='+JSON.stringify(precache)+';\n');
+console.log(`${fullCatalog.length} catalog exercises, ${Object.keys(map).length-fullCatalog.length} legacy mappings, ${used.size*3} SVGs. Unvisited catalog SVGs cache on demand.`);

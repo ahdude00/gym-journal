@@ -612,7 +612,8 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
    Medya (images/, videos/): © Gym visual — https://gymvisual.com/
      180×180 sınırı ve atıf zorunluluğu için bkz. NOTICE.md
    ========================================================== */
-const RAW = Array.isArray(window.EXDATA) ? window.EXDATA : [];
+const RAW = (Array.isArray(window.EXDATA) ? window.EXDATA : []).concat(window.WG_CATALOG||[]);
+const GUIDE = (window.WG_CATALOG||[]).slice().sort((a,b)=>a.n.localeCompare(b.n));
 /* custom.js kendi kayitlarini sona ekliyor; katalog alfabetik olsun */
 RAW.sort((a, b) => a.n.toLowerCase().localeCompare(b.n.toLowerCase(), "en"));
 const EX = {};
@@ -621,7 +622,7 @@ RAW.forEach(e => { EX[e.i] = e; });
 const BOLGE = {
   "back":"Sırt", "cardio":"Kardiyo", "chest":"Göğüs", "lower arms":"Ön kol",
   "lower legs":"Baldır", "neck":"Boyun", "shoulders":"Omuz",
-  "upper arms":"Kol", "upper legs":"Bacak", "waist":"Karın ve bel"
+  "upper arms":"Kol", "upper legs":"Bacak", "waist":"Karın ve bel", "mobility":"Esneme ve mobilite"
 };
 const KAS = {
   "abs":"karın", "abductors":"kalça dış", "adductors":"iç bacak", "biceps":"biceps",
@@ -629,7 +630,7 @@ const KAS = {
   "forearms":"ön kol", "glutes":"kalça", "hamstrings":"arka bacak", "lats":"kanat",
   "levator scapulae":"boyun", "pectorals":"göğüs", "quads":"ön bacak",
   "serratus anterior":"yan karın", "spine":"bel", "traps":"trapez",
-  "triceps":"triceps", "upper back":"üst sırt"
+  "triceps":"triceps", "upper back":"üst sırt", "posterior chain":"arka kas zinciri", "mobility":"mobilite", "lower back":"bel", "hips":"kalça", "core":"karın"
 };
 const EKIP = {
   "assisted":"destekli", "band":"lastik", "barbell":"halter", "body weight":"vücut ağırlığı",
@@ -640,7 +641,8 @@ const EKIP = {
   "rope":"ip", "skierg machine":"skierg", "sled machine":"kızak makinesi",
   "smith machine":"smith makinesi", "stability ball":"pilates topu", "stationary bike":"sabit bisiklet",
   "stepmill machine":"step makinesi", "tire":"lastik tekerlek", "trap bar":"trap bar",
-  "upper body ergometer":"kol ergometresi", "weighted":"ağırlıklı", "wheel roller":"karın tekerleği"
+  "upper body ergometer":"kol ergometresi", "weighted":"ağırlıklı", "wheel roller":"karın tekerleği",
+  "cardio":"kardiyo", "pull-up bar":"barfiks demiri", "bench":"bank", "wall":"duvar", "chair":"sandalye", "doorway":"kapı eşiği", "towel":"havlu", "box":"kutu / basamak"
 };
 const bolgeTR = c => BOLGE[c] || c;
 const kasTR   = t => KAS[t] || t;
@@ -678,7 +680,7 @@ function sahneIc(e){
 }
 function exAltyazi(id){ const e = EX[id]; return e ? kasTR(e.t) + " · " + ekipTR(e.q) : ""; }
 /* Dataset "bu hareket ağırlıklı mı" bilgisini taşımıyor; ekipmandan tahmin ediyoruz. */
-function varsayilanTip(e){ return (e && (e.q === "body weight" || e.q === "assisted")) ? "vucut" : "kg"; }
+function varsayilanTip(e){ return e&&e.tip ? e.tip : (e && (e.q === "body weight" || e.q === "assisted")) ? "vucut" : "kg"; }
 
 /* Çekirdek hareketler için elle yazılmış Türkçe ipucu, sık hatalar ve
    başlangıç önerisi — dataset'te bu üç alan yok. Anahtar = dataset id. */
@@ -809,7 +811,7 @@ function molaOku(ham, eski){
   const n=+t;
   return isNaN(n) ? (eski==null?60:eski) : Math.max(0,Math.min(600,n));
 }
-function oneriOf(id){ const o = ov(id); return (o && o.oneri) ? o.oneri : { tekrar:10 }; }
+function oneriOf(id){ const o = ov(id); return (o && o.oneri) ? o.oneri : EX[id]?.oneri || { tekrar:10 }; }
 function tipOf(id){ const o = ov(id); return (o && o.tip) ? o.tip : varsayilanTip(EX[id]); }
 
 /* Eski sürüm hareketleri slug ile tutuyordu; kayıtlar dataset id'sine taşınıyor. */
@@ -2245,7 +2247,7 @@ function renderWorkout(){
         <button class="btn quiet sm" id="setSil">− Set çıkar</button>
         <button class="btn quiet sm" id="setEkle">+ Set ekle</button>
       </div>
-      ${e?`<details style="margin-top:12px"><summary class="muted small">Nasıl yapılır</summary>
+      ${e&&e.d.length?`<details style="margin-top:12px"><summary class="muted small">Nasıl yapılır</summary>
         <ol class="steps small" style="margin-top:8px">${e.d.map(a=>`<li>${a}</li>`).join("")}</ol>
         ${o&&o.hatalar?`<h3 style="margin-top:12px">Sık yapılan hatalar</h3>
         <ul class="warn small">${o.hatalar.map(a=>`<li>${a}</li>`).join("")}</ul>`:""}</details>`:""}
@@ -2518,7 +2520,7 @@ function renderPrograms(){
       <button class="exitem" data-p="${p.id}">
         <span class="nm"><b>${p.ad}</b><span class="muted small">${progOzet(p)}</span></span>
         <span class="muted">Düzenle ›</span></button>`).join("")}</div>`
-    :`<div class="card"><h3>Henüz program yok</h3><p class="muted small" style="margin-top:6px">Yeni bir program oluştur, sonra Hareketler sekmesinden ${RAW.length} hareket arasından seçim yap.</p></div>`}
+    :`<div class="card"><h3>Henüz program yok</h3><p class="muted small" style="margin-top:6px">Yeni bir program oluştur, sonra Hareketler sekmesinden ${GUIDE.length} hareket arasından seçim yap.</p></div>`}
     <button class="btn" id="yeni">Yeni program</button>`;
   document.getElementById("back").onclick=()=>{ state.tab="workout"; render(); scrollTo(0,0); };
   view.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{ state.duzenle=b.dataset.p; render(); scrollTo(0,0); });
@@ -3026,14 +3028,14 @@ function renderGuide(){
   if(state.openEx) return renderExDetay();
   const secim=!!state.secici;
   document.getElementById("title").textContent=secim?"Hareket seç":"Hareketler";
-  if(!RAW.length){
-    view.innerHTML=`<div class="card"><h3>Hareket veritabanı yüklenemedi</h3>
-      <p class="muted small" style="margin-top:6px">data/exercises.js okunamadı. Sayfayı yenilemeyi dene.</p></div>`;
+  if(!GUIDE.length){
+    view.innerHTML=`<div class="card"><h3>Hareket kataloğu yüklenemedi</h3>
+      <p class="muted small" style="margin-top:6px">Uygulamayı yeniden açmayı dene.</p></div>`;
     return;
   }
   const k=state.kat;
   const qEn=(k.q||"").trim().toLowerCase(), qTr=(k.q||"").trim().toLocaleLowerCase("tr");
-  const liste=RAW.filter(e=>{
+  const liste=GUIDE.filter(e=>{
     if(k.bolge && e.c!==k.bolge) return false;
     if(k.ekip && e.q!==k.ekip) return false;
     if(!qEn) return true;
@@ -3044,8 +3046,8 @@ function renderGuide(){
         || bolgeTR(e.c).toLocaleLowerCase("tr").includes(qTr);
   });
   const goster=liste.slice(0,k.limit);
-  const bolgeler=Object.keys(BOLGE).filter(c=>RAW.some(e=>e.c===c));
-  const ekipler=[...new Set(RAW.map(e=>e.q))].sort((a,b)=>ekipTR(a).localeCompare(ekipTR(b),"tr"));
+  const bolgeler=Object.keys(BOLGE).filter(c=>GUIDE.some(e=>e.c===c));
+  const ekipler=[...new Set(GUIDE.map(e=>e.q))].sort((a,b)=>ekipTR(a).localeCompare(ekipTR(b),"tr"));
 
   view.innerHTML=`
     ${secim?`<div class="card" style="padding:12px 16px;margin-bottom:10px">
@@ -3113,8 +3115,8 @@ function renderExDetay(){
       <h2 style="margin-top:12px">${e.n}</h2>
       <p class="muted small">Hedef: ${kasTR(e.t)}${e.s&&e.s.length?" · Yardımcı: "+e.s.map(kasTR).join(", "):""}</p>
       ${o&&o.ipucu?`<p class="small" style="margin-top:8px">${o.ipucu}</p>`:""}
-      <h3 style="margin-top:14px">Nasıl yapılır</h3>
-      <ol class="steps">${e.d.map(a=>`<li>${a}</li>`).join("")}</ol>
+      ${e.d.length?`<h3 style="margin-top:14px">Nasıl yapılır</h3>
+      <ol class="steps">${e.d.map(a=>`<li>${a}</li>`).join("")}</ol>`:""}
       ${o&&o.hatalar?`<h3 style="margin-top:14px">Sık yapılan hatalar</h3>
       <ul class="warn small">${o.hatalar.map(a=>`<li>${a}</li>`).join("")}</ul>`:""}
       ${ATIF}
@@ -3359,7 +3361,7 @@ function renderData(){
     </div>
     <div class="card">
       <h3>Hareket veritabanı</h3>
-      <div class="kv"><span>Hareket sayısı</span><b>${RAW.length}</b></div>
+      <div class="kv"><span>Hareket sayısı</span><b>${GUIDE.length}</b></div>
       <div class="kv"><span>Programların</span><b>${state.programs.length}</b></div>
       <button class="btn quiet sm" id="goProg2" style="margin-top:12px">Programları düzenle</button>
       ${ATIF}
