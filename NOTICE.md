@@ -1,5 +1,21 @@
 # Media Attribution & License
 
+## Workout Guide SVG illustrations
+
+Selected, **unmodified** SVG frames from [Workout Guide](https://github.com/bryllim/workout-guide)
+are stored in `assets/workout-guide/`. Artwork by **Bryl Lim**, based in part on
+[Everkinetic](https://github.com/everkinetic/data), is licensed under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+Original attribution, frame provenance and the pinned source revision are retained
+in `assets/workout-guide/sources.json`; the upstream asset license and attribution
+documents are included alongside it. CSS displays the original white artwork on
+a dark surface and cycles its three frames; the SVG files themselves are unchanged.
+Only reviewed matches are used. Notes explain single-arm and grip differences;
+unmatched exercises retain their existing illustration or instruction fallback.
+Use `tools/import-workout-guide.cjs` to reproduce the import from a source checkout.
+
+The Gym visual terms below apply to the remaining Gym visual files, not these SVGs.
+
 The exercise **media** (thumbnail images and animation GIFs) in this repository
 is the property of **Gym visual** and is redistributed here **with permission**.
 

@@ -8,7 +8,8 @@
    ASSETS'i bastan indirir, activate eski cache'i siler. Aksi halde sunucu
    kapaliyken (ya da internet yokken) onceAg cache'e duser ve kullanici
    eski surumu gorur — guncelleme yapilmamis gibi. */
-const CORE  = 'salon-defteri-v13';  // v13: Samsung Health tarzı yeni arayüz ve temalar
+const CORE  = 'salon-defteri-v14';  // v14: yerel Workout Guide SVG gösterimleri
+importScripts('./data/workout-guide.js');
 /* Medya "once cache" okunuyor: bir kez indirilen gorsel bir daha aga
    sorulmaz. Var olan bir gorseli DEGISTIRDIGINDE bu surumu artir, yoksa
    kullanicida eski gorsel kalir. (Yeni id eklemek icin gerekmez.) */
@@ -16,8 +17,9 @@ const MEDYA = 'salon-defteri-medya-v3';   // v3: c003-c005 figur cizimine gecti
 const MEDYA_TAVAN = 600;   // bu sayiyi asinca en eski kayitlar atilir
 
 const ASSETS = [
-  './', './index.html', './manifest.json', './data/exercises.js', './data/custom.js', './data/food.js',
-  './icon-192.png', './icon-512.png'
+  './', './index.html', './manifest.json', './data/exercises.js', './data/custom.js', './data/food.js', './data/workout-guide.js',
+  './icon-192.png', './icon-512.png',
+  ...new Set(Object.values(self.WG_MEDIA||{}).flatMap(x=>x.frames.map(p=>'./'+p)))
 ];
 
 self.addEventListener('install', e => {
