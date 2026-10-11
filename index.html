@@ -292,6 +292,16 @@ summary{cursor:pointer}
   border-radius:var(--r-s);padding:12px 10px;font-family:var(--sans);font-size:14px;-webkit-appearance:none;appearance:none}
 .count{color:var(--dim);font-size:13px;padding:9px 0 2px}
 
+/* Öğün kalemleri ve kalıcı fotoğraf arşivi */
+.food-edit-row{border-top:1px solid var(--line);padding:12px 0}
+.food-edit-row label{display:block;margin:7px 0;color:var(--dim);font-size:13px}
+.food-total{font-weight:700;margin:14px 0}
+.food-photo{width:100%;max-height:260px;object-fit:contain;border-radius:var(--r-s)}
+.food-archive{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.food-archive-card{min-width:0;text-align:left;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:var(--r-s);padding:8px}
+.food-archive-card img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--r-s)}
+.food-archive-card b,.food-archive-card span{display:block;margin-top:5px}
+
 /* program düzenleyici */
 .progrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
 /* Sıralama tutamağı. touch-action:none şart: olmazsa tarayıcı parmağı
@@ -474,6 +484,7 @@ nav button.on i{background:var(--accent-soft)}
 
 <script src="data/exercises.js"></script>
 <script src="data/custom.js"></script>
+<script src="data/food.js"></script>
 <script>
 /* ==========================================================
    1. HAREKET VERİTABANI
@@ -794,7 +805,7 @@ function programlariTazele(){
    3. DURUM VE KAYIT
    ========================================================== */
 const KEY="salonDefteri.v1";
-let state={tab:"home",sessions:[],meals:{},hedefProtein:150,besinTarih:null,tema:"gece",
+let state={tab:"home",sessions:[],favorites:[],meals:{},hedefProtein:150,besinTarih:null,tema:"gece",
   programs:[],programSurum:0,active:null,exIndex:0,openEx:null,openHist:null,donem:"hafta",otoDosya:true,
   kat:{q:"",bolge:"",ekip:"",limit:60},duzenle:null,secici:null,bildirim:false,ekranAcik:true,saglayici:"gemini",modeller:{},kotaDolu:{}};
 let restTimer=null,restBitis=0,sayacBas=0,sayacBitti=null,sayacTipi="dinlenme",clockTimer=null,kayitYeri="yok";
@@ -828,6 +839,7 @@ async function loadAll(){
     const d=JSON.parse(ham);
     state.sessions=d.sessions||[];
     state.meals=d.meals||{};
+    state.favorites=Array.isArray(d.favorites)?d.favorites:[];
     if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
     if(typeof d.otoDosya==="boolean") state.otoDosya=d.otoDosya;
     if(typeof d.bildirim==="boolean") state.bildirim=d.bildirim;
@@ -861,7 +873,7 @@ async function loadAll(){
 }
 async function saveAll(){
   const paket=JSON.stringify({v:3,tema:state.tema,otoDosya:state.otoDosya,bildirim:state.bildirim,ekranAcik:state.ekranAcik,saglayici:state.saglayici,modeller:state.modeller,kotaDolu:state.kotaDolu,hedefProtein:state.hedefProtein,
-    programs:state.programs,programSurum:state.programSurum,sessions:state.sessions,meals:state.meals,
+    programs:state.programs,programSurum:state.programSurum,sessions:state.sessions,meals:state.meals,favorites:state.favorites,
     aktif:state.active,aktifIndex:state.exIndex});
   let ok=false;
   try{ if(window.storage){ await window.storage.set(KEY,paket); ok=true; } }catch(e){}
@@ -1059,6 +1071,7 @@ function renderFood(){
       <div class="row between small muted"><span>${t.p>=hedef?"Hedef tamam":yuvarla(hedef-t.p)+" g kaldı"}</span><span>${Math.round(t.k)} kcal</span></div>
     </div>
 
+    <div class="row" style="gap:8px;margin-bottom:8px"><button class="btn quiet" id="favoriler">Favori öğünler</button><button class="btn quiet" id="arsiv">Fotoğraf arşivi</button></div>
     <button class="btn" id="foto">Fotoğraftan ekle</button>
     <div class="row" style="gap:8px;margin-top:8px">
       <button class="btn quiet" id="yaz">Yazarak ekle</button>
@@ -1085,6 +1098,8 @@ function renderFood(){
     await saveAll(); renderFood();
   });
   view.querySelectorAll("[data-duz]").forEach(b=>b.onclick=()=>ogunDetaySheet(k,+b.dataset.duz));
+  document.getElementById("favoriler").onclick=()=>favorilerSheet(k);
+  document.getElementById("arsiv").onclick=fotoArsiviSheet;
   document.getElementById("elle").onclick=()=>elleEkleSor(k);
   document.getElementById("yaz").onclick=()=>{
     if(!apiAnahtar()){ anahtarSor(); return; }
@@ -1096,69 +1111,7 @@ function renderFood(){
   };
 }
 
-/* Bir besin kaydının ayrıntısı: analizden gelen kalem dökümü, fotoğraflar
-   ve düzenleme alanları tek sayfada. Döküm eskiden yalnızca güne eklemeden
-   önce görünüyor, kayda yazılmadığı için sonra kayboluyordu.
-   Protein ve kalori TEK porsiyon için tutuluyor, gün toplamı bunları adet
-   ile çarpıyor (bkz. gunToplam) - bu ayrım söylenmezse adet yanıltıcı olur. */
-async function ogunDetaySheet(gunK,i){
-  const liste=state.meals[gunK]||[], x=liste[i];
-  if(!x) return;
-  const kayitli=x.foto?await fotoGetir(x.id):null;
-  const kalemler=Array.isArray(x.kalemler)?x.kalemler:[];
-  const guvenTR={yuksek:"yüksek",orta:"orta",dusuk:"düşük"}[x.guven]||"";
-  const adet=x.adet||1;
-  const fotolar=[];
-  if(kayitli){
-    (kayitli.oncekiler||[]).forEach(b=>fotolar.push({b,etiket:"önce"}));
-    (kayitli.kalanlar||[]).forEach(b=>fotolar.push({b,etiket:"kalan"}));
-  }
-  modalAc(`
-    <h2>${x.ad}</h2>
-    <p class="muted small">${gunAdi(gunK)} · ${adet===1?(x.por||"1 porsiyon"):adet+" × "+(x.por||"porsiyon")}${guvenTR?" · güven "+guvenTR:""}</p>
-    ${fotolar.length?`<div class="fotogrid">${fotolar.map(f=>`
-      <div class="fotokare"><img src="data:image/jpeg;base64,${f.b}" alt="">
-        <span class="etiket">${f.etiket}</span></div>`).join("")}</div>`:""}
-    ${(x.foto&&!kayitli)?`<p class="muted small" style="margin-top:12px">Fotoğraflar yalnızca aynı gün saklanıyor; bu kaydınkiler silinmiş.</p>`:""}
-    ${kalemler.length?`<p class="muted small" style="margin:14px 0 2px">Neler var</p>
-      ${kalemler.map(y=>`<div class="kv"><span>${y.ad}<br><span class="muted small">${y.porsiyon||""}</span></span>
-        <b>${yuvarla(+y.p||0)} g · ${Math.round(+y.k||0)} kcal</b></div>`).join("")}`:""}
-    ${x.olcek?`<p class="muted small" style="margin-top:10px">Ölçek: ${x.olcek}</p>`:""}
-    ${x.aciklama?`<p class="muted small">${x.aciklama}</p>`:""}
-    ${x.notu?`<p class="muted small">Notun: ${x.notu}</p>`:""}
-    <p class="muted small" style="margin:16px 0 4px">Düzenle</p>
-    <input class="text" id="dAd" value="${String(x.ad||"").replace(/"/g,"&quot;")}">
-    <div class="editgrid">
-      <div><label>Protein (g)</label><input type="number" inputmode="decimal" id="dP" value="${x.p}"></div>
-      <div><label>Kalori</label><input type="number" inputmode="numeric" id="dK" value="${x.k}"></div>
-      <div><label>Adet</label><input type="number" inputmode="numeric" id="dAdet" value="${adet}"></div>
-    </div>
-    <p class="muted small" style="margin-top:8px">Protein ve kalori tek porsiyon içindir; gün toplamına adetle çarpılarak girer.</p>
-    <button class="btn" id="dKaydet">Kaydet</button>
-    ${(kayitli&&(kayitli.oncekiler||[]).length)?`<button class="btn quiet" id="dKalan">Hepsini yemediysen: kalanını çek</button>`:""}
-    <button class="btn danger" id="dSil">Bu kaydı sil</button>
-    <button class="btn ghost" id="dVaz">Vazgeç</button>`);
-  document.getElementById("dKaydet").onclick=async()=>{
-    const ad=document.getElementById("dAd").value.trim()||"Diğer";
-    const pr=+document.getElementById("dP").value||0;
-    const kal=+document.getElementById("dK").value||0;
-    const yeniAdet=Math.max(1,Math.min(99,+document.getElementById("dAdet").value||1));
-    if(!pr&&!kal){ toast("Protein veya kalori gir"); return; }
-    Object.assign(x,{ad,p:pr,k:kal,adet:yeniAdet});
-    await saveAll(); modalKapat(); renderFood(); toast("Kayıt güncellendi");
-  };
-  const kalanBtn=document.getElementById("dKalan");
-  if(kalanBtn) kalanBtn.onclick=()=>kalanAkisi(gunK, kayitli.oncekiler, x.notu,
-    x.id, x.ad, ()=>ogunDetaySheet(gunK,i));
-  document.getElementById("dSil").onclick=async()=>{
-    await fotoSil(x.id);
-    liste.splice(i,1);
-    if(!liste.length) delete state.meals[gunK];
-    await saveAll(); modalKapat(); renderFood(); toast("Kayıt silindi");
-  };
-  document.getElementById("dVaz").onclick=modalKapat;
-}
-
+/* Ayrıntılı öğün düzenleyici data/food.js'te. Elle giriş kalemsiz kayıt oluşturur. */
 function elleEkleSor(k){
   modalAc(`
     <h2>Elle ekle</h2>
@@ -1273,7 +1226,9 @@ Tabaktaki her yiyeceği "kalemler" dizisine ayrı ayrı yaz: adı, tahmini porsi
 
 ${NOT_KURALI}
 
-"not" alanına tahmini nasıl yaptığını bir cümleyle açıkla.`;
+"not" alanına tahmini nasıl yaptığını bir cümleyle açıkla.
+Her kalemde "gram" alanını pozitif sayısal gramaj olarak ver. Pişmiş / servis edilmiş, gerçekten yenen miktarı esas al.
+`;
 
 const SISTEM_KALAN=`Sana aynı öğünün İKİ GRUP fotoğrafı gönderiliyor: önce yemeğe başlamadan önceki hali, sonra yemekten sonra kalanlar. Her grupta bir ya da birden fazla fotoğraf olabilir.
 
@@ -1289,7 +1244,9 @@ Yenen kısmı "kalemler" dizisinde yiyecek yiyecek de ayır; "protein_g" ve "kal
 
 ${NOT_KURALI}
 
-"not" alanına iki fotoğrafı nasıl karşılaştırdığını bir cümleyle açıkla.`;
+"not" alanına iki fotoğrafı nasıl karşılaştırdığını bir cümleyle açıkla.
+Her kalemde "gram" alanını pozitif sayısal gramaj olarak ver. Pişmiş / servis edilmiş, gerçekten yenen miktarı esas al.
+`;
 
 const SISTEM_METIN=`Kullanıcı ne yediğini yazıyor; protein ve kalori miktarını tahmin ediyorsun.
 
@@ -1305,7 +1262,9 @@ Yazdığı her yiyeceği "kalemler" dizisine ayrı ayrı koy: adı, varsaydığ�
 
 ${NOT_KURALI}
 
-"not" alanına tahmini neye göre yaptığını bir cümleyle açıkla.`;
+"not" alanına tahmini neye göre yaptığını bir cümleyle açıkla.
+Her kalemde "gram" alanını pozitif sayısal gramaj olarak ver. Pişmiş / servis edilmiş, gerçekten yenen miktarı esas al.
+`;
 
 function fotoSema(kalanVar){
   const alan={
@@ -1318,8 +1277,9 @@ function fotoSema(kalanVar){
     kalemler:{type:"array",description:"Tabaktaki yiyecekler tek tek",
       items:{type:"object",properties:{
         ad:{type:"string"}, porsiyon:{type:"string"},
+        gram:{type:"number",description:"Yenen yiyeceğin pişmiş veya servis edilmiş ağırlığı, gram. Pozitif sayı."},
         protein_g:{type:"number"}, kalori:{type:"number"}
-      },required:["ad","porsiyon","protein_g","kalori"]}}
+      },required:["ad","porsiyon","gram","protein_g","kalori"]}}
   };
   const gerekli=["ad","porsiyon","olcek","protein_g","kalori","guven","not","kalemler"];
   if(kalanVar){ alan.yenen_yuzde={type:"number",description:"Yenen oran, 0-100"}; gerekli.push("yenen_yuzde"); }
@@ -1587,8 +1547,7 @@ function fotoSec(kamera){
    localStorage'ın toplam sınırı ~5 MB. IndexedDB kotası çok daha geniş, o
    yüzden fotoğraflar oraya; uygulamanın geri kalanı localStorage'da kalıyor.
 
-   Saklama süresi: yalnızca aynı gün. Ertesi açılışta budanıyor, böylece
-   cihazda birikmiyor. Budandıktan sonra o kayıtta "kalanını çek" çıkmaz.
+   Fotoğraflar öğün silinene kadar saklanır; elle alınan yedeğe dahil edilir.
 
    IndexedDB yoksa ya da reddedilirse (gizli sekme, kapalı depolama) her şey
    sessizce fotoğrafsız çalışır: analiz yapılır, yalnızca sonradan
@@ -1648,18 +1607,6 @@ async function fotoSil(id){
   if(!id) return;
   try{ await fotoSureSinirli(fotoIslem("readwrite", d=>d.delete(id))); }catch(e){}
 }
-/* Gün değişince dünün fotoğraflarını at. Kaydın gününe değil fotoğrafın
-   yazıldığı güne bakıyoruz: geçmiş bir güne kayıt eklesen de fotoğrafı o
-   gün boyunca duruyor. */
-async function fotoBuda(){
-  try{
-    const bugun=gunKey();
-    const hepsi=await fotoSureSinirli(fotoIslem("readonly", d=>d.getAll()));
-    const eski=(hepsi||[]).filter(x=>x&&x.gun!==bugun).map(x=>x.id);
-    if(eski.length) await fotoSureSinirli(fotoIslem("readwrite", d=>{ eski.forEach(id=>d.delete(id)); }));
-  }catch(e){}
-}
-
 function anahtarSor(){
   const sag=aktifSag();
   modalAc(`
@@ -1770,7 +1717,7 @@ function fotoSonucSheet(sonuc, durum){
     if(mevcut) hedef.adet=1;
     if(!mevcut) liste.push(hedef);
     await saveAll(); modalKapat(); renderFood();
-    toast(ad+(mevcut?" güncellendi":" eklendi"));
+    toast(oncekiler.length&&!foto ? "Öğün eklendi; fotoğraf cihaz hafızasına kaydedilemedi." : ad+(mevcut?" güncellendi":" eklendi"));
   };
   /* Yanlış bir kalem varsa kullanıcı söylüyor, tahmin yeniden hesaplanıyor.
      Fotoğraf da önceki tahmin de birlikte gönderildiği için model neyi
@@ -1837,9 +1784,10 @@ function kalanAkisi(gunK, oncekiler, notu, kayitId, kayitAd, geriDon){
 function ogunEkleri(sonuc){
   const ham=Array.isArray(sonuc.kalemler)?sonuc.kalemler:[];
   return {
-    kalemler: ham.map(x=>({
+    kalemler: ham.map(x=>kalemHazirla({
       ad:String(x.ad||""), porsiyon:String(x.porsiyon||""),
-      p:Math.round((+x.protein_g||0)*10)/10, k:Math.round(+x.kalori||0)
+      gram:besinSayi(x.gram)||gramOku(x.porsiyon),
+      p:besinSayi(x.protein_g), k:besinSayi(x.kalori)
     })),
     olcek:String(sonuc.olcek||""),
     guven:String(sonuc.guven||""),
@@ -3176,7 +3124,7 @@ function renderData(){
     </div>
     <div class="card">
       <h3>Yedek al</h3>
-      <p class="muted small">Antrenman geçmişin, programların ve beslenme kayıtların tek dosyaya iner.</p>
+      <p class="muted small">Antrenman geçmişin, programların, favori öğünlerin ve saklanan öğün fotoğrafların tek dosyaya iner. Otomatik antrenman yedeği fotoğrafları içermez.</p>
       <button class="btn" id="exp">Dosyaya aktar</button>
     </div>
     <div class="card">
@@ -3223,9 +3171,10 @@ function renderData(){
   document.getElementById("exp").onclick=()=>dosyayaAktar(false);
   document.getElementById("imp").onchange=dosyadanYukle;
 }
-function dosyayaAktar(sessiz){
+async function dosyayaAktar(sessiz){
   try{
-    const blob=new Blob([JSON.stringify({v:3,hedefProtein:state.hedefProtein,programs:state.programs,sessions:state.sessions,meals:state.meals},null,1)],{type:"application/json"});
+    const photos=sessiz?[]:await fotoSureSinirli(fotoIslem("readonly",d=>d.getAll()),15000);
+    const blob=new Blob([JSON.stringify({v:4,hedefProtein:state.hedefProtein,programs:state.programs,sessions:state.sessions,meals:state.meals,favorites:state.favorites,photos},null,1)],{type:"application/json"});
     const d=new Date(), ad=`salon-defteri-${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}.json`;
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=ad; a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -3242,20 +3191,17 @@ function dosyadanYukle(e){
       const varOlan=new Set(state.sessions.map(s=>s.id)); let eklenen=0;
       gelen.forEach(s=>{ if(s&&s.id&&!varOlan.has(s.id)){ state.sessions.push(s); eklenen++; } });
       state.sessions.sort((a,b)=>new Date(a.tarih)-new Date(b.tarih));
-      /* Aynı gün iki cihazda girildiyse eskiden gelen kayıt sessizce
-         atılıyordu. Artık birleştiriliyor. Besin kaydının kimliği yok, bu
-         yüzden bütün alanları birebir aynı olan kayıt kopya sayılıyor;
-         gerçekten iki kez yenen aynı şey ikinci kez eklenmez - nadir ve
-         elle telafisi kolay, sessizce veri kaybetmekten iyi. */
+      /* Kimlikli öğünleri id ile birleştir; aynı yiyeceğin ayrı öğünlerini
+         koru. Çok eski, kimliksiz kayıtlarda içerik üzerinden eşleştir. */
       let gun=0, birlesen=0;
-      const ogunAnahtar=x=>[x.ad,x.por,x.p,x.k,x.adet].join("\u0001");
+      const ogunAnahtar=x=>x.id ? "id:"+x.id : [x.ad,x.por,x.p,x.k,x.adet].join("\u0001");
       if(d.meals) Object.keys(d.meals).forEach(k=>{
         const gelen=d.meals[k];
         if(!Array.isArray(gelen)||!gelen.length) return;
         if(!state.meals[k]){ state.meals[k]=gelen; gun++; return; }
         const varOlan=new Set(state.meals[k].map(ogunAnahtar));
         let eklendi=0;
-        gelen.forEach(x=>{ if(!varOlan.has(ogunAnahtar(x))){ state.meals[k].push(x); eklendi++; } });
+        gelen.forEach(x=>{ if(!varOlan.has(ogunAnahtar(x))){ state.meals[k].push(x); varOlan.add(ogunAnahtar(x)); eklendi++; } });
         if(eklendi) birlesen++;
       });
       let prog=0;
@@ -3263,11 +3209,24 @@ function dosyadanYukle(e){
         const pid=new Set(state.programs.map(p=>p.id));
         d.programs.forEach(p=>{ if(p&&p.id&&!pid.has(p.id)&&Array.isArray(p.hareketler)){ state.programs.push(p); prog++; } });
       }
+      if(Array.isArray(d.favorites)){
+        const ids=new Set(state.favorites.map(x=>x.id));
+        d.favorites.forEach(x=>{if(x&&x.id&&!ids.has(x.id)){state.favorites.push(x);ids.add(x.id);}});
+      }
+      let fotoSorunu=false;
+      if(Array.isArray(d.photos)&&d.photos.length){
+        try{
+          await fotoSureSinirli(fotoIslem("readwrite",store=>{d.photos.forEach(x=>{
+            if(x&&x.id&&Array.isArray(x.oncekiler)&&Array.isArray(x.kalanlar)&&[...x.oncekiler,...x.kalanlar].every(b=>typeof b==="string"&&/^[A-Za-z0-9+/=]+$/.test(b)))store.put(x);
+          });}),15000);
+        }catch(e){fotoSorunu=true;}
+      }
       if(d.hedefProtein) state.hedefProtein=d.hedefProtein;
       migrasyonYap();
       await saveAll();
       toast(`${eklenen} antrenman, ${gun} beslenme günü, ${prog} program eklendi`
             + (birlesen?` · ${birlesen} gün birleştirildi`:""));
+      if(fotoSorunu)toast("Öğünler yüklendi; fotoğraflar cihaz hafızasına yazılamadı.");
       state.tab="home"; render();
     }catch(err){ toast("Dosya okunamadı. Doğru json dosyasını seçtiğinden emin ol."); }
   };
@@ -3290,7 +3249,7 @@ window.addEventListener("pagehide",()=>{ if(state.active) saveAll(); });
 
 (async()=>{
   await loadAll();
-  fotoBuda();   /* dünün öğün fotoğrafları gitsin; beklemeye gerek yok */
+  // Fotoğraf arşivi kalıcı; gün değişince silinmez.
   if(state.active){
     saatBaslat();
     ekranAcikTut();
