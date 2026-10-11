@@ -1,23 +1,11 @@
 # Media Attribution & License
 
-## Workout Guide SVG illustrations
+## Saved SVG-catalog record compatibility
 
-All 302 exercises and 906 **unmodified** SVG frames from [Workout Guide](https://github.com/bryllim/workout-guide)
-are stored in `assets/workout-guide/`. Artwork by **Bryl Lim**, based in part on
-[Everkinetic](https://github.com/everkinetic/data), is licensed under
-[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
-Original attribution, frame provenance and the pinned source revision are retained
-in `assets/workout-guide/sources.json`; the upstream asset license and attribution
-documents are included alongside it. CSS displays the original white artwork on
-a dark surface and cycles its three frames; the SVG files themselves are unchanged.
-The exercise picker exposes the complete Workout Guide catalog. Legacy exercise
-IDs stay available for saved programs and history. Only reviewed legacy matches
-are used; notes explain single-arm and grip differences. Unmatched saved exercises
-retain their existing illustration or instruction fallback. Workout Guide does not
-include wall slide, chin tuck, or side-lying open book in the pinned 302-exercise catalog.
-Use `tools/import-workout-guide.cjs` to reproduce the import from a source checkout.
-
-The Gym visual terms below apply to the remaining Gym visual files, not these SVGs.
+`data/legacy-workout-guide.js` preserves metadata for saved exercise IDs from
+[Workout Guide](https://github.com/bryllim/workout-guide) by Bryl Lim / Everkinetic
+(CC BY-SA 4.0). The SVG artwork is no longer displayed or bundled. Matching saved
+IDs use the original exercise media; other saved IDs retain their names and metadata.
 
 The exercise **media** (thumbnail images and animation GIFs) in this repository
 is the property of **Gym visual** and is redistributed here **with permission**.

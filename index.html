@@ -551,15 +551,6 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
 .hidden{display:none !important}
 @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
 </style>
-<style>
-/* Original white SVG artwork stays legible in every theme. */
-.plate.wg-art,.stage .media.wg-art{background:#18212b}
-.wg-seq{position:relative;width:min(100%,280px);aspect-ratio:1}
-.stage .media .wg-seq img{position:absolute;inset:0;width:100%;height:100%;opacity:0;animation:wg-frame 1.8s steps(1,end) infinite}
-.stage .media .wg-seq img:first-child{opacity:1}
-@keyframes wg-frame{0%,24.999%{opacity:1}25%,100%{opacity:0}}
-@media(prefers-reduced-motion:reduce){.stage .media .wg-seq img{animation:none;display:none}.stage .media .wg-seq img:first-child{display:block;opacity:1}}
-</style>
 
 <!-- Tema, ana betik yüklenmeden önce uygulanır: yoksa açık tema seçmiş
      biri her açılışta bir anlık koyu ekran görür. -->
@@ -603,7 +594,7 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
 
 <script src="data/exercises.js"></script>
 <script src="data/custom.js"></script>
-<script src="data/workout-guide.js"></script>
+<script src="data/legacy-workout-guide.js"></script>
 <script src="data/food.js"></script>
 <script>
 /* ==========================================================
@@ -612,17 +603,19 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
    Medya (images/, videos/): © Gym visual — https://gymvisual.com/
      180×180 sınırı ve atıf zorunluluğu için bkz. NOTICE.md
    ========================================================== */
-const RAW = (Array.isArray(window.EXDATA) ? window.EXDATA : []).concat(window.WG_CATALOG||[]);
-const GUIDE = (window.WG_CATALOG||[]).slice().sort((a,b)=>a.n.localeCompare(b.n));
+const RAW = Array.isArray(window.EXDATA) ? window.EXDATA : [];
 /* custom.js kendi kayitlarini sona ekliyor; katalog alfabetik olsun */
 RAW.sort((a, b) => a.n.toLowerCase().localeCompare(b.n.toLowerCase(), "en"));
 const EX = {};
 RAW.forEach(e => { EX[e.i] = e; });
+/* Saved programs/history can still resolve IDs from the short-lived SVG catalog.
+   They are not offered in the restored original exercise picker. */
+(window.LEGACY_EX||[]).forEach(e=>{ EX[e.i]=e; });
 
 const BOLGE = {
   "back":"Sırt", "cardio":"Kardiyo", "chest":"Göğüs", "lower arms":"Ön kol",
   "lower legs":"Baldır", "neck":"Boyun", "shoulders":"Omuz",
-  "upper arms":"Kol", "upper legs":"Bacak", "waist":"Karın ve bel", "mobility":"Esneme ve mobilite"
+  "upper arms":"Kol", "upper legs":"Bacak", "waist":"Karın ve bel"
 };
 const KAS = {
   "abs":"karın", "abductors":"kalça dış", "adductors":"iç bacak", "biceps":"biceps",
@@ -630,7 +623,7 @@ const KAS = {
   "forearms":"ön kol", "glutes":"kalça", "hamstrings":"arka bacak", "lats":"kanat",
   "levator scapulae":"boyun", "pectorals":"göğüs", "quads":"ön bacak",
   "serratus anterior":"yan karın", "spine":"bel", "traps":"trapez",
-  "triceps":"triceps", "upper back":"üst sırt", "posterior chain":"arka kas zinciri", "mobility":"mobilite", "lower back":"bel", "hips":"kalça", "core":"karın"
+  "triceps":"triceps", "upper back":"üst sırt"
 };
 const EKIP = {
   "assisted":"destekli", "band":"lastik", "barbell":"halter", "body weight":"vücut ağırlığı",
@@ -641,38 +634,31 @@ const EKIP = {
   "rope":"ip", "skierg machine":"skierg", "sled machine":"kızak makinesi",
   "smith machine":"smith makinesi", "stability ball":"pilates topu", "stationary bike":"sabit bisiklet",
   "stepmill machine":"step makinesi", "tire":"lastik tekerlek", "trap bar":"trap bar",
-  "upper body ergometer":"kol ergometresi", "weighted":"ağırlıklı", "wheel roller":"karın tekerleği",
-  "cardio":"kardiyo", "pull-up bar":"barfiks demiri", "bench":"bank", "wall":"duvar", "chair":"sandalye", "doorway":"kapı eşiği", "towel":"havlu", "box":"kutu / basamak"
+  "upper body ergometer":"kol ergometresi", "weighted":"ağırlıklı", "wheel roller":"karın tekerleği"
 };
 const bolgeTR = c => BOLGE[c] || c;
 const kasTR   = t => KAS[t] || t;
 const ekipTR  = q => EKIP[q] || q;
 
-function wgMedia(e){ return e && (window.WG_MEDIA||{})[e.i]; }
-function exImg(e){ const w=wgMedia(e); return w ? w.frames[0] : "images/" + e.i + "-" + e.m + ".jpg"; }
-function exGif(e){ return "videos/" + e.i + "-" + e.m + ".gif"; }
+function exImg(e){ return "images/" + (e.mediaId||e.i) + "-" + e.m + ".jpg"; }
+function exGif(e){ return "videos/" + (e.mediaId||e.i) + "-" + e.m + ".gif"; }
 function exAd(id){ return EX[id] ? EX[id].n : id; }
 /* Şu an kayıtların hepsinde medya var (c003-c005 de dahil: onlara
    tools/cop-adam-uret.py ile figür çizildi). Aşağıdaki yer tutucu dalı bu
    yüzden çalışmıyor; medyasız bir kayıt eklenirse diye duruyor, yoksa yol
    "images/undefined-undefined.jpg" olur ve kırık görsel çıkar. */
-function medyaVar(e){ return !!(wgMedia(e) || (e && e.m)); }
+function medyaVar(e){ return !!(e && e.m); }
 function basHarf(e){ return String((e&&e.n)||"?").trim().charAt(0).toUpperCase(); }
 /* Kucuk kare (liste satirlari, dinlenme onizlemesi). */
 function plakaIc(e, boy){
   const st = boy ? ` style="width:${boy}px;height:${boy}px"` : "";
   if(!e) return `<span class="plate"${st}></span>`;
   return medyaVar(e)
-    ? `<span class="plate${wgMedia(e)?' wg-art':''}"${st}><img src="${exImg(e)}" loading="lazy" alt="" onerror="this.style.display='none'"></span>`
+    ? `<span class="plate"${st}><img src="${exImg(e)}" loading="lazy" alt="" onerror="this.style.display='none'"></span>`
     : `<span class="plate bos"${st}><b>${basHarf(e)}</b></span>`;
 }
 /* Buyuk gorsel alani (antrenman ekrani, hareket detayi). */
 function sahneIc(e){
-  const w=wgMedia(e);
-  if(w) return `<div class="media wg-art"><div class="wg-seq" role="img" aria-label="${besinHtml(e.n)} — üç aşamalı gösterim">
-    ${[0,1,2,1].map((n,i)=>`<img src="${w.frames[n]}" alt="" style="animation-delay:${i*.45}s" aria-hidden="true">`).join('')}
-    </div></div>${w.note?`<p class="muted small" style="margin:8px 0">${besinHtml(w.note)}</p>`:''}
-    <p class="attrib">Çizimler: <a href="https://github.com/bryllim/workout-guide" target="_blank" rel="noopener">Workout Guide · Bryl Lim / Everkinetic</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>`;
   if(medyaVar(e)) return `<div class="media"><img src="${exGif(e)}" alt="${e.n}" onerror="this.style.display='none'"></div>`;
   /* Bkz. medyaVar: şu an tetiklenmiyor, medyasız kayıt için emniyet. */
   return `<div class="media bos"><b>${basHarf(e)}</b>
@@ -2247,7 +2233,7 @@ function renderWorkout(){
         <button class="btn quiet sm" id="setSil">− Set çıkar</button>
         <button class="btn quiet sm" id="setEkle">+ Set ekle</button>
       </div>
-      ${e&&e.d.length?`<details style="margin-top:12px"><summary class="muted small">Nasıl yapılır</summary>
+      ${e?`<details style="margin-top:12px"><summary class="muted small">Nasıl yapılır</summary>
         <ol class="steps small" style="margin-top:8px">${e.d.map(a=>`<li>${a}</li>`).join("")}</ol>
         ${o&&o.hatalar?`<h3 style="margin-top:12px">Sık yapılan hatalar</h3>
         <ul class="warn small">${o.hatalar.map(a=>`<li>${a}</li>`).join("")}</ul>`:""}</details>`:""}
@@ -2520,7 +2506,7 @@ function renderPrograms(){
       <button class="exitem" data-p="${p.id}">
         <span class="nm"><b>${p.ad}</b><span class="muted small">${progOzet(p)}</span></span>
         <span class="muted">Düzenle ›</span></button>`).join("")}</div>`
-    :`<div class="card"><h3>Henüz program yok</h3><p class="muted small" style="margin-top:6px">Yeni bir program oluştur, sonra Hareketler sekmesinden ${GUIDE.length} hareket arasından seçim yap.</p></div>`}
+    :`<div class="card"><h3>Henüz program yok</h3><p class="muted small" style="margin-top:6px">Yeni bir program oluştur, sonra Hareketler sekmesinden ${RAW.length} hareket arasından seçim yap.</p></div>`}
     <button class="btn" id="yeni">Yeni program</button>`;
   document.getElementById("back").onclick=()=>{ state.tab="workout"; render(); scrollTo(0,0); };
   view.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{ state.duzenle=b.dataset.p; render(); scrollTo(0,0); });
@@ -2969,7 +2955,6 @@ function onizlemeYaz(bilgi, altEl){
   kutu.classList.remove("hidden");
   /* Medyasi olmayan hareketlerde (c003-c005) kare, bas harfli yer tutucuya doner. */
   const plaka=kutu.querySelector(".plate"), img=document.getElementById("restImg");
-  plaka.classList.toggle("wg-art",!!wgMedia(e));
   if(medyaVar(e)){ plaka.classList.remove("bos"); img.classList.remove("hidden"); img.src=exImg(e); }
   else{ plaka.classList.add("bos"); img.classList.add("hidden"); img.removeAttribute("src"); }
   plaka.dataset.harf=basHarf(e);
@@ -3022,20 +3007,20 @@ document.addEventListener("visibilitychange",()=>{
 });
 
 /* --- HAREKET KATALOĞU --- */
-const ATIF=`<p class="attrib">SVG çizimler: <a href="https://github.com/bryllim/workout-guide" target="_blank" rel="noopener">Workout Guide · Bryl Lim / Everkinetic</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.<br>Diğer hareket görselleri © <a href="https://gymvisual.com/" target="_blank" rel="noopener">Gym visual</a> · veri: exercises-dataset (MIT)</p>`;
+const ATIF=`<p class="attrib">Hareket görselleri © <a href="https://gymvisual.com/" target="_blank" rel="noopener">Gym visual</a> · veri: exercises-dataset (MIT)</p>`;
 
 function renderGuide(){
   if(state.openEx) return renderExDetay();
   const secim=!!state.secici;
   document.getElementById("title").textContent=secim?"Hareket seç":"Hareketler";
-  if(!GUIDE.length){
-    view.innerHTML=`<div class="card"><h3>Hareket kataloğu yüklenemedi</h3>
-      <p class="muted small" style="margin-top:6px">Uygulamayı yeniden açmayı dene.</p></div>`;
+  if(!RAW.length){
+    view.innerHTML=`<div class="card"><h3>Hareket veritabanı yüklenemedi</h3>
+      <p class="muted small" style="margin-top:6px">data/exercises.js okunamadı. Sayfayı yenilemeyi dene.</p></div>`;
     return;
   }
   const k=state.kat;
   const qEn=(k.q||"").trim().toLowerCase(), qTr=(k.q||"").trim().toLocaleLowerCase("tr");
-  const liste=GUIDE.filter(e=>{
+  const liste=RAW.filter(e=>{
     if(k.bolge && e.c!==k.bolge) return false;
     if(k.ekip && e.q!==k.ekip) return false;
     if(!qEn) return true;
@@ -3046,8 +3031,8 @@ function renderGuide(){
         || bolgeTR(e.c).toLocaleLowerCase("tr").includes(qTr);
   });
   const goster=liste.slice(0,k.limit);
-  const bolgeler=Object.keys(BOLGE).filter(c=>GUIDE.some(e=>e.c===c));
-  const ekipler=[...new Set(GUIDE.map(e=>e.q))].sort((a,b)=>ekipTR(a).localeCompare(ekipTR(b),"tr"));
+  const bolgeler=Object.keys(BOLGE).filter(c=>RAW.some(e=>e.c===c));
+  const ekipler=[...new Set(RAW.map(e=>e.q))].sort((a,b)=>ekipTR(a).localeCompare(ekipTR(b),"tr"));
 
   view.innerHTML=`
     ${secim?`<div class="card" style="padding:12px 16px;margin-bottom:10px">
@@ -3115,8 +3100,8 @@ function renderExDetay(){
       <h2 style="margin-top:12px">${e.n}</h2>
       <p class="muted small">Hedef: ${kasTR(e.t)}${e.s&&e.s.length?" · Yardımcı: "+e.s.map(kasTR).join(", "):""}</p>
       ${o&&o.ipucu?`<p class="small" style="margin-top:8px">${o.ipucu}</p>`:""}
-      ${e.d.length?`<h3 style="margin-top:14px">Nasıl yapılır</h3>
-      <ol class="steps">${e.d.map(a=>`<li>${a}</li>`).join("")}</ol>`:""}
+      <h3 style="margin-top:14px">Nasıl yapılır</h3>
+      <ol class="steps">${e.d.map(a=>`<li>${a}</li>`).join("")}</ol>
       ${o&&o.hatalar?`<h3 style="margin-top:14px">Sık yapılan hatalar</h3>
       <ul class="warn small">${o.hatalar.map(a=>`<li>${a}</li>`).join("")}</ul>`:""}
       ${ATIF}
@@ -3361,7 +3346,7 @@ function renderData(){
     </div>
     <div class="card">
       <h3>Hareket veritabanı</h3>
-      <div class="kv"><span>Hareket sayısı</span><b>${GUIDE.length}</b></div>
+      <div class="kv"><span>Hareket sayısı</span><b>${RAW.length}</b></div>
       <div class="kv"><span>Programların</span><b>${state.programs.length}</b></div>
       <button class="btn quiet sm" id="goProg2" style="margin-top:12px">Programları düzenle</button>
       ${ATIF}
@@ -3507,7 +3492,7 @@ window.addEventListener("pagehide",()=>{ if(state.active) saveAll(); });
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("sw.js").catch(function (e) { console.log("SW yok:", e); });
+    navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(function (e) { console.log("SW yok:", e); });
   });
 }
 </script>

@@ -8,8 +8,7 @@
    ASSETS'i bastan indirir, activate eski cache'i siler. Aksi halde sunucu
    kapaliyken (ya da internet yokken) onceAg cache'e duser ve kullanici
    eski surumu gorur — guncelleme yapilmamis gibi. */
-const CORE  = 'salon-defteri-v15';  // v15: tam Workout Guide hareket kataloğu
-importScripts('./data/workout-guide.js');
+const CORE  = 'salon-defteri-v17';  // v17: eski GIF kataloğuna dönüş
 /* Medya "once cache" okunuyor: bir kez indirilen gorsel bir daha aga
    sorulmaz. Var olan bir gorseli DEGISTIRDIGINDE bu surumu artir, yoksa
    kullanicida eski gorsel kalir. (Yeni id eklemek icin gerekmez.) */
@@ -17,13 +16,12 @@ const MEDYA = 'salon-defteri-medya-v3';   // v3: c003-c005 figur cizimine gecti
 const MEDYA_TAVAN = 600;   // bu sayiyi asinca en eski kayitlar atilir
 
 const ASSETS = [
-  './', './index.html', './manifest.json', './data/exercises.js', './data/custom.js', './data/food.js', './data/workout-guide.js',
-  './icon-192.png', './icon-512.png',
-  ...(self.WG_PRECACHE||[]).map(p=>'./'+p)
+  './', './index.html', './manifest.json', './data/exercises.js', './data/custom.js', './data/food.js', './data/legacy-workout-guide.js',
+  './icon-192.png', './icon-512.png'
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CORE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CORE).then(c => c.addAll(ASSETS.map(url=>new Request(url,{cache:'reload'})))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -62,7 +60,7 @@ async function onceCache(request){
 async function onceAg(request){
   const cache = await caches.open(CORE);
   try {
-    const res = await fetch(request);
+    const res = await fetch(request,{cache:'no-cache'});
     if (res && res.ok) await cache.put(request, res.clone());
     return res;
   } catch (e) {
