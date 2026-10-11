@@ -15,6 +15,8 @@ const RAPOR_SAAT = 23, RAPOR_DAKIKA = 59;
 const raporVakti = (d = new Date()) => d.getHours() * 60 + d.getMinutes() >= RAPOR_SAAT * 60 + RAPOR_DAKIKA;
 const RAPOR_SAKLA_GUN = 120;
 let raporCalisiyor = null;   // hazırlanan günün anahtarı
+/* Gün bitti mi? Geçmiş günler bitmiştir; bugün yalnızca 23:59'dan sonra. */
+const gunBitti = gun => gun < gunKey() || (gun === gunKey() && raporVakti());
 let raporIlerleme = "";
 
 function raporGunleri(){ return state.raporlar || (state.raporlar = {}); }
@@ -62,7 +64,11 @@ function raporVerisi(gun){
       adim: ADIM_VAR ? state.hedefAdim : null,
       haftalik_antrenman: state.programs.filter(p => !p.opsiyonel).length
     },
-    rapor_gunu: { tarih: gun, gun: GUN_UZUN[d.getDay()] },
+    rapor_gunu: {
+      tarih: gun, gun: GUN_UZUN[d.getDay()],
+      gun_bitti: gunBitti(gun),
+      saat: gunBitti(gun) ? null : saatDk(Date.now())
+    },
     beslenme: {
       toplam_protein_g: Math.round(t.p), toplam_kalori: Math.round(t.k),
       ogunler: (state.meals[gun] || []).map(x => ({
@@ -93,7 +99,13 @@ Görevin günün sonunda kısa, dürüst ve uygulanabilir bir değerlendirme yaz
 - Beslenmede protein hedefi ve kaloriyi değerlendir; öğün kayıtları eksik görünüyorsa (çok az kayıt) bunu söyle, kesin yargıya varma.
 - "adim" null ise adım verisi yok demektir; Aktivite alanında bunu kısaca belirt, uydurma.
 - Son 7 güne bakarak eğilimi yorumla (ör. protein üst üste düşük, antrenman sıklığı).
-- Öneriler yarın için somut olsun (ör. "kahvaltıya 3 yumurta + 200 g yoğurt ekle: ~35 g protein").
+- Öneriler somut olsun (ör. "3 yumurta + 200 g yoğurt: ~35 g protein").
+- "rapor_gunu.gun_bitti" false ise gün henüz bitmedi ve bu bir ARA rapordur ("saat" alanı şu anki saat). O zaman:
+  · Eksik protein/kaloriyi başarısızlık sayma; günün kalanında ne kadar alınması gerektiğini söyle.
+  · Henüz yapılmamış antrenmanı ya da tamamlanmamış adımları "eksik" diye puanlama; gidişatı değerlendir.
+  · "puan" o saate kadarki gidişatı yansıtsın.
+  · "oneriler" ve "yarin" bugünün KALANI için olsun (ör. akşam yemeğinde ne yenmeli, kaç adım daha atılmalı); yarından bahsetme.
+- "gun_bitti" true ise gün kapanmıştır: tüm günü değerlendir, öneriler yarın için olsun.
 - Tıbbi teşhis koyma; ağrı/sakatlık söz konusuysa uzmana yönlendir.
 - Türkçe yaz, samimi ama kısa ol. Her yorum en fazla iki cümle.`;
 
@@ -115,8 +127,8 @@ const RAPOR_SEMA = {
         required: ["alan", "durum", "yorum"]
       }
     },
-    oneriler: { type: "array", items: { type: "string" }, description: "Yarın için 2-4 somut öneri" },
-    yarin: { type: "string", description: "Yarının tek cümlelik odağı" }
+    oneriler: { type: "array", items: { type: "string" }, description: "2-4 somut öneri: gün bittiyse yarın için, bitmediyse bugünün kalanı için" },
+    yarin: { type: "string", description: "Tek cümlelik odak: gün bittiyse yarın, bitmediyse bugünün kalanı" }
   },
   required: ["puan", "baslik", "ozet", "alanlar", "oneriler", "yarin"]
 };
@@ -127,7 +139,7 @@ async function raporOlustur(gun, sessiz){
   raporCalisiyor = gun; raporIlerleme = "Rapor hazırlanıyor"; raporKartiYenile();
   try {
     if (ADIM_VAR) await adimTazele();
-    const veri = raporVerisi(gun);
+    const veri = raporVerisi(gun), ara = !veri.rapor_gunu.gun_bitti;
     const r = await yzIstek([{ metin: "Günün kayıtları:\n" + JSON.stringify(veri) }], RAPOR_SEMA, RAPOR_SISTEM, 2500,
       m => { raporIlerleme = m; raporKartiYenile(); });
     const rap = {
@@ -136,12 +148,12 @@ async function raporOlustur(gun, sessiz){
       alanlar: Array.isArray(r.alanlar) ? r.alanlar.slice(0, 4).map(a => ({ alan: String(a.alan || ""), durum: ["iyi", "orta", "zayif"].includes(a.durum) ? a.durum : "orta", yorum: String(a.yorum || "") })) : [],
       oneriler: Array.isArray(r.oneriler) ? r.oneriler.slice(0, 4).map(String) : [],
       yarin: String(r.yarin || ""),
-      olusturma: Date.now(), model: aktifModel(), kayit: gunKayitSayisi(gun)
+      olusturma: Date.now(), model: aktifModel(), kayit: gunKayitSayisi(gun), ara
     };
     const R = raporGunleri(); R[gun] = rap;
     Object.keys(R).sort().slice(0, Math.max(0, Object.keys(R).length - RAPOR_SAKLA_GUN)).forEach(k => delete R[k]);
     await saveAll();
-    if (!sessiz) toast(gunAdi(gun) + " raporu hazır");
+    if (!sessiz) toast(gunAdi(gun) + (ara ? " ara raporu hazır" : " raporu hazır"));
   } catch (e) {
     if (!sessiz) toast("Rapor hazırlanamadı: " + (e.message || e));
     raporIlerleme = "";
@@ -157,8 +169,10 @@ function raporOtomatik(){
   if (raporCalisiyor || !apiAnahtar()) return;
   const simdi = new Date(), bugun = gunKey(), dun = gunKey(new Date(Date.now() - 864e5)), R = raporGunleri();
   let hedef = null;
-  if (raporVakti(simdi)){ if (!R[bugun] && gunKayitSayisi(bugun)) hedef = bugun; }
-  else if (!R[dun] && gunKayitSayisi(dun)) hedef = dun;
+  /* Eksik ya da gün bitmeden hazırlanmış (ara) rapor, gün bitince son hâline getirilir. */
+  const gerek = g => (!R[g] || R[g].ara) && gunKayitSayisi(g);
+  if (raporVakti(simdi)){ if (gerek(bugun)) hedef = bugun; }
+  else if (gerek(dun)) hedef = dun;
   if (!hedef) return;
   const isaret = hedef + ":" + simdi.getHours() + ":" + (simdi.getMinutes() >= 59 ? 59 : 0);
   if (lsGet("salonDefteri.raporDeneme") === isaret) return;
@@ -166,31 +180,27 @@ function raporOtomatik(){
   raporOlustur(hedef, true);
 }
 
-/* Özet'te hangi gün gösterilecek: bugünün raporu, yoksa dünün. */
+/* Özet'te seçili günün raporu; her rapor yalnızca kendi gününde görünür. */
 function raporSecili(){ return typeof ozetGun === "function" ? ozetGun() : gunKey(); }
 function raporGosterilecekGun(){
-  const R = raporGunleri(), bugun = gunKey(), dun = gunKey(new Date(Date.now() - 864e5));
-  if (raporCalisiyor) return raporCalisiyor;
   const sec = raporSecili();
-  if (sec !== bugun) return R[sec] ? sec : null;   // Özet'te geçmiş bir gün seçili
-  if (R[bugun]) return bugun;
-  if (R[dun]) return dun;
-  return null;
+  return raporGunleri()[sec] ? sec : null;
 }
 const DURUM_ETIKET = { iyi: "İyi", orta: "Orta", zayif: "Zayıf" };
 function raporGovde(gun, rap){
   return `<div class="raporbas">
       <span class="raporpuan" style="--oran:${rap.puan * 10}%"><b>${rap.puan}</b><small>/10</small></span>
-      <div><span class="ek">${besinHtml(gunAdi(gun))} · gün sonu raporu</span><h3>${besinHtml(rap.baslik)}</h3></div>
+      <div><span class="ek">${besinHtml(gunAdi(gun))} · ${rap.ara ? "ara rapor" : "gün sonu raporu"}</span><h3>${besinHtml(rap.baslik)}</h3></div>
     </div>
     <p class="raporozet">${besinHtml(rap.ozet)}</p>
     ${rap.alanlar.map(a => `<div class="raporalan"><div class="kbas"><b>${besinHtml(a.alan)}</b><span class="durum ${a.durum}">${DURUM_ETIKET[a.durum]}</span></div><p>${besinHtml(a.yorum)}</p></div>`).join("")}
-    ${rap.oneriler.length ? `<div class="raporoneri"><b>Yarın için</b><ul>${rap.oneriler.map(o => `<li>${besinHtml(o)}</li>`).join("")}</ul></div>` : ""}
+    ${rap.ara ? `<p class="raporara">Gün bitmeden, ${besinHtml(saatDk(rap.olusturma))} itibarıyla hazırlandı. Günün son raporu ${RAPOR_SAAT}:${RAPOR_DAKIKA}'da hazırlanır.</p>` : ""}
+    ${rap.oneriler.length ? `<div class="raporoneri"><b>${rap.ara ? "Günün kalanı için" : "Yarın için"}</b><ul>${rap.oneriler.map(o => `<li>${besinHtml(o)}</li>`).join("")}</ul></div>` : ""}
     ${rap.yarin ? `<p class="raporyarin">${IKON.tik}<span>${besinHtml(rap.yarin)}</span></p>` : ""}`;
 }
 function raporKartIc(hata){
   const gun = raporGosterilecekGun(), R = raporGunleri();
-  if (raporCalisiyor){
+  if (raporCalisiyor === raporSecili()){
     return `<div class="kbas"><h3>Gün sonu raporu</h3><span class="ek">${besinHtml(gunAdi(raporCalisiyor))}</span></div>
       <p class="muted small" style="margin:10px 0 0"><span class="raporspin"></span>${besinHtml(raporIlerleme || "Rapor hazırlanıyor")}…</p>`;
   }
@@ -198,20 +208,21 @@ function raporKartIc(hata){
     const bugun = raporSecili(), gecmis = bugun !== gunKey(), veri = gunKayitSayisi(bugun) > 0;
     const anahtar = !!apiAnahtar();
     return `<div class="kbas"><h3>Gün sonu raporu</h3><button class="ek" id="raporGecmis" style="color:var(--accent);font-weight:800;font-size:13px">Geçmiş</button></div>
-      <p class="muted small" style="margin:8px 0 12px">${hata ? "Hazırlanamadı: " + besinHtml(hata)
+      <p class="muted small" style="margin:8px 0 12px">${raporCalisiyor ? `<span class="raporspin"></span>${besinHtml(gunAdi(raporCalisiyor))} günün raporu hazırlanıyor…`
+        : hata ? "Hazırlanamadı: " + besinHtml(hata)
         : !anahtar ? "Rapor için yapay zekâ anahtarı gerekiyor (yemek analizindekiyle aynı)."
         : gecmis ? (veri ? "Bu günün raporu yok." : "Bu gün için kayıt yok.")
         : !veri ? "Bugün henüz kayıt yok."
         : `Bugünün raporu ${RAPOR_SAAT}:${RAPOR_DAKIKA}'da kendiliğinden hazırlanır.`}</p>
-      ${veri || !anahtar ? `<button class="btn quiet sm" id="raporSimdi">${!anahtar ? "Anahtar gir" : gecmis ? "Bu günün raporunu hazırla" : "Şimdi hazırla"}</button>` : ""}`;
+      ${(veri || !anahtar) && !raporCalisiyor ? `<button class="btn quiet sm" id="raporSimdi">${!anahtar ? "Anahtar gir" : gecmis ? "Bu günün raporunu hazırla" : "Şimdi ara rapor hazırla"}</button>` : ""}`;
   }
-  const rap = R[gun], yeni = gun === gunKey() && gunKayitSayisi(gun) > (rap.kayit || 0);
+  const rap = R[gun], yeni = gunKayitSayisi(gun) > (rap.kayit || 0);
   const saat = new Date(rap.olusturma);
   return raporGovde(gun, rap) + `
     ${hata ? `<p class="muted small" style="color:var(--uyari)">Güncellenemedi: ${besinHtml(hata)}</p>` : ""}
     <div class="raporalt">
       <span>${String(saat.getHours()).padStart(2, "0")}:${String(saat.getMinutes()).padStart(2, "0")} · ${besinHtml(modelAdi(rap.model))}${yeni ? " · sonra yeni kayıt var" : ""}</span>
-      <button class="minibtn" id="raporYenile">${yeni ? "Güncelle" : "Yenile"}</button>
+      ${raporCalisiyor ? "" : `<button class="minibtn" id="raporYenile">${yeni ? "Güncelle" : "Yenile"}</button>`}
       <button class="minibtn" id="raporGecmis">Geçmiş</button>
     </div>`;
 }
@@ -220,7 +231,7 @@ function raporKartiYenile(hata){
   kutu.innerHTML = raporKartIc(hata);
   const simdi = document.getElementById("raporSimdi"), yenile = document.getElementById("raporYenile"), gecmis = document.getElementById("raporGecmis");
   if (simdi) simdi.onclick = () => apiAnahtar() ? raporOlustur(raporSecili()) : anahtarSor();
-  if (yenile) yenile.onclick = () => raporOlustur(raporGosterilecekGun());
+  if (yenile) yenile.onclick = () => raporOlustur(raporSecili());
   if (gecmis) gecmis.onclick = raporGecmisiSheet;
 }
 function raporGecmisiSheet(){
@@ -228,7 +239,7 @@ function raporGecmisiSheet(){
   modalAc(`<h2>Geçmiş raporlar</h2>
     ${gunler.length ? gunler.map(g => `<button class="raporsatir" data-rapor="${g}">
         <span class="raporpuan kucuk" style="--oran:${R[g].puan * 10}%"><b>${R[g].puan}</b></span>
-        <span><b>${besinHtml(gunAdi(g))}</b><span class="muted small">${besinHtml(R[g].baslik)}</span></span>${IKON.ok}</button>`).join("")
+        <span><b>${besinHtml(gunAdi(g))}</b><span class="muted small">${R[g].ara ? "Ara rapor · " : ""}${besinHtml(R[g].baslik)}</span></span>${IKON.ok}</button>`).join("")
       : `<p class="muted small">Henüz rapor yok.</p>`}
     <button class="btn ghost" id="rgKapat">Kapat</button>`);
   document.querySelectorAll("[data-rapor]").forEach(el => el.onclick = () => {

@@ -8,7 +8,7 @@
    ASSETS'i bastan indirir, activate eski cache'i siler. Aksi halde sunucu
    kapaliyken (ya da internet yokken) onceAg cache'e duser ve kullanici
    eski surumu gorur — guncelleme yapilmamis gibi. */
-const CORE  = 'salon-defteri-v25';  // v25: Özet'te önceki günlere geçiş
+const CORE  = 'salon-defteri-v26';  // v26: rapor kendi gününde, gün bitmeden ara rapor
 /* Medya "once cache" okunuyor: bir kez indirilen gorsel bir daha aga
    sorulmaz. Var olan bir gorseli DEGISTIRDIGINDE bu surumu artir, yoksa
    kullanicida eski gorsel kalir. (Yeni id eklemek icin gerekmez.) */
