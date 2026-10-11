@@ -643,8 +643,8 @@ const ekipTR  = q => EKIP[q] || q;
 function exImg(e){ return "images/" + (e.mediaId||e.i) + "-" + e.m + ".jpg"; }
 function exGif(e){ return "videos/" + (e.mediaId||e.i) + "-" + e.m + ".gif"; }
 function exAd(id){ return EX[id] ? EX[id].n : id; }
-/* Şu an kayıtların hepsinde medya var (c003-c005 de dahil: onlara
-   tools/cop-adam-uret.py ile figür çizildi). Aşağıdaki yer tutucu dalı bu
+/* Şu an kayıtların hepsinde medya var (c003-c010 dahil: onlar
+   tools/program-gifs/ ile çizildi). Aşağıdaki yer tutucu dalı bu
    yüzden çalışmıyor; medyasız bir kayıt eklenirse diye duruyor, yoksa yol
    "images/undefined-undefined.jpg" olur ve kırık görsel çıkar. */
 function medyaVar(e){ return !!(e && e.m); }

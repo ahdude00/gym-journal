@@ -8,7 +8,7 @@
    ASSETS'i bastan indirir, activate eski cache'i siler. Aksi halde sunucu
    kapaliyken (ya da internet yokken) onceAg cache'e duser ve kullanici
    eski surumu gorur — guncelleme yapilmamis gibi. */
-const CORE  = 'salon-defteri-v19';  // v19: Özet'ten yemek ekleme ve kalori hedefi
+const CORE  = 'salon-defteri-v20';  // v20: programdaki özel hareketlere yeni anatomik animasyonlar
 /* Medya "once cache" okunuyor: bir kez indirilen gorsel bir daha aga
    sorulmaz. Var olan bir gorseli DEGISTIRDIGINDE bu surumu artir, yoksa
    kullanicida eski gorsel kalir. (Yeni id eklemek icin gerekmez.) */
@@ -16,10 +16,9 @@ const MEDYA = 'salon-defteri-medya-v3';   // v3: c003-c005 figur cizimine gecti
 const MEDYA_TAVAN = 600;   // bu sayiyi asinca en eski kayitlar atilir
 
 const ASSETS = [
-  './', './index.html', './manifest.json', './data/exercises.js', './data/custom.js?v=18', './data/food.js', './data/legacy-workout-guide.js',
+  './', './index.html', './manifest.json', './data/exercises.js', './data/custom.js', './data/food.js', './data/legacy-workout-guide.js',
   './icon-192.png', './icon-512.png',
-  './videos/c006-recovery-v1.gif', './videos/c008-recovery-v1.gif', './videos/c009-recovery-v1.gif', './videos/c010-recovery-v1.gif',
-  './images/c006-recovery-v1.jpg', './images/c008-recovery-v1.jpg', './images/c009-recovery-v1.jpg', './images/c010-recovery-v1.jpg',
+  ...['c003','c004','c005','c006','c008','c009','c010'].flatMap(id=>[`./videos/${id}-anim-v2.gif`,`./images/${id}-anim-v2.jpg`]),
   './videos/0659-LEH9jxP.gif', './images/0659-LEH9jxP.jpg'
 ];
 

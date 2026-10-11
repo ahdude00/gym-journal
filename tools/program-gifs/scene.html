@@ -1,0 +1,72 @@
+<!doctype html><html><meta charset="utf-8"><style>body{margin:0;background:#fff}canvas{display:block}</style>
+<script type="module">
+/* Programdaki özel hareketlerin sahnesi: ışık, kamera, sahne nesneleri.
+   Figür body.js'te, pozlar poses.js'te. */
+import * as T from './vendor/three.module.js';
+import {V,buildFigure,polygonize,primBounds,setHL} from './body.js';
+import {walk,wallSlide,chinTuck,catCow,openBook,doorway,DOOR_E} from './poses.js';
+
+const SIZE=540;
+const renderer=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(1);renderer.setSize(SIZE,SIZE);renderer.setClearColor(0xffffff);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
+document.body.append(renderer.domElement);
+const scene=new T.Scene(),camera=new T.OrthographicCamera(-1,1,1,-1,.01,100);
+const hemi=new T.HemisphereLight(0xffffff,0x4a4a4a,1.15);scene.add(hemi);
+const key=new T.DirectionalLight(0xffffff,2.6);key.castShadow=true;key.shadow.mapSize.set(2048,2048);
+Object.assign(key.shadow.camera,{left:-2,right:2,top:2,bottom:-2,near:.1,far:30});key.shadow.bias=-.0005;key.shadow.radius=5;
+scene.add(key,key.target);
+const fill=new T.DirectionalLight(0xffffff,.5);scene.add(fill,fill.target);
+const floor=new T.Mesh(new T.PlaneGeometry(30,30),new T.ShadowMaterial({opacity:.09}));
+floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+
+const MAT={
+  body:new T.MeshStandardMaterial({vertexColors:true,roughness:.6}),
+  line:new T.MeshBasicMaterial({color:0x3a3a3a,side:T.BackSide}),
+  prop:new T.MeshStandardMaterial({color:0xdadada,roughness:1}),
+};
+let group=new T.Group();scene.add(group);
+function box(p,s){
+  const m=new T.Mesh(new T.BoxGeometry(...s),MAT.prop);m.position.set(...p);m.castShadow=m.receiveShadow=true;group.add(m);
+  const o=new T.Mesh(new T.BoxGeometry(s[0]+.01,s[1]+.01,s[2]+.01),MAT.line);o.position.copy(m.position);group.add(o);
+}
+/* Her hareket: poz, hedef kaslar, kamera yönü, sahne nesneleri. */
+const EX={
+  c003:{pose:catCow,hl:{abs:true,erect:true},view:[.2,.4,1]},
+  c004:{pose:wallSlide,hl:{delt:true,traps:true},view:[.6,.2,1],props:()=>box([0,1.1,-.176],[1.25,2.2,.035])},
+  c005:{pose:chinTuck,hl:{neck:true},view:[.3,.75,1],props:()=>box([.79,.012,0],[.4,.024,.34])},
+  c006:{pose:p=>walk(p,{lift:1,knee:58,swing:30,elbow:85,bob:.02}),hl:{},view:[.55,.16,1]},
+  c008:{pose:openBook,hl:{pec:'R',delt:'R'},view:[-.55,.85,1],props:()=>box([.95,.06,.0],[.3,.12,.36])},
+  c009:{pose:doorway,hl:{pec:'R',delt:'R'},view:[.75,.22,1],
+        props:()=>{box([DOOR_E.x-.075,1.06,DOOR_E.z+.06],[.07,2.12,.11]);box([DOOR_E.x+.34,2.13,DOOR_E.z+.06],[.9,.08,.11]);}},
+  c010:{pose:p=>walk(p,{lift:.7,knee:42,swing:18,elbow:18,bob:.01}),hl:{},view:[.55,.16,1]},
+};
+function compose(id,t,mesh=true){
+  scene.remove(group);group.traverse(o=>o.geometry?.dispose());group=new T.Group();scene.add(group);
+  const e=EX[id];setHL(e.hl);buildFigure(e.pose(t));e.props?.();
+  if(!mesh)return;
+  const {geo,hull}=polygonize();
+  const m=new T.Mesh(geo,MAT.body);m.castShadow=true;group.add(m);group.add(new T.Mesh(hull,MAT.line));
+}
+function aim(id,target){
+  const dir=V(EX[id].view).normalize();
+  camera.position.copy(target).addScaledVector(dir,12);camera.up.set(0,1,0);camera.lookAt(target);camera.updateMatrixWorld();
+  const R=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,0),U=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,1);
+  key.position.copy(target).addScaledVector(R,-2.4).addScaledVector(U,4).addScaledVector(dir,3);key.target.position.copy(target);
+  fill.position.copy(target).addScaledVector(R,3).addScaledVector(U,.5).addScaledVector(dir,2);fill.target.position.copy(target);
+}
+/* Kamera, hareketin bütün karelerini (ve sahne nesnelerini) kapsar. */
+window.fit=(id,phases)=>{
+  const pts=[];
+  for(const t of phases){compose(id,t,false);for(const b of primBounds())pts.push(b);
+    group.updateMatrixWorld(true);group.traverse(o=>{if(o.isMesh){o.geometry.computeBoundingBox();const bb=o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld);
+      for(const x of[bb.min.x,bb.max.x])for(const y of[bb.min.y,bb.max.y])for(const z of[bb.min.z,bb.max.z])pts.push({c:new T.Vector3(x,y,z),R:0});}});}
+  const c=new T.Box3();for(const p of pts)c.expandByPoint(p.c);aim(id,c.getCenter(new T.Vector3()));
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;const inv=camera.matrixWorldInverse;
+  for(const p of pts){const q=p.c.clone().applyMatrix4(inv);x0=Math.min(x0,q.x-p.R);x1=Math.max(x1,q.x+p.R);y0=Math.min(y0,q.y-p.R);y1=Math.max(y1,q.y+p.R);}
+  const half=Math.max(x1-x0,y1-y0)/2*1.06,cx=(x0+x1)/2,cy=(y0+y1)/2;
+  Object.assign(camera,{left:cx-half,right:cx+half,top:cy+half,bottom:cy-half});camera.updateProjectionMatrix();return true;
+};
+window.renderFrame=(id,t)=>{compose(id,t);renderer.render(scene,camera);return renderer.domElement.toDataURL('image/png');};
+window.ready=true;
+</script></html>
