@@ -9,8 +9,6 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
-import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.getcapacitor.JSArray
@@ -28,7 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.Period
+import java.time.ZoneId
 
 /**
  * Health Connect'ten günlük adım sayısını okur. Samsung Health adımlarını
@@ -101,14 +99,7 @@ class AdimPlugin : Plugin() {
             try {
                 val bugun = LocalDate.now()
                 val bas = bugun.minusDays((gun - 1).toLong())
-                val gruplar = HealthConnectClient.getOrCreate(context).aggregateGroupByPeriod(
-                    AggregateGroupByPeriodRequest(
-                        metrics = setOf(StepsRecord.COUNT_TOTAL),
-                        timeRangeFilter = TimeRangeFilter.between(bas.atStartOfDay(), bugun.plusDays(1).atStartOfDay()),
-                        timeRangeSlicer = Period.ofDays(1)
-                    )
-                )
-                val sayilar = gruplar.associate { it.startTime.toLocalDate() to (it.result[StepsRecord.COUNT_TOTAL] ?: 0L) }
+                val sayilar = gunlukAdim(HealthConnectClient.getOrCreate(context), bas, bugun)
                 val dizi = JSArray()
                 for (i in 0 until gun) {
                     val g = bas.plusDays(i.toLong())
@@ -121,6 +112,28 @@ class AdimPlugin : Plugin() {
                 call.reject(e.message ?: "Adımlar okunamadı")
             }
         }
+    }
+
+    /**
+     * Günlük adım: her gün için kaynak (uygulama) başına toplam alınır ve en
+     * yükseği seçilir. Samsung Health ile Android'in kendi telefon adım sayacı
+     * aynı sensörü okuyup Health Connect'e ayrı ayrı yazıyor; Samsung tüm günü
+     * tek kayıt yazdığı için Health Connect'in aggregate'i bunları ayıklayamıyor
+     * ve kabaca iki katını veriyordu.
+     */
+    private suspend fun gunlukAdim(client: HealthConnectClient, bas: LocalDate, son: LocalDate): Map<LocalDate, Long> {
+        val zaman = ZoneId.systemDefault()
+        val filtre = TimeRangeFilter.between(bas.atStartOfDay(), son.plusDays(1).atStartOfDay())
+        val kayitlar = ArrayList<StepsRecord>()
+        var sayfa: String? = null
+        do {
+            val yanit = client.readRecords(ReadRecordsRequest(StepsRecord::class, filtre, pageToken = sayfa))
+            kayitlar += yanit.records
+            sayfa = yanit.pageToken
+        } while (sayfa != null)
+        return kayitlar
+            .groupBy { it.startTime.atZone(it.startZoneOffset ?: zaman.rules.getOffset(it.startTime)).toLocalDate() }
+            .mapValues { (_, l) -> l.groupBy { it.metadata.dataOrigin.packageName }.values.maxOf { k -> k.sumOf { it.count } } }
     }
 
     /** Health Connect ayarlarını (ya da güncelleme gerekiyorsa mağaza sayfasını) açar. */
@@ -180,7 +193,7 @@ class AdimPlugin : Plugin() {
                     for (i in 0 until n) dakika.merge(bas + i, pay) { a, b -> maxOf(a, b) }
                 }
                 ret.put("cakisan", cakisan).put("tekilTahmin", Math.round(dakika.values.sum()))
-                val toplam = client.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), aralik))[StepsRecord.COUNT_TOTAL] ?: 0L
+                val toplam = gunlukAdim(client, bugun, bugun)[bugun] ?: 0L
                 // Son 7 günde hiç kayıt var mı (Samsung Health eşitlemesi gecikiyor olabilir)
                 val hafta = client.readRecords(ReadRecordsRequest(StepsRecord::class,
                     TimeRangeFilter.between(bugun.minusDays(6).atStartOfDay(), bugun.plusDays(1).atStartOfDay()))).records
