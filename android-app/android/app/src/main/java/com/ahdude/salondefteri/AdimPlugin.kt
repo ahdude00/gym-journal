@@ -154,8 +154,32 @@ class AdimPlugin : Plugin() {
                 val bugun = LocalDate.now()
                 val aralik = TimeRangeFilter.between(bugun.atStartOfDay(), bugun.plusDays(1).atStartOfDay())
                 val kayitlar = client.readRecords(ReadRecordsRequest(StepsRecord::class, aralik)).records
+                // Kaynak = uygulama + cihaz: aggregate yalnızca farklı uygulamalar arasında
+                // çift saymayı önler; aynı uygulamanın telefon ve saat kayıtları toplanır.
                 val kaynak = JSObject()
-                kayitlar.groupBy { it.metadata.dataOrigin.packageName }.forEach { (pkg, l) -> kaynak.put(pkg, l.sumOf { it.count }) }
+                kayitlar.groupBy {
+                    val d = it.metadata.device
+                    val tur = when (d?.type) { 1 -> "saat"; 2 -> "telefon"; 4 -> "yüzük"; 6 -> "bileklik"; null -> "cihaz yok"; else -> "tür ${d.type}" }
+                    val model = listOfNotNull(d?.manufacturer, d?.model).joinToString(" ")
+                    "${it.metadata.dataOrigin.packageName} · $tur" + if (model.isNotEmpty()) " ($model)" else ""
+                }.forEach { (k, l) -> kaynak.put(k, l.sumOf { it.count }) }
+                ret.put("hamToplam", kayitlar.sumOf { it.count })
+                // Zamanca üst üste binen kayıt sayısı (aynı adımların tekrar yazılması)
+                var sonBitis = java.time.Instant.MIN
+                var cakisan = 0
+                for (k in kayitlar.sortedBy { it.startTime }) {
+                    if (k.startTime < sonBitis) cakisan++
+                    if (k.endTime > sonBitis) sonBitis = k.endTime
+                }
+                // Çakışmasız tahmin: her kaydı dakikalarına eşit dağıt, her dakikada en yükseği al
+                val dakika = HashMap<Long, Double>()
+                kayitlar.forEach {
+                    val bas = it.startTime.epochSecond / 60
+                    val n = maxOf(1L, (it.endTime.epochSecond - 1) / 60 - bas + 1)
+                    val pay = it.count.toDouble() / n
+                    for (i in 0 until n) dakika.merge(bas + i, pay) { a, b -> maxOf(a, b) }
+                }
+                ret.put("cakisan", cakisan).put("tekilTahmin", Math.round(dakika.values.sum()))
                 val toplam = client.aggregate(AggregateRequest(setOf(StepsRecord.COUNT_TOTAL), aralik))[StepsRecord.COUNT_TOTAL] ?: 0L
                 // Son 7 günde hiç kayıt var mı (Samsung Health eşitlemesi gecikiyor olabilir)
                 val hafta = client.readRecords(ReadRecordsRequest(StepsRecord::class,

@@ -1253,7 +1253,7 @@ async function adimTaniSheet(){
   let r;
   try{ r=await adimCagir("tani"); }
   catch(e){ modalAc(`<h2>Adım tanılama</h2><p class="muted small">${besinHtml((e&&e.message)||String(e))}</p><p class="muted small">Uygulamanın en son sürümünü kurduğundan emin ol.</p><button class="btn ghost" id="taniKapat">Kapat</button>`); document.getElementById("taniKapat").onclick=modalKapat; return; }
-  const kaynak=r.kaynaklar?Object.keys(r.kaynaklar).map(k=>`<div class="kv"><span>${besinHtml(k==="com.sec.android.app.shealth"?"Samsung Health":k)}</span><b>${(+r.kaynaklar[k]).toLocaleString("tr-TR")}</b></div>`).join(""):"";
+  const kaynak=r.kaynaklar?Object.keys(r.kaynaklar).map(k=>`<div class="kv"><span>${besinHtml(k.replace("com.sec.android.app.shealth","Samsung Health"))}</span><b>${(+r.kaynaklar[k]).toLocaleString("tr-TR")}</b></div>`).join(""):"";
   const ipucu = r.durum!=="hazir" ? "Health Connect bu telefonda kullanılamıyor ya da güncellenmeli."
     : !r.izin ? "Bu uygulamanın adım okuma izni yok. Aşağıdan Health Connect'i açıp Salon Defteri'ne \"Adımlar\" iznini ver."
     : r.hata ? "Okurken hata oluştu."
@@ -1265,6 +1265,9 @@ async function adimTaniSheet(){
     <div class="kv"><span>Okuma izni</span><b>${r.izin?"var":"yok"}</b></div>
     ${r.izin?`<div class="kv"><span>Bugünkü adım kaydı</span><b>${r.bugunKayit||0}</b></div>
     <div class="kv"><span>Bugünkü toplam</span><b>${(+r.toplam||0).toLocaleString("tr-TR")}</b></div>
+    ${r.hamToplam!=null?`<div class="kv"><span>Kayıtların ham toplamı</span><b>${(+r.hamToplam).toLocaleString("tr-TR")}</b></div>`:""}
+    ${r.cakisan!=null?`<div class="kv"><span>Üst üste binen kayıt</span><b>${r.cakisan}</b></div>
+    <div class="kv"><span>Çakışmasız tahmin</span><b>${(+r.tekilTahmin).toLocaleString("tr-TR")}</b></div>`:""}
     <div class="kv"><span>Son 7 günde kayıt</span><b>${r.haftaKayit||0}</b></div>
     ${r.sonKayit?`<div class="kv"><span>En son kayıt</span><b>${besinHtml(new Date(r.sonKayit).toLocaleString("tr-TR"))}</b></div>`:""}
     ${kaynak}`:""}
