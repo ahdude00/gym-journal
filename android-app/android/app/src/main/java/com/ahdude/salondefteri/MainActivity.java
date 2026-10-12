@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Yerel eklentiler super.onCreate'ten önce kaydedilmeli.
         registerPlugin(AdimPlugin.class);
+        registerPlugin(GaleriPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

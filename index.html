@@ -2045,6 +2045,36 @@ async function fotoSil(id){
   if(!id) return;
   try{ await fotoSureSinirli(fotoIslem("readwrite", d=>d.delete(id))); }catch(e){}
 }
+/* ==========================================================
+   GALERİ ALBÜMÜ (yalnızca Android uygulamasında)
+   Öğün eklenince fotoğrafların orijinalleri (küçültülmemiş hali) galeride
+   "Salon Defteri" albümüne kopyalanır. Küçük kopya → orijinal dosya eşlemesi
+   yalnızca bu oturumda tutulur; bir fotoğraf albüme bir kez yazılır, böylece
+   "kalanını çek" sonrası güncellemede ilk fotoğraflar tekrar yazılmaz.
+   Eski APK'da eklenti yoksa ya da yazma başarısızsa öğün yine eklenir. */
+const albumOrijinal=new Map(), albumYazilan=new Set();
+function dosyaBase64(dosya){
+  return new Promise((coz,yan)=>{
+    const r=new FileReader();
+    r.onload=()=>coz(String(r.result).slice(String(r.result).indexOf(",")+1));
+    r.onerror=()=>yan(r.error);
+    r.readAsDataURL(dosya);
+  });
+}
+async function albumeKaydet(kucukler){
+  const basliklar=window.Capacitor&&window.Capacitor.PluginHeaders;
+  if(!ADIM_VAR||(Array.isArray(basliklar)&&!basliklar.some(p=>p.name==="Galeri"))) return;   /* eski APK */
+  const dosyalar=kucukler.map(b=>albumOrijinal.get(b)).filter(d=>d&&!albumYazilan.has(d));
+  let hata=0;
+  for(const [i,d] of dosyalar.entries()){
+    albumYazilan.add(d);
+    const tur=d.type||"image/jpeg", uzanti={"image/png":"png","image/heic":"heic","image/heif":"heif","image/webp":"webp"}[tur]||"jpg";
+    try{
+      await window.Capacitor.nativePromise("Galeri","kaydet",{veri:await dosyaBase64(d), tur, ad:`SalonDefteri_${Date.now()}_${i+1}.${uzanti}`});
+    }catch(e){ hata++; albumYazilan.delete(d); }
+  }
+  if(hata) toast("Fotoğraf galeriye kaydedilemedi");
+}
 function anahtarSor(){
   const sag=aktifSag();
   modalAc(`
@@ -2155,6 +2185,7 @@ function fotoSonucSheet(sonuc, durum){
     if(mevcut) hedef.adet=1;
     if(!mevcut) liste.push(hedef);
     await saveAll(); modalKapat(); renderFood();
+    albumeKaydet([...oncekiler, ...(durum.kalanlar||[])]);
     toast(oncekiler.length&&!foto ? "Öğün eklendi; fotoğraf cihaz hafızasına kaydedilemedi." : ad+(mevcut?" güncellendi":" eklendi"));
   };
   /* Yanlış bir kalem varsa kullanıcı söylüyor, tahmin yeniden hesaplanıyor.
@@ -2274,7 +2305,7 @@ function fotoSecSheet(ayar){
       let tasan=false;
       for(const dosya of dosyalar){
         if(secilen.length>=FOTO_EN_FAZLA){ tasan=true; break; }
-        try{ secilen.push(await fotoKucult(dosya)); }
+        try{ const b=await fotoKucult(dosya); secilen.push(b); albumOrijinal.set(b,dosya); }
         catch(e){ toast("Bir fotoğraf okunamadı"); }
       }
       mesgul=false;
