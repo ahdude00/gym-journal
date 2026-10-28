@@ -1346,6 +1346,7 @@ async function adimTaniSheet(){
   const ipucu = r.durum!=="hazir" ? "Health Connect bu telefonda kullanılamıyor ya da güncellenmeli."
     : !r.izin ? "Bu uygulamanın adım okuma izni yok. Aşağıdan Health Connect'i açıp Salon Defteri'ne \"Adımlar\" iznini ver."
     : r.hata ? "Okurken hata oluştu."
+    : r.bozukKayit ? "Health Connect'te başlangıcı bitişine eşit bozuk bir adım kaydı var (başka bir uygulama yazmış). Kayıtlar tek tek listelenemiyor ama günlük adımlar yine doğru sayılıyor."
     : !r.haftaKayit ? "Health Connect'te son 7 günde hiç adım kaydı yok. Samsung Health henüz veri göndermiyor: Samsung Health › Ayarlar › Health Connect › izinlerde \"Adımlar\"ın yazma izni açık olmalı. Açtıktan sonra Samsung Health'i bir kez açıp birkaç dakika bekle."
     : !r.bugunKayit ? "Önceki günlerde kayıt var ama bugün yok: Samsung Health eşitlemesi gecikiyor olabilir, Samsung Health'i açıp tekrar dene."
     : r.toplam? "Her şey yolunda görünüyor." : "Kayıt var ama toplam 0: Health Connect › Veri ve erişim › Adımlar › veri kaynakları sırasında Samsung Health'in listede olduğunu kontrol et.";

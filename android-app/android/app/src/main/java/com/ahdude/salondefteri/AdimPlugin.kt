@@ -9,6 +9,8 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.metadata.DataOrigin
+import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.getcapacitor.JSArray
@@ -26,7 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.Period
 
 /**
  * Health Connect'ten günlük adım sayısını okur. Samsung Health adımlarını
@@ -118,22 +120,33 @@ class AdimPlugin : Plugin() {
      * Günlük adım: her gün için kaynak (uygulama) başına toplam alınır ve en
      * yükseği seçilir. Samsung Health ile Android'in kendi telefon adım sayacı
      * aynı sensörü okuyup Health Connect'e ayrı ayrı yazıyor; Samsung tüm günü
-     * tek kayıt yazdığı için Health Connect'in aggregate'i bunları ayıklayamıyor
-     * ve kabaca iki katını veriyordu.
+     * tek kayıt yazdığı için tüm kaynakların birlikte aggregate'i bunları
+     * ayıklayamıyor ve kabaca iki katını veriyordu.
+     *
+     * Kayıtlar tek tek okunmuyor, kaynak başına aggregate isteniyor: bir uygulama
+     * başlangıcı bitişine eşit bir kayıt yazınca connect-client o kaydı
+     * çözerken "startTime must be before endTime" fırlatıyor ve bütün okuma
+     * düşüyordu. Aggregate hesabı Health Connect'te yapıldığı için bu kayıtlar
+     * okumayı bozmaz.
      */
-    private suspend fun gunlukAdim(client: HealthConnectClient, bas: LocalDate, son: LocalDate): Map<LocalDate, Long> {
-        val zaman = ZoneId.systemDefault()
+    private suspend fun gunlukAdim(client: HealthConnectClient, bas: LocalDate, son: LocalDate): Map<LocalDate, Long> =
+        kaynakAdim(client, bas, son).mapValues { (_, k) -> k.values.maxOrNull() ?: 0L }
+
+    /** Gün → (kaynak paket adı → adım). */
+    private suspend fun kaynakAdim(client: HealthConnectClient, bas: LocalDate, son: LocalDate): Map<LocalDate, Map<String, Long>> {
         val filtre = TimeRangeFilter.between(bas.atStartOfDay(), son.plusDays(1).atStartOfDay())
-        val kayitlar = ArrayList<StepsRecord>()
-        var sayfa: String? = null
-        do {
-            val yanit = client.readRecords(ReadRecordsRequest(StepsRecord::class, filtre, pageToken = sayfa))
-            kayitlar += yanit.records
-            sayfa = yanit.pageToken
-        } while (sayfa != null)
-        return kayitlar
-            .groupBy { it.startTime.atZone(it.startZoneOffset ?: zaman.rules.getOffset(it.startTime)).toLocalDate() }
-            .mapValues { (_, l) -> l.groupBy { it.metadata.dataOrigin.packageName }.values.maxOf { k -> k.sumOf { it.count } } }
+        fun istek(kaynak: Set<DataOrigin>) = AggregateGroupByPeriodRequest(
+            metrics = setOf(StepsRecord.COUNT_TOTAL), timeRangeFilter = filtre,
+            timeRangeSlicer = Period.ofDays(1), dataOriginFilter = kaynak)
+        val kaynaklar = client.aggregateGroupByPeriod(istek(emptySet())).flatMap { it.result.dataOrigins }.toSet()
+        val sonuc = HashMap<LocalDate, HashMap<String, Long>>()
+        for (k in kaynaklar) {
+            for (g in client.aggregateGroupByPeriod(istek(setOf(k)))) {
+                val n = g.result[StepsRecord.COUNT_TOTAL] ?: continue
+                sonuc.getOrPut(g.startTime.toLocalDate()) { HashMap() }[k.packageName] = n
+            }
+        }
+        return sonuc
     }
 
     /** Health Connect ayarlarını (ya da güncelleme gerekiyorsa mağaza sayfasını) açar. */
@@ -165,46 +178,60 @@ class AdimPlugin : Plugin() {
                 ret.put("izin", verilen.containsAll(izinler))
                 if (!verilen.containsAll(izinler)) { call.resolve(ret); return@launch }
                 val bugun = LocalDate.now()
-                val aralik = TimeRangeFilter.between(bugun.atStartOfDay(), bugun.plusDays(1).atStartOfDay())
-                val kayitlar = client.readRecords(ReadRecordsRequest(StepsRecord::class, aralik)).records
-                // Kaynak = uygulama + cihaz: aggregate yalnızca farklı uygulamalar arasında
-                // çift saymayı önler; aynı uygulamanın telefon ve saat kayıtları toplanır.
+                // Toplam ve kaynaklar aggregate'ten: bozuk bir kayıt bunları etkilemez.
+                val kaynakBugun = kaynakAdim(client, bugun, bugun)[bugun] ?: emptyMap()
+                ret.put("toplam", kaynakBugun.values.maxOrNull() ?: 0L)
                 val kaynak = JSObject()
-                kayitlar.groupBy {
-                    val d = it.metadata.device
-                    val tur = when (d?.type) { 1 -> "saat"; 2 -> "telefon"; 4 -> "yüzük"; 6 -> "bileklik"; null -> "cihaz yok"; else -> "tür ${d.type}" }
-                    val model = listOfNotNull(d?.manufacturer, d?.model).joinToString(" ")
-                    "${it.metadata.dataOrigin.packageName} · $tur" + if (model.isNotEmpty()) " ($model)" else ""
-                }.forEach { (k, l) -> kaynak.put(k, l.sumOf { it.count }) }
-                ret.put("hamToplam", kayitlar.sumOf { it.count })
-                // Zamanca üst üste binen kayıt sayısı (aynı adımların tekrar yazılması)
-                var sonBitis = java.time.Instant.MIN
-                var cakisan = 0
-                for (k in kayitlar.sortedBy { it.startTime }) {
-                    if (k.startTime < sonBitis) cakisan++
-                    if (k.endTime > sonBitis) sonBitis = k.endTime
+                kaynakBugun.forEach { (k, n) -> kaynak.put(k, n) }
+                ret.put("kaynaklar", kaynak)
+                try { kayitAyrinti(client, bugun, ret) }
+                catch (e: IllegalArgumentException) {
+                    // Başlangıcı bitişine eşit bir kayıt: kayıtlar tek tek okunamıyor, toplam yine doğru.
+                    ret.put("bozukKayit", e.message ?: "")
                 }
-                // Çakışmasız tahmin: her kaydı dakikalarına eşit dağıt, her dakikada en yükseği al
-                val dakika = HashMap<Long, Double>()
-                kayitlar.forEach {
-                    val bas = it.startTime.epochSecond / 60
-                    val n = maxOf(1L, (it.endTime.epochSecond - 1) / 60 - bas + 1)
-                    val pay = it.count.toDouble() / n
-                    for (i in 0 until n) dakika.merge(bas + i, pay) { a, b -> maxOf(a, b) }
-                }
-                ret.put("cakisan", cakisan).put("tekilTahmin", Math.round(dakika.values.sum()))
-                val toplam = gunlukAdim(client, bugun, bugun)[bugun] ?: 0L
-                // Son 7 günde hiç kayıt var mı (Samsung Health eşitlemesi gecikiyor olabilir)
-                val hafta = client.readRecords(ReadRecordsRequest(StepsRecord::class,
-                    TimeRangeFilter.between(bugun.minusDays(6).atStartOfDay(), bugun.plusDays(1).atStartOfDay()))).records
-                ret.put("bugunKayit", kayitlar.size).put("kaynaklar", kaynak).put("toplam", toplam)
-                    .put("haftaKayit", hafta.size)
-                    .put("sonKayit", hafta.maxByOrNull { it.endTime }?.endTime?.toString())
                 call.resolve(ret)
             } catch (e: Exception) {
                 call.resolve(ret.put("hata", e.javaClass.simpleName + ": " + (e.message ?: "")))
             }
         }
+    }
+
+    /** Tanılama için bugünkü ve son 7 günün kayıtlarını tek tek okur. */
+    private suspend fun kayitAyrinti(client: HealthConnectClient, bugun: LocalDate, ret: JSObject) {
+        val aralik = TimeRangeFilter.between(bugun.atStartOfDay(), bugun.plusDays(1).atStartOfDay())
+        val kayitlar = client.readRecords(ReadRecordsRequest(StepsRecord::class, aralik)).records
+        // Kaynak = uygulama + cihaz: aggregate yalnızca farklı uygulamalar arasında
+        // çift saymayı önler; aynı uygulamanın telefon ve saat kayıtları toplanır.
+        val kaynak = JSObject()
+        kayitlar.groupBy {
+            val d = it.metadata.device
+            val tur = when (d?.type) { 1 -> "saat"; 2 -> "telefon"; 4 -> "yüzük"; 6 -> "bileklik"; null -> "cihaz yok"; else -> "tür ${d.type}" }
+            val model = listOfNotNull(d?.manufacturer, d?.model).joinToString(" ")
+            "${it.metadata.dataOrigin.packageName} · $tur" + if (model.isNotEmpty()) " ($model)" else ""
+        }.forEach { (k, l) -> kaynak.put(k, l.sumOf { it.count }) }
+        ret.put("hamToplam", kayitlar.sumOf { it.count })
+        // Zamanca üst üste binen kayıt sayısı (aynı adımların tekrar yazılması)
+        var sonBitis = java.time.Instant.MIN
+        var cakisan = 0
+        for (k in kayitlar.sortedBy { it.startTime }) {
+            if (k.startTime < sonBitis) cakisan++
+            if (k.endTime > sonBitis) sonBitis = k.endTime
+        }
+        // Çakışmasız tahmin: her kaydı dakikalarına eşit dağıt, her dakikada en yükseği al
+        val dakika = HashMap<Long, Double>()
+        kayitlar.forEach {
+            val bas = it.startTime.epochSecond / 60
+            val n = maxOf(1L, (it.endTime.epochSecond - 1) / 60 - bas + 1)
+            val pay = it.count.toDouble() / n
+            for (i in 0 until n) dakika.merge(bas + i, pay) { a, b -> maxOf(a, b) }
+        }
+        ret.put("cakisan", cakisan).put("tekilTahmin", Math.round(dakika.values.sum()))
+        // Son 7 günde hiç kayıt var mı (Samsung Health eşitlemesi gecikiyor olabilir)
+        val hafta = client.readRecords(ReadRecordsRequest(StepsRecord::class,
+            TimeRangeFilter.between(bugun.minusDays(6).atStartOfDay(), bugun.plusDays(1).atStartOfDay()))).records
+        ret.put("bugunKayit", kayitlar.size).put("kaynaklar", kaynak)
+            .put("haftaKayit", hafta.size)
+            .put("sonKayit", hafta.maxByOrNull { it.endTime }?.endTime?.toString())
     }
 
     /** Her gece verilen saatte gün sonu raporu bildirimi kurar (varsayılan 23:59). */
