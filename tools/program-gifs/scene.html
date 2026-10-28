@@ -4,7 +4,7 @@
    Figür body.js'te, pozlar poses.js'te. */
 import * as T from './vendor/three.module.js';
 import {V,buildFigure,polygonize,primBounds,setHL} from './body.js';
-import {walk,wallSlide,chinTuck,catCow,openBook,doorway,DOOR_E} from './poses.js';
+import {walk,wallSlide,chinTuck,catCow,openBook,doorway,DOOR_E,proneYTW,wallLateral,WALL_X,doorCurl,singleLegRDL,towelCurl} from './poses.js';
 
 const SIZE=540;
 const renderer=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
@@ -30,7 +30,14 @@ function box(p,s){
   const m=new T.Mesh(new T.BoxGeometry(...s),MAT.prop);m.position.set(...p);m.castShadow=m.receiveShadow=true;group.add(m);
   const o=new T.Mesh(new T.BoxGeometry(s[0]+.01,s[1]+.01,s[2]+.01),MAT.line);o.position.copy(m.position);group.add(o);
 }
-/* Her hareket: poz, hedef kaslar, kamera yönü, sahne nesneleri. */
+/* a'dan b'ye uzanan ince şerit (havlu gibi); w genişlik, t kalınlık. */
+function strip(a,b,w,t){
+  const d=new T.Vector3().subVectors(b,a),m=new T.Mesh(new T.BoxGeometry(w,d.length(),t),MAT.prop);
+  m.position.copy(a).addScaledVector(d,.5);m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.clone().normalize());
+  m.castShadow=m.receiveShadow=true;group.add(m);
+  const o=new T.Mesh(new T.BoxGeometry(w+.01,d.length()+.01,t+.01),MAT.line);o.position.copy(m.position);o.quaternion.copy(m.quaternion);group.add(o);
+}
+/* Her hareket: poz, hedef kaslar, kamera yönü, sahne nesneleri (pozu alır). */
 const EX={
   c003:{pose:catCow,hl:{abs:true,erect:true},view:[.2,.4,1]},
   c004:{pose:wallSlide,hl:{delt:true,traps:true},view:[.6,.2,1],props:()=>box([0,1.1,-.176],[1.25,2.2,.035])},
@@ -40,10 +47,18 @@ const EX={
   c009:{pose:doorway,hl:{pec:'R',delt:'R'},view:[.75,.22,1],
         props:()=>{box([DOOR_E.x-.075,1.06,DOOR_E.z+.06],[.07,2.12,.11]);box([DOOR_E.x+.34,2.13,DOOR_E.z+.06],[.9,.08,.11]);}},
   c010:{pose:p=>walk(p,{lift:.7,knee:42,swing:18,elbow:18,bob:.01}),hl:{},view:[.55,.16,1]},
+  c013:{pose:proneYTW,hl:{back:true,traps:true,delt:true},view:[-.35,1,.55],props:()=>box([.8,.012,0],[.24,.024,.3])},
+  c014:{pose:wallLateral,hl:{delt:'L'},view:[-.3,.15,1],props:()=>box([WALL_X+.0175,1.1,0],[.035,2.2,1])},
+  c015:{pose:doorCurl,hl:{bi:'L'},view:[1,.18,.4],
+        props:J=>box([J.grip.x-.02,1.06,J.grip.z+.05],[.08,2.12,.06])},
+  c017:{pose:singleLegRDL,hl:{ham:'R',erect:true},view:[1,.15,.4]},
+  c019:{pose:towelCurl,hl:{bi:true},view:[.75,.15,1],
+        props:J=>{const f=J.towel.foot;strip(J.towel.L,new T.Vector3(f.x+.04,f.y,f.z),.055,.004);strip(J.towel.R,new T.Vector3(f.x-.04,f.y,f.z),.055,.004);
+                  box([f.x,.003,f.z],[.11,.006,.12]);}},
 };
 function compose(id,t,mesh=true){
   scene.remove(group);group.traverse(o=>o.geometry?.dispose());group=new T.Group();scene.add(group);
-  const e=EX[id];setHL(e.hl);buildFigure(e.pose(t));e.props?.();
+  const e=EX[id],J=e.pose(t);setHL(e.hl);buildFigure(J);e.props?.(J);
   if(!mesh)return;
   const {geo,hull}=polygonize();
   const m=new T.Mesh(geo,MAT.body);m.castShadow=true;group.add(m);group.add(new T.Mesh(hull,MAT.line));

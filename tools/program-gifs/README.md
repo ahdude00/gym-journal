@@ -16,6 +16,11 @@ kullanılmaz.
 | c008 | yan yatışta open book | sağ göğüs ve ön omuz |
 | c009 | kapı eşiğinde göğüs esnetme | sağ göğüs ve ön omuz |
 | c010 | rahat yürüyüş | — |
+| c013 | yüzüstü Y-T-W kaldırış | üst sırt, trapez, arka omuz |
+| c014 | duvara izometrik yan kaldırış | sol omuz |
+| c015 | kapı kasası biceps curl | sol biceps |
+| c017 | tek bacak Romen deadlift | sağ arka bacak, bel kasları |
+| c019 | havluyla izometrik çekiç curl | biceps |
 
 ## Nasıl çalışır
 
@@ -25,7 +30,7 @@ kullanılmaz.
   köşe başına hesaplanan ortam gölgesi bunları koyulaştırır. Dış hatta ters
   yüzlü bir kabukla ince kontur çizilir.
 - `poses.js`: Her hareket 0–1 arası bir fazdan eklem noktalarını hesaplar.
-- `scene.html`: Işık, kamera, sahne nesneleri (duvar, kapı kasası, yastık) ve
+- `scene.html`: Işık, kamera, sahne nesneleri (duvar, kapı kasası, yastık, havlu) ve
   hangi kasların kırmızı olacağı. Kamera, hareketin bütün karelerini kapsar.
 - `render.cjs`: Kareleri yerel tarayıcıda 540×540 çizer; `pack.py` onları
   180×180'e küçültür, ortak paletle GIF'e çevirir ve ilk kareyi JPEG yapar.

@@ -132,3 +132,92 @@ export function doorway(u){
   return J;
 }
 
+
+/* ---- Ev günleri (c013-c015, c017, c019) ---- */
+const ayakta=()=>{const P=V([0,.955,0]),W=add(P,[0,.2,.004]),N=add(W,[0,.37,-.006]);return {P,W,N,F:[0,0,1]};};
+function standLegs(J,j,ank){
+  for(const side of['L','R']){
+    const hip=j.hip[side],ankle=V(ank[side]),f=footOf(ankle,[side==='L'?.12:-.12,-.3,1],[0,1,0]);
+    J.leg[side]={hip,knee:ik(hip,ankle,.45,.44,[0,0,1]),ankle,toe:f.toe,footUp:f.footUp,kneeFwd:[0,0,1],lat:j.latLo[side]};
+  }
+}
+function hangArm(J,j,side,down,fwd){
+  const s=side==='L'?1:-1,sh=j.sh[side],el=add(sh,mul(down,.3)).add(V([s*.025,0,0]));
+  const wr=add(el,mul(down,.27));
+  J.arm[side]={sh,el,wr,hand:V(down),palm:[-s,0,0],lat:j.latUp[side]};J.armFwd[side]=fwd||[0,0,1];
+}
+// Yüzüstü Y-T-W: faz 0 → Y, .5 → T, 1 → W (gidiş-dönüşte W'den Y'ye geri)
+export function proneYTW(u){
+  const P=[0,.115,0],W=[.2,.12,0],N=[.57,.125,0],F=[0,-1,0];
+  const j=joints(P,W,N,F,F),J={pelvis:P,waist:W,neck:N,fwdLo:F,fwdUp:F,arm:{},leg:{},armFwd:{}};
+  for(const side of['L','R']){
+    const z=side==='L'?-1:1,hip=j.hip[side],knee=V([hip.x-.45,.075,z*.1]),ankle=V([knee.x-.43,.065,z*.11]);
+    J.leg[side]={hip,knee,ankle,toe:add(ankle,[-.15,-.04,0]),footUp:[0,-1,0],kneeFwd:[0,-1,0],lat:j.latLo[side]};
+    const t=Math.min(1,u*2),w=Math.max(0,u*2-1);
+    const th=(u<.5?mix(38,90,t):mix(90,128,w))*deg, ph=(u<.5?th/deg:mix(90,40,w))*deg;
+    const sh=j.sh[side],ud=V([Math.cos(th),.2,z*Math.sin(th)]).normalize(),el=add(sh,mul(ud,.3));
+    const fd=V([Math.cos(ph),.12,z*Math.sin(ph)]).normalize(),wr=add(el,mul(fd,.27));
+    J.arm[side]={sh,el,wr,hand:fd,palm:[0,-1,0],lat:j.latUp[side]};J.armFwd[side]=[1,.4,0];
+  }
+  J.headUp=[1,0,0];J.headFwd=[0,-1,0];J.headC=V([.76,.135,0]);
+  return J;
+}
+// Duvara izometrik yan kaldırış (sol kol, duvar solda): gevşek → itiş
+export const WALL_X=.335;
+export function wallLateral(u){
+  const {P,W,N,F}=ayakta(),j=joints(P,W,N,F,F),J={pelvis:P,waist:W,neck:N,fwdLo:F,fwdUp:F,arm:{},leg:{},armFwd:{}};
+  standLegs(J,j,{L:[.12,.075,.02],R:[-.12,.075,.02]});
+  const a=mix(4,15,u)*deg,sh=j.sh.L,el=add(sh,[.3*Math.sin(a),-.3*Math.cos(a),.0]);
+  const fd=V([Math.sin(a)*.6,-Math.cos(25*deg),Math.sin(25*deg)]).normalize();
+  J.arm.L={sh,el,wr:add(el,mul(fd,.27)),hand:fd,palm:[-1,0,0],lat:j.latUp.L};J.armFwd.L=[0,0,1];
+  hangArm(J,j,'R',V([-.04,-1,.02]).normalize());
+  J.headUp=[0,1,0];J.headFwd=[0,0,1];J.headC=add(N,[0,.175,.025]);
+  return J;
+}
+// Kapı kasası biceps curl (sol el kasada, avuç yukarı): geriye yaslanma → çekiş
+export function doorCurl(u){
+  const A=V([0,.075,0]),govde=b=>{
+    const ax=V([0,Math.cos(b),-Math.sin(b)]),F=[0,Math.sin(b),Math.cos(b)];
+    const P=add(A,mul(ax,.88)),W=add(P,mul(ax,.2)),N=add(W,mul(ax,.37));
+    return {ax,F,P,W,N,j:joints(P,W,N,F,F)};
+  };
+  /* El kasayı gövdenin ortasında tutar; ayaklar kasanın iki yanında. */
+  const b0=26*deg,g0=govde(b0),sh0=g0.j.sh.L,H=V([.02,sh0.y-.035,sh0.z+.54]);
+  const g=govde(mix(26,14,u)*deg),J={pelvis:g.P,waist:g.W,neck:g.N,fwdLo:g.F,fwdUp:g.F,arm:{},leg:{},armFwd:{}};
+  standLegs(J,g.j,{L:[.1,.075,0],R:[-.1,.075,0]});
+  const sh=g.j.sh.L,el=ik(sh,H,.3,.27,[0,-1,-.2]);
+  J.arm.L={sh,el,wr:H,hand:[0,.25,1],palm:[0,1,0],lat:g.j.latUp.L};J.armFwd.L=[0,1,0];
+  hangArm(J,g.j,'R',mul(g.ax,-1));
+  const hu=lerp(g.ax,[0,1,0],.45).normalize(),hf=V(g.F).addScaledVector(hu,-V(g.F).dot(hu)).normalize();
+  J.headUp=hu;J.headFwd=hf;J.headC=add(g.N,mul(hu,.175)).addScaledVector(hf,.025);
+  J.grip=H;
+  return J;
+}
+// Tek bacak Romen deadlift (sağ bacak destek, sol bacak geriye)
+export function singleLegRDL(u){
+  const a=mix(4,78,u)*deg,d=V([0,Math.cos(a),Math.sin(a)]),F=[0,-Math.sin(a),Math.cos(a)];
+  const P=V([0,mix(.95,.9,u),-mix(0,.13,u)]),W=add(P,mul(d,.2)),N=add(W,mul(d,.37));
+  const j=joints(P,W,N,F,F),J={pelvis:P,waist:W,neck:N,fwdLo:F,fwdUp:F,arm:{},leg:{},armFwd:{}};
+  {const hip=j.hip.R,ankle=V([-.1,.075,.02]),f=footOf(ankle,[-.08,-.3,1],[0,1,0]);
+   J.leg.R={hip,knee:ik(hip,ankle,.45,.44,[0,0,1]),ankle,toe:f.toe,footUp:f.footUp,kneeFwd:[0,0,1],lat:j.latLo.R};}
+  {const b=mix(8,82,u)*deg,dir=V([0,-Math.cos(b),-Math.sin(b)]),front=V([0,-Math.sin(b),Math.cos(b)]);
+   const hip=j.hip.L,knee=add(hip,mul(dir,.45)),ankle=add(knee,mul(dir,.44)).addScaledVector(front,.03);
+   J.leg.L={hip,knee,ankle,toe:add(ankle,mul(front.clone().addScaledVector(dir,.4).normalize(),.16)),footUp:mul(dir,-1),kneeFwd:front,lat:j.latLo.L};}
+  for(const side of['L','R'])hangArm(J,j,side,V([0,-1,.08]).normalize());
+  J.headUp=d;J.headFwd=F;J.headC=add(N,mul(d,.175)).addScaledVector(V(F),.025);
+  return J;
+}
+// Havluyla izometrik çekiç curl: sağ ayak havluda, dirsekler 90°
+export function towelCurl(u){
+  const {P,W,N,F}=ayakta(),j=joints(P,W,N,F,F),J={pelvis:P,waist:W,neck:N,fwdLo:F,fwdUp:F,arm:{},leg:{},armFwd:{}};
+  standLegs(J,j,{L:[.12,.075,-.1],R:[-.1,.075,.14]});
+  const a=mix(-14,2,u)*deg;
+  for(const side of['L','R']){
+    const s=side==='L'?1:-1,sh=j.sh[side],el=add(sh,[s*.02,-.3,.035]);
+    const fd=V([-s*.12,Math.sin(a),Math.cos(a)]).normalize(),wr=add(el,mul(fd,.27));
+    J.arm[side]={sh,el,wr,hand:fd,palm:[-s,0,0],lat:j.latUp[side]};J.armFwd[side]=[0,0,1];
+  }
+  J.headUp=[0,1,0];J.headFwd=[0,-.12,1];J.headC=add(N,[0,.175,.025]);
+  J.towel={L:add(J.arm.L.wr,mul(J.arm.L.hand,.05)),R:add(J.arm.R.wr,mul(J.arm.R.hand,.05)),foot:V([-.1,.012,.2])};
+  return J;
+}

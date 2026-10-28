@@ -21,7 +21,7 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>state.programs.length);await page.evaluate(()=>navigator.serviceWorker.ready);await page.waitForFunction(()=>navigator.serviceWorker.controller);
     // New media must be available offline on first use, not just after viewing.
     await context.setOffline(true);await page.reload();await page.waitForFunction(()=>state.programs.length);
-    for(const id of ['c003','c004','c005','c006','c007','c008','c009','c010']){
+    for(const id of ['c003','c004','c005','c006','c007','c008','c009','c010','c013','c014','c015','c017','c019']){
       await page.evaluate(id=>{state.openEx=id;renderExDetay();},id);
       await page.waitForFunction(()=>document.querySelector('.media img')?.complete&&document.querySelector('.media img').naturalWidth===180);
       assert(!await page.evaluate(()=>document.documentElement.scrollWidth>390));

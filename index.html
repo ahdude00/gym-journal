@@ -708,10 +708,10 @@ const ekipTR  = q => EKIP[q] || q;
 function exImg(e){ return "images/" + (e.mediaId||e.i) + "-" + e.m + ".jpg"; }
 function exGif(e){ return "videos/" + (e.mediaId||e.i) + "-" + e.m + ".gif"; }
 function exAd(id){ return EX[id] ? EX[id].n : id; }
-/* Şu an kayıtların hepsinde medya var (c003-c010 dahil: onlar
-   tools/program-gifs/ ile çizildi). Aşağıdaki yer tutucu dalı bu
-   yüzden çalışmıyor; medyasız bir kayıt eklenirse diye duruyor, yoksa yol
-   "images/undefined-undefined.jpg" olur ve kırık görsel çıkar. */
+/* Şu an kayıtların hepsinde medya var (c003-c019 dahil: dataset'te
+   karşılığı olmayanlar tools/program-gifs/ ile çizildi). Aşağıdaki yer
+   tutucu dalı bu yüzden çalışmıyor; medyasız bir kayıt eklenirse diye
+   duruyor, yoksa yol "images/undefined-undefined.jpg" olur ve kırık görsel çıkar. */
 function medyaVar(e){ return !!(e && e.m); }
 function basHarf(e){ return String((e&&e.n)||"?").trim().charAt(0).toUpperCase(); }
 /* Kucuk kare (liste satirlari, dinlenme onizlemesi). */
@@ -851,7 +851,42 @@ const OVERLAY = {
     hatalar:["Kalçanın yukarı fırlaması veya belin çökmesi.","Nefesi tutmak.","Boynu yukarı kaldırmak — bak yere."] },
   "c002":{ tip:"vucut", oneri:{tekrar:8},
     ipucu:"Zorlaşsın istersen ayaklarını sandalyeye koy.",
-    hatalar:["Kalçayı düşürüp normal şınava çevirmek.","Dirsekleri tamamen yana açmak.","Boynu öne uzatıp kambur kalmak."] }
+    hatalar:["Kalçayı düşürüp normal şınava çevirmek.","Dirsekleri tamamen yana açmak.","Boynu öne uzatıp kambur kalmak."] },
+
+  /* ---- EV GÜNLERİ (ekipmansız) ---- */
+  "c011":{ tip:"vucut", oneri:{tekrar:8},
+    ipucu:"Barfiksin ev karşılığı. Masanın sağlam olduğundan emin ol; zorlaştırmak için bacakları düzle, sonra ayakları sandalyeye koy.",
+    hatalar:["Kalçayı düşürüp yarım tekrar yapmak.","Omuzları kulaklara doğru çekmek.","Aşağıda kontrolü bırakıp düşmek."] },
+  "c012":{ tip:"vucut", oneri:{tekrar:10},
+    ipucu:"Tek kol dambıl kürek yerine. Ayaklar kasaya yaklaştıkça zorlaşır.",
+    hatalar:["Gövdeyi çevirerek çekmek.","Dirseği yana açmak.","Kalçayı kırıp gövdeyi bükmek."] },
+  "c013":{ tip:"vucut", oneri:{tekrar:6},
+    ipucu:"Ters kelebek ve face pull yerine. Tekrar her harften biri; Y, T ve W'yi sırayla yap, her birinde 2 sn tut.",
+    hatalar:["Beli kavislendirip yükü bele almak.","Omuzları kulağa doğru kaldırmak.","Başı yerden kaldırmak."] },
+  "c014":{ tip:"sure", oneri:{tekrar:30},
+    ipucu:"Lateral raise yerine. Süre her kol için; tam güçle değil, yüzde 70-80 ile it.",
+    hatalar:["Omuzu kulağa doğru kaldırmak.","Gövdeyi duvara yaslamak.","Nefesi tutmak."] },
+  "c015":{ tip:"vucut", oneri:{tekrar:10},
+    ipucu:"Dambıl curl yerine. Üst kol sabit; çekişi sırt değil biceps yapsın.",
+    hatalar:["Dirseği geriye çekip kürek çekişe çevirmek.","Kalçayı kırmak.","İnişte kendini bırakmak."] },
+  "c016":{ tip:"vucut", oneri:{tekrar:10},
+    ipucu:"Goblet squat yerine. Sandalyeyi duvara daya ki kaymasın.",
+    hatalar:["Ön dizin içeri çökmesi.","Ön topuğun yerden kalkması.","Gövdeyi öne yıkmak."] },
+  "c017":{ tip:"vucut", oneri:{tekrar:10},
+    ipucu:"Romen deadlift yerine. Kalçadan bük; belinde hissedersen dur.",
+    hatalar:["Sırtı yuvarlamak.","Kalçayı yana açıp gövdeyi çevirmek.","Destek dizini kilitlemek."] },
+  "c018":{ tip:"vucut", oneri:{tekrar:6},
+    ipucu:"Omuz press yerine, pike şınavın zor hali. Sandalye sağlam olsun.",
+    hatalar:["Kalçayı düşürüp şınava çevirmek.","Dirsekleri tamamen yana açmak.","Başı kontrolsüz yere indirmek."] },
+  "c019":{ tip:"sure", oneri:{tekrar:20},
+    ipucu:"Çekiç curl yerine. Dirsek açısı süre boyunca sabit kalsın.",
+    hatalar:["Gövdeyi geriye atarak çekmek.","Omuzları kaldırmak.","Nefesi tutmak."] },
+  "c020":{ tip:"vucut", oneri:{tekrar:10},
+    ipucu:"Baş üstü triceps ve skull crusher yerine. Yüzey alçaldıkça zorlaşır.",
+    hatalar:["Dirsekleri yana açmak.","Hareketi şınava çevirmek — üst kol sabit.","Beli çökertmek."] },
+  "0283":{ tip:"vucut", oneri:{tekrar:8},
+    ipucu:"Dar şınav, triceps'e yükler. Zor gelirse dizler yerde yap.",
+    hatalar:["Dirsekleri yana açmak.","Kalçanın çökmesi.","Yarım tekrar yapmak."] }
 };
 function ov(id){ return OVERLAY[id] || null; }
 /* Mola kutusunu okur. 0 geçerli bir değer olduğu için "||" ile varsayılana
@@ -920,6 +955,17 @@ function kapanis(){
   return [{ex:"c005",set:2,tekrar:"8",mola:20,tip:"vucut"}];
 }
 function gun(id,ad,govde){ return {id, ad, hareketler:[...acilis(), ...govde, ...kapanis()]}; }
+/* Ekipmansız ev günü: aynı numaralı salon gününün yerine geçer (ev:"1" gibi).
+   Ana sırada ayrıca yer almaz; yapılınca o gün yapılmış sayılır. Isınmada
+   eliptik yerine ev içinde yürüme var. */
+function evGun(no,ad,govde){
+  return {id:"ev"+no, ev:no, ad,
+    not:"Ekipmansız · Gün "+no+"’in yerine sayılır. Başlamadan masa, sandalye ve kapı kasasının sağlam olduğundan emin ol. Tekrar aralığının üstüne çıkınca hareketi zorlaştır: 3 sn iniş, açıyı değiştir, tek tarafa geç.",
+    hareketler:[
+      {ex:"c006",set:1,tekrar:"300",mola:20,tip:"sure"},
+      ...acilis().slice(1), ...govde, ...kapanis()
+    ]};
+}
 
 /* Omuz, sırt ve kol öncelikli üç ana gün; pazar ana döngüye dahil değil.
    Çalışma setleri: 17 / 21 / 19. Isınma ve kapanış ayrıca eklenir. */
@@ -959,15 +1005,52 @@ function varsayilanProgramlar(){
         {ex:"c004",set:2,tekrar:"8",mola:30,tip:"vucut"},
         {ex:"c009",set:2,tekrar:"20-30",mola:30,tip:"sure"},
         {ex:"c010",set:1,tekrar:"540",mola:0,tip:"sure"}
-      ]}
+      ]},
+    evGun("1","Ev Gün 1 — Sırt, omuz ve biceps",[
+      {ex:"c011",set:3,tekrar:"6-12", mola:120,tip:"vucut"},
+      {ex:"c012",set:3,tekrar:"10-12",mola:90, tip:"vucut"},
+      {ex:"c013",set:3,tekrar:"6",    mola:60, tip:"vucut"},
+      {ex:"c014",set:3,tekrar:"30-45",mola:60, tip:"sure"},
+      {ex:"c015",set:3,tekrar:"10-15",mola:60, tip:"vucut"},
+      {ex:"0276",set:2,tekrar:"8",    mola:45, tip:"vucut"}]),
+    evGun("2","Ev Gün 2 — Bacak, itiş, kol",[
+      {ex:"c016",set:3,tekrar:"8-12", mola:90, tip:"vucut"},
+      {ex:"c017",set:3,tekrar:"8-12", mola:90, tip:"vucut"},
+      {ex:"c002",set:3,tekrar:"6-10", mola:120,tip:"vucut"},
+      {ex:"0662",set:3,tekrar:"8-15", mola:90, tip:"vucut"},
+      {ex:"c014",set:3,tekrar:"30-45",mola:60, tip:"sure"},
+      {ex:"c019",set:2,tekrar:"20-30",mola:60, tip:"sure"},
+      {ex:"c020",set:2,tekrar:"8-12", mola:75, tip:"vucut"},
+      {ex:"c001",set:2,tekrar:"30-40",mola:45, tip:"sure"}]),
+    evGun("3","Ev Gün 3 — Omuz, sırt ve triceps",[
+      {ex:"c018",set:3,tekrar:"5-8",  mola:120,tip:"vucut"},
+      {ex:"c011",set:3,tekrar:"6-12", mola:120,tip:"vucut"},
+      {ex:"c012",set:3,tekrar:"10-12",mola:90, tip:"vucut"},
+      {ex:"0662",set:2,tekrar:"8-12", mola:90, tip:"vucut"},
+      {ex:"c014",set:3,tekrar:"30-45",mola:60, tip:"sure"},
+      {ex:"c013",set:2,tekrar:"6",    mola:60, tip:"vucut"},
+      {ex:"0283",set:3,tekrar:"6-12", mola:60, tip:"vucut"},
+      {ex:"0705",set:2,tekrar:"20-30",mola:45, tip:"sure"}])
   ];
 }
+/* Sıraya ve haftalık hedefe giren günler: opsiyonel ve ev günleri hariç. */
+function anaProgramlar(){ return state.programs.filter(p=>!p.opsiyonel && !p.ev); }
 
 /* v5: 60 dk hedefli ana günler ve opsiyonel pazar. Özel programlar ve
-   geçmiş seans kopyaları korunur; varsayılan programlar güncellenir. */
-const PROGRAM_SURUM = 5;
+   geçmiş seans kopyaları korunur; varsayılan programlar güncellenir.
+   v6: yalnızca ev günleri eklenir; ana günlerdeki düzenlemelere dokunulmaz. */
+const PROGRAM_SURUM = 6;
 function programlariTazele(){
-  if((state.programSurum||1) >= PROGRAM_SURUM) return false;
+  const surum = state.programSurum||1;
+  if(surum >= PROGRAM_SURUM) return false;
+  if(surum >= 5){
+    const var_ = new Set(state.programs.map(p=>p.id));
+    varsayilanProgramlar().filter(p=>p.ev && !var_.has(p.id)).forEach(p=>{
+      p.duzenlendi=Date.now(); state.programs.push(p);
+    });
+    state.programSurum = PROGRAM_SURUM;
+    return true;
+  }
   const yeni = varsayilanProgramlar();
   yeni.forEach(p=>{ p.duzenlendi=Date.now(); });
   const eskiAB = state.programs.length===2
@@ -1093,17 +1176,23 @@ function haftaBasi(d){ const x=new Date(d); x.setDate(x.getDate()-((x.getDay()+6
 function progById(id){ return state.programs.find(p=>p.id===id)||null; }
 function yeniProgId(){ return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
 function progOzet(p){
-  return (p.opsiyonel?"Opsiyonel · ":"")+p.hareketler.length+" hareket \u00b7 "
+  return (p.opsiyonel?"Opsiyonel · ":"")+(p.ev?"Evde · ":"")+p.hareketler.length+" hareket \u00b7 "
        + p.hareketler.reduce((a,h)=>a+(+h.set||0),0)+" set";
 }
 function progKisa(ad){ return String(ad||"").split("\u2014")[0].trim()||"Program"; }
-/* Opsiyonel seanslar ana gün sırasını değiştirmez. */
+/* Opsiyonel seanslar ana gün sırasını değiştirmez; ev günü ise yerine
+   geçtiği ana gün yapılmış gibi sırayı ilerletir. */
+function anaGunId(s){
+  const pid=(s.program&&s.program.id)||s.gun;
+  const ev=(s.program&&s.program.ev) || (progById(pid)||{}).ev;
+  return ev || pid;
+}
 function sonrakiProgram(){
-  const ana=state.programs.filter(p=>!p.opsiyonel);
+  const ana=anaProgramlar();
   if(!ana.length) return null;
-  const son=[...state.sessions].reverse().find(s=>ana.some(p=>p.id===((s.program&&s.program.id)||s.gun)));
+  const son=[...state.sessions].reverse().find(s=>ana.some(p=>p.id===anaGunId(s)));
   if(!son) return ana[0];
-  const pid=(son.program&&son.program.id)||son.gun;
+  const pid=anaGunId(son);
   const i=ana.findIndex(p=>p.id===pid);
   return ana[(i+1)%ana.length];
 }
@@ -1335,7 +1424,7 @@ function renderHome(){
   const prog=state.active?{...state.active.program,hareketler:state.active.hareketler||[]}:sonrakiProgram();
   const hb=haftaBasi(keyToDate(bugun)), hs=new Date(hb.getTime()+7*864e5);
   const buHafta=state.sessions.filter(s=>{ const x=new Date(s.tarih); return x>=hb&&x<hs&&gunKey(x)<=bugun; }).length;
-  const haftaHedef=Math.max(1,state.programs.filter(p=>!p.opsiyonel).length);
+  const haftaHedef=Math.max(1,anaProgramlar().length);
   /* Seçilen günün sonuna kadarki en son antrenman */
   const oncekiler=state.sessions.filter(s=>gunKey(new Date(s.tarih))<=bugun);
   const sonAnt=oncekiler.length?oncekiler[oncekiler.length-1]:null;
@@ -2424,7 +2513,7 @@ function renderWorkout(){
       const d=new Date(hb.getTime()+i*864e5), k=gunKey(d);
       return `<div class="${k===bugun?"bugun":""} ${yapilan.has(k)?"yapildi":""}"><small>${GUNLER[d.getDay()]}</small><b>${d.getDate()}</b></div>`;
     }).join("");
-    const haftaHedef=Math.max(1,state.programs.filter(p=>!p.opsiyonel).length);
+    const haftaHedef=Math.max(1,anaProgramlar().length);
     document.getElementById("ust").textContent=`Bu hafta ${yapilan.size} / ${haftaHedef} tamamlandı`;
     view.innerHTML=`
       <div class="gunserit" aria-label="Bu hafta">${serit}</div>
@@ -2448,7 +2537,7 @@ function renderWorkout(){
       ${digerleri.length?`<h3 class="bolumbas">Diğer programlar</h3>
       <div class="card" style="padding:6px 18px">
         ${digerleri.map(p=>`<div class="exitem">
-          <span class="progbas ${p.opsiyonel?"ops":""}">${p.opsiyonel?"+":(String(progKisa(p.ad)).match(/\d+/)||[progKisa(p.ad).charAt(0)])[0]}</span>
+          <span class="progbas ${p.opsiyonel||p.ev?"ops":""}">${p.opsiyonel?"+":p.ev?"E"+p.ev:(String(progKisa(p.ad)).match(/\d+/)||[progKisa(p.ad).charAt(0)])[0]}</span>
           <span class="nm"><b>${progBaslik(p.ad)}</b><span class="muted small">${progOzet(p)}</span></span>
           <button class="minibtn" data-start="${p.id}">Başlat</button></div>`).join("")}
       </div>`:""}
@@ -2681,7 +2770,7 @@ function startSession(prog){
   }));
   state.active={
     id:"s"+Date.now(), tarih:new Date().toISOString(),
-    gun:prog.id, program:{id:prog.id,ad:prog.ad,not:prog.not,opsiyonel:prog.opsiyonel}, hareketler,
+    gun:prog.id, program:{id:prog.id,ad:prog.ad,not:prog.not,opsiyonel:prog.opsiyonel,ev:prog.ev}, hareketler,
     baslangic:Date.now(), sure:0,
     /* Gecen antrenmanda ne yaptiysan onunla basla: set sayisi, kilo ve
        tekrar set set birebir tasinir. Programi o antrenmandan SONRA

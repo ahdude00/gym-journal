@@ -25,6 +25,11 @@ const LISTE={
   c008:gidisDonus(130),   // open book
   c009:gidisDonus(130),   // kapı eşiğinde göğüs esnetme
   c010:dongu(150),        // sakin yürüyüş
+  c013:gidisDonus(160),   // yüzüstü Y-T-W (Y → T → W → T → Y)
+  c014:gidisDonus(120),   // duvara izometrik yan kaldırış
+  c015:gidisDonus(120),   // kapı kasası biceps curl
+  c017:gidisDonus(130),   // tek bacak Romen deadlift
+  c019:gidisDonus(120),   // havluyla izometrik çekiç curl
 };
 const server=http.createServer((req,res)=>{
   const target=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);

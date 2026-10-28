@@ -11,12 +11,12 @@
    Kareleri çıkaran betik: tools/ozel-gif-uret.py
    Medya © Gym visual — dataset medyasından türetilmiştir, atıf aynen geçerli.
 
-   B) Özgün animasyonlar (c003, c004, c005, c006, c008, c009, c010)
+   B) Özgün animasyonlar (c003-c006, c008-c010, c013-c015, c017, c019)
    Dataset'te karşılığı olmayan, poz karesi de çıkarılamayan hareketler.
    Dataset üslubuna benzeyen anatomik bir 3B figürle yerelde çizildi:
    tools/program-gifs/ (Three.js + Surface Nets). Bir görsel üretme
    servisi kullanılmadı ve dataset medyasından türetilmedi — Gym visual
-   atıfı bu yedi dosya için geçerli DEĞİLDİR.
+   atıfı bu dosyalar için geçerli DEĞİLDİR.
 
    Görseller: images/{id}-{m}.jpg ve videos/{id}-{m}.gif
    Bu dosya data/exercises.js'ten SONRA yüklenir ve ona eklenir;
@@ -118,3 +118,20 @@ for (const id of ["c006","c008","c009","c010"]) {
 }
 const wall=window.EXDATA.find(x=>x.i==="c007");
 if(wall){wall.m="LEH9jxP";wall.mediaId="0659";}
+
+/* Ekipmansız ev günleri (Ev Gün 1-3): dambıl, bar, bench ve lastik yerine
+   masa, sandalye, kapı kasası, duvar ve havlu. Görseli uyan dataset
+   hareketinin medyası mediaId ile kullanılıyor; uyan görseli olmayanlar
+   (c013, c014, c015, c017, c019) özgün animasyon (yukarıdaki not B). */
+window.EXDATA.push(
+{"i":"c011","n":"Masa altı ters kürek","c":"back","q":"body weight","t":"upper back","s":["lats","biceps"],"m":"VPPtusI","mediaId":"2300","d":["Sağlam, ağır bir masanın altına sırtüstü uzan; göğsün masa kenarının hizasında olsun.","Masa kenarını omuz genişliğinden biraz geniş, avuçlar aşağı bakacak şekilde tut.","Kalçayı kaldır: omuzdan topuğa düz bir çizgi. Kolaysa dizleri bük, zorsa bacakları düzle.","Kürekleri sıkarak göğsünü masaya çek, tepede 1 saniye bekle.","3 saniyede kontrollü in. Başlamadan önce masanın devrilmeyeceğinden emin ol."]},
+{"i":"c012","n":"Kapı kasası tek kol kürek","c":"back","q":"body weight","t":"upper back","s":["lats","biceps"],"m":"O4oIqQD","mediaId":"3161","d":["Açık bir kapının kasasına yan değil, karşıdan dur; bir elinle kasayı göğüs hizasında kavra.","Ayaklarını kasaya yaklaştır ve kolun düzleşene kadar geriye yaslan; gövde düz kalsın.","Dirseği gövdenin yanından geriye çekerek kendini kasaya doğru çek.","Tepede kürek kemiğini 1 saniye sık, yavaşça geri yaslan.","Ayaklar kasaya ne kadar yakınsa hareket o kadar zorlaşır. Diğer kolla tekrarla."]},
+{"i":"c013","m":"anim-v2","n":"Yüzüstü Y-T-W kaldırış","c":"shoulders","q":"body weight","t":"upper back","s":["delts","traps"],"d":["Yere yüzüstü uzan, alnını küçük bir havluya koy; boyun nötr kalsın.","Y: Kolları baş üstünde çapraz uzat, başparmaklar yukarı; kolları yerden kaldır, 2 saniye tut.","T: Kolları yanlara aç, aynı şekilde kaldır ve 2 saniye tut.","W: Dirsekleri bük, kürekleri aşağı ve geriye sıkarak kolları kaldır, 2 saniye tut.","Her harften istenen sayı kadar yap. Beli kavislendirme; yükü kürekler alsın."]},
+{"i":"c014","m":"anim-v2","n":"Duvara izometrik yan kaldırış","c":"shoulders","q":"body weight","t":"delts","s":["traps"],"d":["Duvarın yanına dur; duvara yakın kolun dirseği hafif bükülü, kolun dışı duvarda.","Kolu yana kaldırmaya çalışır gibi duvarı yana doğru it; gövde duvara yaslanmasın.","Kuvvetin yaklaşık yüzde 70-80'i ile it, süre boyunca bırakma.","Omuzu kulağa doğru kaldırma; normal nefes al.","Süre bitince diğer kola geç. Bir set iki kolu kapsar."]},
+{"i":"c015","m":"anim-v2","n":"Kapı kasası biceps curl","c":"upper arms","q":"body weight","t":"biceps","s":["forearms"],"d":["Kapı kasasını tek elle, avucun yukarı bakacak şekilde göğüs hizasında tut.","Ayaklarını kasaya yaklaştır ve kolun düz olacak şekilde geriye yaslan.","Üst kolunu sabit tutup yalnızca dirseği bükerek kendini kasaya doğru çek.","Tepede biceps'i sık, 3 saniyede kontrollü geri yaslan.","Ayaklar kasaya yaklaştıkça zorlaşır. Diğer kolla tekrarla."]},
+{"i":"c016","n":"Bulgar split squat (sandalyeyle)","c":"upper legs","q":"body weight","t":"quads","s":["glutes","hamstrings"],"m":"9E25EOx","mediaId":"2368","d":["Duvara dayalı bir sandalyenin önünde dur, bir ayağının üstünü arkadaki sandalyeye koy.","Ön ayak sandalyeden yaklaşık iki adım önde olsun; gövde dik.","Ön diz ayak ucu yönünde kalarak, arka diz yere yaklaşana kadar in.","Ön topuktan iterek yukarı çık.","İstenen tekrar kadar yap, sonra bacak değiştir."]},
+{"i":"c017","m":"anim-v2","n":"Tek bacak Romen deadlift","c":"upper legs","q":"body weight","t":"hamstrings","s":["glutes","spine"],"d":["Tek bacak üstünde dur, diz hafif bükülü; dengen için bir elinle duvara hafifçe dokun.","Kalçadan menteşe yap: gövde öne eğilirken boştaki bacak düz şekilde geriye uzansın.","Sırt düz, kalçalar yere paralel kalsın; dönmesin.","Arka bacakta gerilmeyi hissedince dur, kalçayı sıkarak dik pozisyona dön.","Belinde hissedersen hareket aralığını küçült. Diğer bacakla tekrarla."]},
+{"i":"c018","n":"Yükseltilmiş pike şınav","c":"shoulders","q":"body weight","t":"delts","s":["triceps","pectorals"],"m":"custom","mediaId":"c002","d":["Ayaklarını sağlam bir sandalyeye koy, ellerini yere omuzdan biraz geniş yerleştir.","Kalçayı yukarı kaldır; gövden ellerin üstünde mümkün olduğunca dik olsun.","Başını ellerinin biraz önüne doğru, kontrollü indir.","Aşağıda 1 saniye dur, iterek başlangıca dön.","Zor gelirse ayakları yere indir ve normal pike şınav yap."]},
+{"i":"c019","m":"anim-v2","n":"Havluyla izometrik çekiç curl","c":"upper arms","q":"body weight","t":"biceps","s":["forearms"],"d":["Havlunun ortasına bir ayağınla bas; iki ucunu avuçlar birbirine bakacak şekilde tut.","Dirsekleri yaklaşık 90 derece bük, üst kollar gövdenin yanında.","Havluyu yukarı çekmeye çalış; havlu gergin, dirsek açısı sabit kalsın.","Süre boyunca çekmeye devam et, nefesini tutma.","Gövdeyi geriye atarak destek alma."]},
+{"i":"c020","n":"Masa kenarı triceps extension","c":"upper arms","q":"body weight","t":"triceps","s":[],"m":"s0HKO2I","mediaId":"1771","d":["Ellerini sağlam bir masa ya da tezgah kenarına omuz genişliğinde koy, geriye adım at; vücut düz bir çizgi.","Üst kollar sabit kalarak dirsekleri bük ve alnını ellerinin altına doğru indir.","Dirsekler öne baksın, yana açılmasın.","Yalnızca dirsekten iterek kolları düzleştir.","Ayakları geriye aldıkça ya da daha alçak bir yüzey kullandıkça zorlaşır."]}
+);
