@@ -135,3 +135,8 @@ window.EXDATA.push(
 {"i":"c019","m":"anim-v2","n":"Havluyla izometrik çekiç curl","c":"upper arms","q":"body weight","t":"biceps","s":["forearms"],"d":["Havlunun ortasına bir ayağınla bas; iki ucunu avuçlar birbirine bakacak şekilde tut.","Dirsekleri yaklaşık 90 derece bük, üst kollar gövdenin yanında.","Havluyu yukarı çekmeye çalış; havlu gergin, dirsek açısı sabit kalsın.","Süre boyunca çekmeye devam et, nefesini tutma.","Gövdeyi geriye atarak destek alma."]},
 {"i":"c020","n":"Masa kenarı triceps extension","c":"upper arms","q":"body weight","t":"triceps","s":[],"m":"s0HKO2I","mediaId":"1771","d":["Ellerini sağlam bir masa ya da tezgah kenarına omuz genişliğinde koy, geriye adım at; vücut düz bir çizgi.","Üst kollar sabit kalarak dirsekleri bük ve alnını ellerinin altına doğru indir.","Dirsekler öne baksın, yana açılmasın.","Yalnızca dirsekten iterek kolları düzleştir.","Ayakları geriye aldıkça ya da daha alçak bir yüzey kullandıkça zorlaşır."]}
 );
+
+/* Barfikste asılı kalma (dead hang). Dataset'te karşılığı yok; barfiks
+   GIF'i çekiş gösterdiği için yanıltıcı olurdu, o yüzden medyasız —
+   antrenman ekranında baş harfli yer tutucu görünür. */
+window.EXDATA.push({"i":"c021","n":"barfikste asılı kalma (dead hang)","c":"back","q":"body weight","t":"forearms","s":["lats","shoulders"],"d":["Barı omuz genişliğinde, avuçlar öne bakacak şekilde kavra.","Ayaklarını yerden kes; kollar düz, vücut sakin assın.","Omuzları kulaklardan hafif uzak tut, sallanma.","Normal nefes al. Kavrama bırakmadan hemen önce in."]});

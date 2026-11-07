@@ -554,6 +554,18 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
 .satirlink{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:0 18px;
   background:var(--panel);border-radius:22px;color:var(--text);font-size:15px;font-weight:700;text-align:left;margin-bottom:12px}
 .satirlink span{flex:1}
+/* Antrenman: alternatif hareket satırı ve kaydırınca kartın kayarak gelmesi */
+.altgec{display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;padding:10px 14px;
+  border:1.5px dashed var(--line);border-radius:14px;background:transparent;color:var(--text);text-align:left;font:inherit}
+.altgec .simge{font-size:20px;line-height:1;color:var(--accent);flex:none}
+.altgec span.yazi{flex:1;min-width:0}
+.altgec small{display:block;color:var(--dim);font-size:12px;font-weight:600}
+.altgec b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.altgec.altta{border-style:solid;border-color:var(--accent);background:var(--accent-soft)}
+@keyframes kaySag{from{transform:translateX(-28px);opacity:.35}to{transform:none;opacity:1}}
+@keyframes kaySol{from{transform:translateX(28px);opacity:.35}to{transform:none;opacity:1}}
+.kaySag{animation:kaySag .22s ease-out}.kaySol{animation:kaySol .22s ease-out}
+@media (prefers-reduced-motion:reduce){.kaySag,.kaySol{animation:none}}
 .satirlink svg,.ok{width:18px;height:18px;fill:none;stroke:var(--dim);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:none}
 /* Antrenman sekmesi: haftanın günleri şeridi */
 .gunserit{display:flex;gap:6px;margin-bottom:12px}
@@ -669,6 +681,39 @@ nav button.on i{background:var(--accent-soft);color:var(--accent)}
      180×180 sınırı ve atıf zorunluluğu için bkz. NOTICE.md
    ========================================================== */
 const RAW = Array.isArray(window.EXDATA) ? window.EXDATA : [];
+/* Programdaki hareketlerin kısa, genel İngilizce adları. Dataset adları
+   uzun ve teknik ("dumbbell seated shoulder press (parallel grip)"); salonda
+   herkesin kullandığı adlar ekranda daha kolay okunuyor. Asıl ad e.tam'da
+   kalıyor ve katalog aramasında hâlâ bulunuyor ("lever", "sled" gibi). */
+const KISA_AD = {
+  // ısınma
+  "2141":"Elliptical", "3666":"Treadmill Walk", "c004":"Wall Slide", "c006":"Easy Walk",
+  // itiş
+  "0577":"Chest Press", "0289":"DB Bench Press", "0025":"Bench Press",
+  "0314":"Incline DB Press", "0047":"Incline Bench Press",
+  "0334":"Lateral Raise", "0178":"Cable Lateral Raise",
+  "0359":"Rear Delt Fly", "0225":"Cable Rear Delt Fly", "0602":"Reverse Pec Deck", "0383":"Rear Delt Fly (Standing)",
+  "0404":"DB Shoulder Press", "0426":"Standing DB Press",
+  "0201":"Triceps Pushdown", "0200":"Rope Pushdown", "0194":"Cable Overhead Extension",
+  "2189":"Overhead DB Extension", "0351":"Skull Crusher",
+  // çekiş
+  "0652":"Pull-up", "0017":"Assisted Pull-up", "0150":"Lat Pulldown", "3563":"One-Arm Pulldown",
+  "0292":"One-Arm DB Row", "0293":"DB Row", "0861":"Cable Row", "1359":"Smith Row",
+  "c021":"Dead Hang", "2133":"Farmer's Walk",
+  "0294":"Biceps Curl", "0447":"EZ Bar Curl", "0313":"Hammer Curl", "0592":"Machine Curl",
+  // bacak
+  "3281":"Smith Squat", "0043":"Barbell Squat", "1463":"Leg Press", "1760":"Goblet Squat",
+  "1459":"Romanian Deadlift", "0085":"Barbell RDL", "0586":"Leg Curl",
+  "0489":"Back Extension", "0573":"Back Extension Machine", "1422":"Glute Bridge",
+  // gövde, vücut ağırlığı ve ev
+  "0276":"Dead Bug", "c001":"Plank", "0705":"Side Plank", "0662":"Push-up", "0283":"Diamond Push-up",
+  "c002":"Pike Push-up", "c018":"Elevated Pike Push-up", "c003":"Cat-Cow", "c005":"Chin Tuck",
+  "c007":"Easy Push-up", "c008":"Open Book", "c009":"Doorway Chest Stretch", "c010":"Easy Walk & Breathe",
+  "c011":"Table Row", "c012":"Door Frame Row", "c013":"Y-T-W Raise", "c014":"Wall Lateral Hold",
+  "c015":"Door Frame Curl", "c016":"Bulgarian Split Squat", "c017":"Single-Leg RDL",
+  "c019":"Towel Hammer Hold", "c020":"Table Triceps Extension"
+};
+RAW.forEach(e=>{ if(KISA_AD[e.i]){ e.tam=e.n; e.n=KISA_AD[e.i]; } });
 /* custom.js kendi kayitlarini sona ekliyor; katalog alfabetik olsun */
 RAW.sort((a, b) => a.n.toLowerCase().localeCompare(b.n.toLowerCase(), "en"));
 const EX = {};
@@ -755,7 +800,7 @@ const OVERLAY = {
     ipucu:"Asıl iş belini yere yapışık tutmakta.",
     hatalar:["Belin yerden kalkması — o an dur, daha az uzat.","Nefesi tutmak.","Hızlı yapmak; bu hareket yavaş yapılır."] },
   "0652":{ tip:"vucut", oneri:{tekrar:4},
-    ipucu:"Negatif çalış: sandalyeyle çeneyi çıkar, desteği çek, 5 saniyede in. Tekrar = iniş sayısı.",
+    ipucu:"Çıkabildiğin kadar tam tekrar yap. Tam tekrar çıkmıyorsa negatif çalış: sandalyeyle çeneyi çıkar, 5 saniyede in. Tekrar = iniş sayısı.",
     hatalar:["Serbest bırakıp düşmek — asıl fayda inişte.","Sallanarak momentum almak.","Omuzları kulaklara gömülü bırakmak; altta kürekler hafif aktif kalsın."] },
   "0292":{ tip:"kg", oneri:{kg:12,tekrar:10},
     ipucu:"Dambılı göğse değil, kalçaya doğru çek.",
@@ -886,7 +931,88 @@ const OVERLAY = {
     hatalar:["Dirsekleri yana açmak.","Hareketi şınava çevirmek — üst kol sabit.","Beli çökertmek."] },
   "0283":{ tip:"vucut", oneri:{tekrar:8},
     ipucu:"Dar şınav, triceps'e yükler. Zor gelirse dizler yerde yap.",
-    hatalar:["Dirsekleri yana açmak.","Kalçanın çökmesi.","Yarım tekrar yapmak."] }
+    hatalar:["Dirsekleri yana açmak.","Kalçanın çökmesi.","Yarım tekrar yapmak."] },
+
+  /* ---- İTİŞ / ÇEKİŞ / BACAK (salon) ---- */
+  "0577":{ tip:"kg", oneri:{kg:30,tekrar:8},
+    ipucu:"Sırt pede yapışık, kürekler hafif geride. Tutamaçlar göğsün orta hizasında olsun.",
+    hatalar:["Omuzları öne yuvarlayıp itmek.","Kalçayı koltuktan kaldırmak.","Dönüşte ağırlığı yığına çarptırmak."] },
+  "0314":{ tip:"kg", oneri:{kg:12,tekrar:8},
+    ipucu:"Bank 30-45 derece. Dambıllar üst göğsün yanına insin, dirsekler gövdeyle 45 derece.",
+    hatalar:["Dirsekleri 90 derece yana açmak.","Bankı çok dik kurup omuz press'e çevirmek.","Yukarıda dambılları çarpıştırmak."] },
+  "0602":{ tip:"kg", oneri:{kg:15,tekrar:12},
+    ipucu:"Arka omuz hareketi. Kolları geriye değil yana aç; hafif ağırlık yeter.",
+    hatalar:["Kürekleri sıkıp kürek çekişe çevirmek.","Omuzları kulaklara kaldırmak.","Sallanarak momentum almak."] },
+  "0201":{ tip:"kg", oneri:{kg:20,tekrar:10},
+    ipucu:"Dirsekler gövdenin yanında sabit; yalnızca ön kol hareket etsin.",
+    hatalar:["Dirsekleri öne kaçırıp gövdeyle bastırmak.","Gövdeyi öne yıkmak.","Yukarıda ağırlığı bırakıp sektirmek."] },
+  "0150":{ tip:"kg", oneri:{kg:35,tekrar:8},
+    ipucu:"Barı üst göğse çek, dirsekleri aşağı ve geriye götür. Hafif geriye yaslanmak serbest.",
+    hatalar:["Gövdeyi geriye atıp sallanarak çekmek.","Barı ensenin arkasına çekmek.","Yukarıda omuzları kulaklara bırakmak."] },
+  "0861":{ tip:"kg", oneri:{kg:35,tekrar:10},
+    ipucu:"Tutamacı göbeğe çek, tepede kürekleri sık. Gövde dik ve sabit.",
+    hatalar:["Gövdeyle öne-arkaya sallanmak.","Sırtı yuvarlayarak öne uzanmak.","Omuzları kulaklara kaldırmak."] },
+  "0043":{ tip:"kg", oneri:{kg:30,tekrar:8},
+    ipucu:"İlk haftalar hafif başla, tekniği otur. Diz ayak ucu yönünde, kalça diz hizasına insin.",
+    hatalar:["Dizlerin içeri çökmesi.","Topuğun yerden kalkması.","Aşağıda belin yuvarlanması."] },
+  "0085":{ tip:"kg", oneri:{kg:30,tekrar:10},
+    ipucu:"Kalçayı geriye it, bar bacaklara yakın insin. Arka bacakta gerilme gelince dön.",
+    hatalar:["Sırtı yuvarlamak.","Barı bacaklardan uzaklaştırmak.","Squat'a çevirip dizleri fazla bükmek."] },
+  /* ---- ALTERNATİFLER (alet doluyken) ---- */
+  "0047":{ tip:"kg", oneri:{kg:30,tekrar:8},
+    ipucu:"Incline bench istasyonunda. Bar üst göğse insin, dirsekler gövdeyle 45 derece.",
+    hatalar:["Barı boyna doğru indirmek.","Kalçayı sehpadan kaldırmak.","Göğüste sektirmek."] },
+  "0426":{ tip:"kg", oneri:{kg:8,tekrar:8},
+    ipucu:"Sehpa doluysa ayakta. Karnı ve kalçayı sık ki bel kavis yapmasın.",
+    hatalar:["Beli geriye kavislendirmek.","Dizlerden ivme almak.","Dambılları kulak hizasının çok altına indirmek."] },
+  "0178":{ tip:"kg", oneri:{kg:5,tekrar:12},
+    ipucu:"Cable crossover'da, alt makaradan. Kablo hareketin başında da yük verir; hafif başla.",
+    hatalar:["Gövdeyi yana yatırıp çekmek.","Eli omuzdan yukarı çıkarmak.","Omzu kulağa kaldırmak."] },
+  "0225":{ tip:"kg", oneri:{kg:5,tekrar:12},
+    ipucu:"Cable crossover'da, üst makaralardan çapraz tut; kolları yana ve geriye aç.",
+    hatalar:["Dirsekleri büküp kürek çekişe çevirmek.","Gövdeyle geriye yaslanmak.","Omuzları kaldırmak."] },
+  "0194":{ tip:"kg", oneri:{kg:15,tekrar:10},
+    ipucu:"Cable crossover'da, ip ile. Makaraya sırtını dön, dirsekler başın yanında sabit.",
+    hatalar:["Dirsekleri yana açmak.","Beli kavislendirmek.","Hareketi omuzdan yapmak."] },
+  "0017":{ tip:"kg", oneri:{kg:30,tekrar:8},
+    ipucu:"Kg ayarlı barfiks makinesi. Buradaki kg yardım miktarı: AZALDIKÇA güçleniyorsun.",
+    hatalar:["Yardımı fazla seçip hareketi kolaylaştırmak.","Aşağıda kolları tam açmamak.","Sallanarak çekmek."] },
+  "3563":{ tip:"kg", oneri:{kg:15,tekrar:10},
+    ipucu:"Cable crossover üst makarası. Dirseği kalçana doğru çek; her kol için ayrı set.",
+    hatalar:["Gövdeyi yana bükerek çekmek.","Omzu kulağa kaldırmak.","Yukarıda kontrolü bırakmak."] },
+  "1359":{ tip:"kg", oneri:{kg:20,tekrar:10},
+    ipucu:"Smith'te öne eğil, sırt düz. Barı göbeğe doğru çek.",
+    hatalar:["Sırtı yuvarlamak.","Gövdeyi kaldırarak çekmek.","Dirsekleri yana açmak."] },
+  "0447":{ tip:"kg", oneri:{kg:15,tekrar:10},
+    ipucu:"Z bar bileği rahatlatır. Dirsekler gövdenin yanında sabit kalsın.",
+    hatalar:["Gövdeyle sallanarak kaldırmak.","Dirsekleri öne kaçırmak.","İnişte kendini bırakmak."] },
+  "2133":{ tip:"sure", oneri:{tekrar:40},
+    ipucu:"Ağır dambılları yanlarında tut ve yürü ya da dur. Kavrama ve omuz için, asılı kalmanın yerine.",
+    hatalar:["Omuzları öne düşürmek.","Gövdeyi bir yana yatırmak.","Nefesi tutmak."] },
+  "3281":{ tip:"kg", oneri:{kg:20,tekrar:8},
+    ipucu:"Ayaklar barın biraz önünde, omuz genişliğinde. Kalça diz hizasına insin.",
+    hatalar:["Dizlerin içeri çökmesi.","Topuğun yerden kalkması.","Aşağıda belin yuvarlanması."] },
+  "1463":{ tip:"kg", oneri:{kg:60,tekrar:10},
+    ipucu:"Leg press. Kalçan koltuktan kalkmayacak kadar in; yukarıda dizi kilitleme.",
+    hatalar:["Aşağıda belin koltuktan kalkması.","Dizleri tam kilitlemek.","Dizlerin içeri çökmesi."] },
+  "0586":{ tip:"kg", oneri:{kg:20,tekrar:12},
+    ipucu:"Leg curl makinesi; oturarak olanı da aynı iş. Arka bacağı yavaş indirerek çalış.",
+    hatalar:["Kalçayı pedden kaldırmak.","Ağırlığı sallayarak kaldırmak.","İnişi hızlı bırakmak."] },
+  "0573":{ tip:"kg", oneri:{kg:20,tekrar:12},
+    ipucu:"Back extension makinesi. Gövde düz çizgiye gelince dur.",
+    hatalar:["Geriye aşırı açılmak.","Hızlı ve sallanarak yapmak.","Sırtı yuvarlamak."] },
+  "0592":{ tip:"kg", oneri:{kg:15,tekrar:10},
+    ipucu:"Biceps curl makinesi. Üst kol pede yapışık, aşağıda kolu neredeyse tam aç.",
+    hatalar:["Omzu kaldırıp yardım almak.","Yarım tekrar yapmak.","İnişi hızlı bırakmak."] },
+  "0200":{ tip:"kg", oneri:{kg:15,tekrar:12},
+    ipucu:"İstasyonda ip ile. Aşağıda ipi hafifçe iki yana aç.",
+    hatalar:["Dirsekleri öne kaçırmak.","Gövdeyi öne yıkmak.","Yukarıda ağırlığı bırakmak."] },
+  "3666":{ tip:"sure", oneri:{tekrar:180},
+    ipucu:"Eliptik doluysa. Hafif eğimde, konuşabileceğin tempoda yürü.",
+    hatalar:["Tutamaçlara asılmak.","Isınmayı koşuya çevirmek."] },
+  "c021":{ tip:"sure", oneri:{tekrar:30},
+    ipucu:"Kavrama ve omuz için. Omuzları kulaklardan hafif uzak tut, sallanma.",
+    hatalar:["Omuzları tamamen bırakıp kulaklara gömmek.","Bacaklarla sallanmak.","Nefesi tutmak."] }
 };
 function ov(id){ return OVERLAY[id] || null; }
 /* Mola kutusunu okur. 0 geçerli bir değer olduğu için "||" ile varsayılana
@@ -939,31 +1065,38 @@ function temaUygula(ad){
   return t;
 }
 
-/* Antrenman tek bir liste: bölüm ayrımı yok. Her gün aynı üç hareketle
-   açılıp chin tuck ile kapanıyor; tekrar yazmak yerine üretiliyor.
-   Açılışta bilerek lateral raise yok — aynı hareket hem açılışta hem
-   listede olsaydı, uygulama "geçen sefer" ağırlığını hafif açılış
-   setinden okur ve çalışma ağırlığını unuturdu. */
-function acilis(){
+/* Antrenman tek bir liste: bölüm ayrımı yok. Isınma kısa: 3 dk eliptik,
+   omuz press ya da barfiks olan günlerde 1x10 wall slide. Soğuma yok —
+   chin tuck ve köprü salondan çıktı (v7).
+   Asıl ısınma ilk ağır hareketin hafif setleri; onlar bilerek listede
+   yok: aynı hareketin altına kaydedilseydi uygulama "geçen sefer"
+   ağırlığını hafif setten okur ve çalışma ağırlığını unuturdu. Bu yüzden
+   gün notunda "kaydetmeden yap" diye anlatılıyor. Açılışta lateral raise
+   olmamasının sebebi de aynı. */
+function acilis(wallSlide){
   return [
-    {ex:"2141",set:1,tekrar:"180",mola:20,tip:"sure"},
-    {ex:"c004",set:2,tekrar:"10", mola:15,tip:"vucut"},
-    {ex:"1422",set:1,tekrar:"12", mola:20,tip:"vucut"}
+    {ex:"2141",set:1,tekrar:"180",mola:20,tip:"sure", alt:{ex:"3666"}},   // eliptik ↔ koşu bandında yürüyüş
+    ...(wallSlide ? [{ex:"c004",set:1,tekrar:"10",mola:15,tip:"vucut"}] : [])
   ];
 }
-function kapanis(){
-  return [{ex:"c005",set:2,tekrar:"8",mola:20,tip:"vucut"}];
+const ISINMA_NOTU = "İlk ağır harekete 2 hafif setle ısın, kaydetme. ";
+const ALT_NOTU = "Alet doluysa kartı sağa kaydır. ";
+const ILERLEME_NOTU = "Aralığın üstüne çıkınca ağırlığı artır.";
+function gun(id,ad,not,govde,wallSlide){
+  return {id, ad, not, hareketler:[...acilis(wallSlide), ...govde]};
 }
-function gun(id,ad,govde){ return {id, ad, hareketler:[...acilis(), ...govde, ...kapanis()]}; }
-/* Ekipmansız ev günü: aynı numaralı salon gününün yerine geçer (ev:"1" gibi).
+/* Ekipmansız ev günü: "yerine" numaralı salon gününün yerine geçer.
    Ana sırada ayrıca yer almaz; yapılınca o gün yapılmış sayılır. Isınmada
-   eliptik yerine ev içinde yürüme var. */
-function evGun(no,ad,govde){
-  return {id:"ev"+no, ev:no, ad,
-    not:"Ekipmansız · Gün "+no+"’in yerine sayılır. Başlamadan masa, sandalye ve kapı kasasının sağlam olduğundan emin ol. Tekrar aralığının üstüne çıkınca hareketi zorlaştır: 3 sn iniş, açıyı değiştir, tek tarafa geç.",
+   eliptik yerine ev içinde yürüme var. id'ler (ev1-ev3) eski kayıtlarla
+   uyum için korunuyor; v7'de itiş/çekiş/bacak düzenine göre yeniden
+   eşleştirildiler: ev3 → İtiş (1), ev1 → Çekiş (2), ev2 → Bacak (3). */
+function evGun(id,yerine,ad,govde){
+  return {id, ev:yerine, ad,
+    not:"Ekipmansız · Gün "+yerine+" yerine sayılır. Masa, sandalye ve kapının sağlam olduğundan emin ol.",
     hareketler:[
       {ex:"c006",set:1,tekrar:"300",mola:20,tip:"sure"},
-      ...acilis().slice(1), ...govde, ...kapanis()
+      {ex:"c004",set:1,tekrar:"10",mola:15,tip:"vucut"},
+      ...govde
     ]};
 }
 
@@ -971,32 +1104,45 @@ function evGun(no,ad,govde){
    Çalışma setleri: 17 / 21 / 19. Isınma ve kapanış ayrıca eklenir. */
 function varsayilanProgramlar(){
   return [
-    gun("1","Gün 1 — Sırt, omuz ve biceps",[
-      {ex:"0652",set:3,tekrar:"3-5",  mola:120,tip:"vucut"},
-      {ex:"0292",set:3,tekrar:"10-12",mola:90, tip:"kg"},
-      {ex:"0359",set:3,tekrar:"12-15",mola:60, tip:"kg"},
-      {ex:"0334",set:3,tekrar:"12-20",mola:60, tip:"kg"},
-      {ex:"0294",set:3,tekrar:"10-12",mola:60, tip:"kg"},
-      {ex:"0276",set:2,tekrar:"8",    mola:45, tip:"vucut"}]),
-    gun("2","Gün 2 — Bacak, itiş, kol",[
-      {ex:"1760",set:3,tekrar:"10-12",mola:90, tip:"kg"},
-      {ex:"1459",set:3,tekrar:"10-12",mola:90, tip:"kg"},
-      {ex:"0404",set:3,tekrar:"8-10", mola:120,tip:"kg"},
-      {ex:"0662",set:3,tekrar:"8-12", mola:90, tip:"vucut"},
-      {ex:"0334",set:3,tekrar:"12-20",mola:60, tip:"kg"},
-      {ex:"0313",set:2,tekrar:"10-15",mola:60, tip:"kg"},
-      {ex:"2189",set:2,tekrar:"10-15",mola:75, tip:"kg"},
-      {ex:"c001",set:2,tekrar:"30-40",mola:45, tip:"sure"}]),
-    gun("3","Gün 3 — Omuz, sırt ve triceps",[
-      {ex:"0404",set:3,tekrar:"8-10", mola:120,tip:"kg"},
-      {ex:"0652",set:3,tekrar:"3-5",  mola:120,tip:"vucut"},
-      {ex:"0293",set:3,tekrar:"10-12",mola:90, tip:"kg"},
-      {ex:"0662",set:2,tekrar:"8-12", mola:90, tip:"vucut"},
-      {ex:"0334",set:3,tekrar:"12-20",mola:60, tip:"kg"},
-      {ex:"0359",set:2,tekrar:"12-15",mola:60, tip:"kg"},
-      {ex:"0351",set:3,tekrar:"10-12",mola:60, tip:"kg"}]),
-    {id:"pazar",ad:"Pazar — Opsiyonel ev seansı",opsiyonel:true,
-      not:"Yaklaşık 30 dk · Zorluk 3–4/10. Şınavda en az 4–5 tekrar yedekte kalsın. Belirgin yorgunluk varsa şınavı atla. Kaçırınca telafi gerekmez.",
+    /* Ankara Üni. Cebeci Spor Salonu'nun alet listesine göre (v8).
+       Salonda squat sehpası ve uzun olimpik bar yok: squat Smith'te,
+       romen deadlift dambılla. Her hareketin "alt" alanı, alet ya da
+       sehpa doluyken yapılacak, BAŞKA bir aletle yapılan karşılığı. */
+    gun("1","Gün 1 — İtiş",
+      ISINMA_NOTU+ALT_NOTU+ILERLEME_NOTU,[
+      /* Sıra arkadaşının listesindeki gibi (v9): shoulder press sonda. */
+      {ex:"0577",set:3,tekrar:"6-10", mola:120,tip:"kg", alt:{ex:"0289"}},   // chest press makinesi ↔ dambıl bench
+      {ex:"0314",set:3,tekrar:"6-10", mola:120,tip:"kg", alt:{ex:"0047"}},   // incline dambıl ↔ incline bench istasyonu
+      {ex:"0334",set:3,tekrar:"10-15",mola:60, tip:"kg", alt:{ex:"0178"}},   // dambıl ↔ cable crossover
+      {ex:"0359",set:3,tekrar:"10-15",mola:60, tip:"kg", alt:{ex:"0225"}},   // destekli reverse fly ↔ crossover
+      {ex:"0404",set:3,tekrar:"6-10", mola:120,tip:"kg", alt:{ex:"0426"}},   // oturarak ↔ ayakta (sehpa gerekmez)
+      {ex:"0201",set:3,tekrar:"8-12", mola:60, tip:"kg", alt:{ex:"0194"}}],  // istasyon pushdown ↔ crossover baş üstü
+      true),
+    gun("2","Gün 2 — Çekiş",
+      ISINMA_NOTU+"Barfiks: baştaki 2 set taze, ortadaki 1 set max. "+ALT_NOTU+ILERLEME_NOTU,[
+      /* Sıra arkadaşının listesindeki gibi (v9). Barfiks iki kez: baştaki
+         2 set taze kollarla (önceki öneri), cable row'dan sonraki 1 set max
+         arkadaşının listesindeki yeri. "Geçen sefer" her biri için kendi
+         sırasından okunur (sonKayitBilgi'deki sira). */
+      {ex:"0652",set:2,tekrar:"max",  mola:120,tip:"vucut", alt:{ex:"0017",tekrar:"6-10",tip:"kg"}}, // barfiks ↔ kg ayarlı barfiks makinesi
+      {ex:"0150",set:3,tekrar:"6-10", mola:120,tip:"kg", alt:{ex:"3563",tekrar:"8-12"}},  // istasyon ↔ crossover tek kol
+      {ex:"0292",set:3,tekrar:"8-12", mola:90, tip:"kg", alt:{ex:"0293"}},   // tek kol (sehpa) ↔ iki kol ayakta
+      {ex:"0861",set:3,tekrar:"8-12", mola:90, tip:"kg", alt:{ex:"1359"}},   // istasyon ↔ Smith
+      {ex:"0652",set:1,tekrar:"max",  mola:90, tip:"vucut", alt:{ex:"0017",tekrar:"6-10",tip:"kg"}},
+      {ex:"c021",set:1,tekrar:"30-60",mola:60, tip:"sure", alt:{ex:"2133"}}, // asılı kalma ↔ dambılla taşıma
+      {ex:"0294",set:3,tekrar:"8-12", mola:60, tip:"kg", alt:{ex:"0447"}}],  // dambıl ↔ Z bar
+      true),
+    gun("3","Gün 3 — Bacak",
+      ISINMA_NOTU+"Squat'ta ilk haftalar tekniğe odaklan. "+ALT_NOTU+ILERLEME_NOTU,[
+      {ex:"3281",set:3,tekrar:"6-8",  mola:150,tip:"kg", alt:{ex:"1463",tekrar:"8-12"}},  // Smith squat ↔ leg press
+      {ex:"1459",set:3,tekrar:"8-10", mola:120,tip:"kg", alt:{ex:"0586",tekrar:"10-12"}}, // dambıl RDL ↔ leg curl
+      {ex:"0489",set:2,tekrar:"10-12",mola:90, tip:"vucut", alt:{ex:"0573",tip:"kg"}},    // sehpa ↔ makine
+      {ex:"0334",set:3,tekrar:"10-15",mola:60, tip:"kg", alt:{ex:"0178"}},
+      {ex:"0313",set:3,tekrar:"10-12",mola:60, tip:"kg", alt:{ex:"0592"}},   // hammer ↔ biceps curl makinesi
+      {ex:"2189",set:3,tekrar:"10-12",mola:60, tip:"kg", alt:{ex:"0200"}}],  // oturarak ↔ istasyon rope pushdown
+      false),
+    {id:"pazar",ad:"Pazar — Ev seansı",opsiyonel:true,
+      not:"~30 dk, hafif. Yorgunsan şınavı atla.",
       hareketler:[
         {ex:"c006",set:1,tekrar:"300",mola:0,tip:"sure"},
         {ex:"c007",set:2,tekrar:"8-12",mola:90,tip:"vucut"},
@@ -1006,23 +1152,7 @@ function varsayilanProgramlar(){
         {ex:"c009",set:2,tekrar:"20-30",mola:30,tip:"sure"},
         {ex:"c010",set:1,tekrar:"540",mola:0,tip:"sure"}
       ]},
-    evGun("1","Ev Gün 1 — Sırt, omuz ve biceps",[
-      {ex:"c011",set:3,tekrar:"6-12", mola:120,tip:"vucut"},
-      {ex:"c012",set:3,tekrar:"10-12",mola:90, tip:"vucut"},
-      {ex:"c013",set:3,tekrar:"6",    mola:60, tip:"vucut"},
-      {ex:"c014",set:3,tekrar:"30-45",mola:60, tip:"sure"},
-      {ex:"c015",set:3,tekrar:"10-15",mola:60, tip:"vucut"},
-      {ex:"0276",set:2,tekrar:"8",    mola:45, tip:"vucut"}]),
-    evGun("2","Ev Gün 2 — Bacak, itiş, kol",[
-      {ex:"c016",set:3,tekrar:"8-12", mola:90, tip:"vucut"},
-      {ex:"c017",set:3,tekrar:"8-12", mola:90, tip:"vucut"},
-      {ex:"c002",set:3,tekrar:"6-10", mola:120,tip:"vucut"},
-      {ex:"0662",set:3,tekrar:"8-15", mola:90, tip:"vucut"},
-      {ex:"c014",set:3,tekrar:"30-45",mola:60, tip:"sure"},
-      {ex:"c019",set:2,tekrar:"20-30",mola:60, tip:"sure"},
-      {ex:"c020",set:2,tekrar:"8-12", mola:75, tip:"vucut"},
-      {ex:"c001",set:2,tekrar:"30-40",mola:45, tip:"sure"}]),
-    evGun("3","Ev Gün 3 — Omuz, sırt ve triceps",[
+    evGun("ev3","1","Ev 1 — İtiş",[
       {ex:"c018",set:3,tekrar:"5-8",  mola:120,tip:"vucut"},
       {ex:"c011",set:3,tekrar:"6-12", mola:120,tip:"vucut"},
       {ex:"c012",set:3,tekrar:"10-12",mola:90, tip:"vucut"},
@@ -1030,7 +1160,23 @@ function varsayilanProgramlar(){
       {ex:"c014",set:3,tekrar:"30-45",mola:60, tip:"sure"},
       {ex:"c013",set:2,tekrar:"6",    mola:60, tip:"vucut"},
       {ex:"0283",set:3,tekrar:"6-12", mola:60, tip:"vucut"},
-      {ex:"0705",set:2,tekrar:"20-30",mola:45, tip:"sure"}])
+      {ex:"0705",set:2,tekrar:"20-30",mola:45, tip:"sure"}]),
+    evGun("ev1","2","Ev 2 — Çekiş",[
+      {ex:"c011",set:3,tekrar:"6-12", mola:120,tip:"vucut"},
+      {ex:"c012",set:3,tekrar:"10-12",mola:90, tip:"vucut"},
+      {ex:"c013",set:3,tekrar:"6",    mola:60, tip:"vucut"},
+      {ex:"c014",set:3,tekrar:"30-45",mola:60, tip:"sure"},
+      {ex:"c015",set:3,tekrar:"10-15",mola:60, tip:"vucut"},
+      {ex:"0276",set:2,tekrar:"8",    mola:45, tip:"vucut"}]),
+    evGun("ev2","3","Ev 3 — Bacak",[
+      {ex:"c016",set:3,tekrar:"8-12", mola:90, tip:"vucut"},
+      {ex:"c017",set:3,tekrar:"8-12", mola:90, tip:"vucut"},
+      {ex:"c002",set:3,tekrar:"6-10", mola:120,tip:"vucut"},
+      {ex:"0662",set:3,tekrar:"8-15", mola:90, tip:"vucut"},
+      {ex:"c014",set:3,tekrar:"30-45",mola:60, tip:"sure"},
+      {ex:"c019",set:2,tekrar:"20-30",mola:60, tip:"sure"},
+      {ex:"c020",set:2,tekrar:"8-12", mola:75, tip:"vucut"},
+      {ex:"c001",set:2,tekrar:"30-40",mola:45, tip:"sure"}])
   ];
 }
 /* Sıraya ve haftalık hedefe giren günler: opsiyonel ve ev günleri hariç. */
@@ -1038,19 +1184,19 @@ function anaProgramlar(){ return state.programs.filter(p=>!p.opsiyonel && !p.ev)
 
 /* v5: 60 dk hedefli ana günler ve opsiyonel pazar. Özel programlar ve
    geçmiş seans kopyaları korunur; varsayılan programlar güncellenir.
-   v6: yalnızca ev günleri eklenir; ana günlerdeki düzenlemelere dokunulmaz. */
-const PROGRAM_SURUM = 6;
+   v6: yalnızca ev günleri eklenir; ana günlerdeki düzenlemelere dokunulmaz.
+   v7: itiş / çekiş / bacak programı. Gün 1-3 ve ev günleri bilerek
+   baştan yazılır (kullanıcı programı değiştirmek istedi); pazar seansı
+   varsa kullanıcının hali korunur, özel programlara dokunulmaz.
+   v8: aynı yöntemle Gün 1-3 salonun aletlerine göre ve alternatifli.
+   v9: Gün 1-2 hareket sırası arkadaşının listesindeki gibi; Gün 2'de
+   ikinci barfiks.
+   v10: kısa gün adları ve notlar (hareketler aynı). */
+const PROGRAM_SURUM = 10;
+const KORUNAN_VARSAYILAN = new Set(["pazar"]);
 function programlariTazele(){
   const surum = state.programSurum||1;
   if(surum >= PROGRAM_SURUM) return false;
-  if(surum >= 5){
-    const var_ = new Set(state.programs.map(p=>p.id));
-    varsayilanProgramlar().filter(p=>p.ev && !var_.has(p.id)).forEach(p=>{
-      p.duzenlendi=Date.now(); state.programs.push(p);
-    });
-    state.programSurum = PROGRAM_SURUM;
-    return true;
-  }
   const yeni = varsayilanProgramlar();
   yeni.forEach(p=>{ p.duzenlendi=Date.now(); });
   const eskiAB = state.programs.length===2
@@ -1060,7 +1206,12 @@ function programlariTazele(){
     state.programs = yeni;
   }else{
     const yeniId = new Set(yeni.map(p=>p.id));
-    state.programs = yeni.concat(state.programs.filter(p=>!yeniId.has(p.id)));
+    const eski = new Map(state.programs.map(p=>[p.id,p]));
+    state.programs = yeni.map(p=>(KORUNAN_VARSAYILAN.has(p.id) && eski.get(p.id)) || p)
+      .concat(state.programs.filter(p=>!yeniId.has(p.id)));
+    /* Korunan pazar seansının adı elle değiştirilmemişse kısa ada geçer (v10). */
+    const pz=state.programs.find(p=>p.id==="pazar"), pzYeni=yeni.find(p=>p.id==="pazar");
+    if(pz && pzYeni && pz.ad==="Pazar — Opsiyonel ev seansı"){ pz.ad=pzYeni.ad; pz.not=pzYeni.not; }
   }
   state.programSurum = PROGRAM_SURUM;
   return true;
@@ -1197,27 +1348,35 @@ function sonrakiProgram(){
   return ana[(i+1)%ana.length];
 }
 function programNotu(p){
-  const not=p.not || (p.id==='2'
-    ? '60 dk hedefi · Hammer curl ve triceps’i dönüşümlü yap: birer set, ardından 60–75 sn dinlenme. Tek kol hareketlerini iki tarafta tamamla.'
-    : ['1','3'].includes(p.id) ? '60 dk hedefi · Tek kol hareketlerini ve dead bug’ı iki tarafta tamamla. Ana hareketlerde 90–120 sn, yardımcı hareketlerde 45–60 sn dinlen.' : '');
+  const not=p.not || '';
   return not ? '<p class="muted small" style="margin:8px 0">'+String(not).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</p>' : '';
 }
-/* Bir hareketin en son yapildigi antrenmandaki setleri ve o seansin tarihi. */
-function sonKayitBilgi(exId){
+/* Bir hareketin en son yapildigi antrenmandaki setleri ve o seansin tarihi.
+   sira: ayni hareket bir gunde birden fazla kez geciyorsa kacincisi
+   (Gun 2'de barfiks hem basta hem ortada). Her biri gecen seferki AYNI
+   sıradaki kaydindan okunur; yoksa basta 2 set yapilan barfiks, ortadaki
+   tek setlik barfiksi de 2 sete cikarirdi. */
+function sonKayitBilgi(exId, sira=0){
   for(let i=state.sessions.length-1;i>=0;i--){
     const s=state.sessions[i];
-    const e=(s.kayitlar||[]).find(k=>k.id===exId);
-    if(e&&e.setler){ const d=e.setler.filter(x=>x.done); if(d.length) return {setler:d,tarih:s.tarih}; }
+    const liste=(s.kayitlar||[]).filter(k=>k.id===exId&&k.setler&&k.setler.some(x=>x.done));
+    const e=liste[sira];
+    if(e) return {setler:e.setler.filter(x=>x.done),tarih:s.tarih};
   }
   return null;
+}
+/* i. hareketten once ayni hareketin kac kez geciyor oldugu. */
+function hareketSirasi(hareketler,i){
+  const ex=hareketler[i]&&hareketler[i].ex;
+  return hareketler.slice(0,i).filter(x=>x.ex===ex).length;
 }
 function sonKayit(exId){ const b=sonKayitBilgi(exId); return b?b.setler[b.setler.length-1]:null; }
 /* "Geçen sefer" satırı. Son seti değil o antrenmandaki TÜM setleri yazıyor:
    veri zaten set set duruyordu, tek set göstermek "4 set yaptım, hangisi
    bu?" sorusunu doğuruyordu. Ağırlık bütün setlerde aynıysa bir kez yazılıp
    tekrarlar ardına diziliyor - en sık durum bu ve çok daha kısa okunuyor. */
-function gecenSeferMetni(exId, tip){
-  const b=sonKayitBilgi(exId);
+function gecenSeferMetni(exId, tip, sira=0){
+  const b=sonKayitBilgi(exId, sira);
   if(!b || !b.setler.length) return null;
   const ss=b.setler, tarih=tarihTR(b.tarih);
   const tk=x=>x.tekrar!=null?x.tekrar:"?";
@@ -1444,7 +1603,7 @@ function renderHome(){
   const ortP=say?Math.round(topP/say):0;
   const enB=Math.max(hedef*1.15,...gunler.map(x=>x.p));
 
-  const isinma=new Set([...acilis(),...kapanis()].map(h=>h.ex));
+  const isinma=new Set([...acilis(true).map(h=>h.ex),"c006"]);
   let asil=prog?(prog.hareketler||[]).filter(h=>!isinma.has(h.ex)):[];
   if(prog&&!asil.length) asil=prog.hareketler||[];
   const kucuk=asil.slice(0,4), fazla=asil.length-kucuk.length;
@@ -2554,22 +2713,24 @@ function renderWorkout(){
 
   const s=state.active, h=s.hareketler[state.exIndex], e=EX[h.ex], kayit=s.kayitlar[state.exIndex];
   const o=ov(h.ex), birim=h.tip==="sure"?"sn":"tekrar";
-  const gecen=gecenSeferMetni(h.ex,h.tip);
+  const gecen=gecenSeferMetni(h.ex,h.tip,hareketSirasi(s.hareketler,state.exIndex));
   document.getElementById("title").textContent=progKisa(s.program.ad);
   view.innerHTML=`
-    ${programNotu(s.program)}
-    <p class="muted small" style="margin:0 0 6px">Hareket ${state.exIndex+1} / ${s.hareketler.length}</p>
+    <p class="muted small" style="margin:0 0 6px">Hareket ${state.exIndex+1} / ${s.hareketler.length}${h.altta?" · <b style=\"color:var(--accent)\">Alternatif</b>":""}</p>
     <div class="progress">${s.hareketler.map((x,i)=>
       `<button type="button" data-git="${i}" class="${i<=state.exIndex?"on":""} ${i===state.exIndex?"simdi":""}"
         aria-label="${i+1}. hareket: ${String(exAd(x.ex)).replace(/"/g,"&quot;")}"
         title="${i+1}. ${String(exAd(x.ex)).replace(/"/g,"&quot;")}"></button>`).join("")}</div>
-    <div class="card">
+    <div class="card" id="exKart">
       <div class="stage">
         ${sahneIc(e)}
         <div class="stage-cap"><span>${e?kasTR(e.t):""}</span><span>${e?ekipTR(e.q):""}</span></div>
       </div>
       <div class="row between" style="margin-top:12px"><h2>${exAd(h.ex)}</h2><span class="pill" id="setPill">${setEtiketi(kayit,h)}</span></div>
-      <p class="muted small" style="margin-top:4px">${o&&o.ipucu?o.ipucu:(e?bolgeTR(e.c):"")}${gecen?" · "+gecen:" · İlk kez yapıyorsun — kutulardaki sayılar öneri, değiştirebilirsin"}</p>
+      ${h.alt&&EX[h.alt.ex]?`<button type="button" class="altgec ${h.altta?"altta":""}" id="altGec">
+        <span class="simge" aria-hidden="true">⇄</span>
+        <span class="yazi"><small>${h.altta?"Ana hareket":"Alternatif"}</small><b>${exAd(h.alt.ex)}</b></span></button>`:""}
+      <p class="muted small" style="margin-top:4px">${gecen||"İlk kez · kutulardaki değerler öneri"}</p>
       ${setBasligi(h,birim)}
       <div id="setler">
         ${kayit.setler.map((st,i)=>setSatiri(st,i,h,birim)).join("")}
@@ -2579,6 +2740,7 @@ function renderWorkout(){
         <button class="btn quiet sm" id="setEkle">+ Set ekle</button>
       </div>
       ${e?`<details style="margin-top:12px"><summary class="muted small">Nasıl yapılır</summary>
+        ${o&&o.ipucu?`<p class="small" style="margin-top:8px"><b>İpucu:</b> ${o.ipucu}</p>`:""}
         <ol class="steps small" style="margin-top:8px">${e.d.map(a=>`<li>${a}</li>`).join("")}</ol>
         ${o&&o.hatalar?`<h3 style="margin-top:12px">Sık yapılan hatalar</h3>
         <ul class="warn small">${o.hatalar.map(a=>`<li>${a}</li>`).join("")}</ul>`:""}</details>`:""}
@@ -2710,6 +2872,8 @@ function renderWorkout(){
     if(i===state.exIndex) return;
     state.exIndex=i; saveAll(); renderWorkout(); scrollTo(0,0);
   });
+  const altBtn=document.getElementById("altGec");
+  if(altBtn) altBtn.onclick=()=>alternatifUygula(h.altta?-1:1);
   document.getElementById("prevEx").onclick=()=>{ if(state.exIndex>0){state.exIndex--;saveAll();renderWorkout();scrollTo(0,0);} };
   document.getElementById("nextEx").onclick=()=>{
     if(state.exIndex<s.hareketler.length-1){ state.exIndex++; saveAll(); renderWorkout(); scrollTo(0,0); }
@@ -2746,8 +2910,8 @@ function renderWorkout(){
 /* Bir hareket icin seans kaydi. adet verilmezse gecen antrenmandaki set
    sayisi, o da yoksa programdaki hedef kullanilir. Kilo ve tekrar her zaman
    gecen antrenmandan set set tasinir. */
-function kayitOlustur(h,adet,hedefleriKullan=false){
-  const onceki=hedefleriKullan ? null : sonKayitBilgi(h.ex), o=oneriOf(h.ex);
+function kayitOlustur(h,adet,hedefleriKullan=false,sira=0){
+  const onceki=hedefleriKullan ? null : sonKayitBilgi(h.ex, sira), o=oneriOf(h.ex);
   const gecmis = onceki ? onceki.setler : null;
   const n = adet!=null ? adet : (gecmis ? gecmis.length : h.set);
   return { id:h.ex, tip:h.tip, setler:Array.from({length:n},(_,i)=>{
@@ -2759,6 +2923,48 @@ function kayitOlustur(h,adet,hedefleriKullan=false){
   })};
 }
 
+/* --- ALTERNATİF HAREKET ---
+   Program satırında alt:{ex, tekrar?, tip?} olabilir: alet doluyken
+   yapılacak karşılık. Set ve mola ana hareketten gelir; tekrar ve tip
+   verilmemişse de öyle (tip yoksa hareketin kendi tipi).
+   Antrenmanda kart sağa kaydırılınca ana ↔ alternatif yer değiştirir.
+   Her ikisinin kaydı ayrı tutulur: görünmeyenin kaydı h.altKayit'ta durur,
+   geri dönünce işaretli setler kaybolmaz. Antrenman bitince ikisinde de
+   işaretli set varsa ikisi de kaydedilir — "geçen sefer" her hareketin
+   kendi geçmişinden okunsun diye. */
+function alternatifeGec(i){
+  const s=state.active, h=s&&s.hareketler[i];
+  if(!h||!h.alt||!EX[h.alt.ex]) return false;
+  const a=h.alt;
+  const yeni={ex:a.ex, set:h.set, tekrar:a.tekrar||h.tekrar, mola:h.mola, tip:a.tip||tipOf(a.ex),
+    alt:{ex:h.ex, tekrar:h.tekrar, tip:h.tip}, altta:!h.altta, altKayit:s.kayitlar[i]};
+  s.hareketler[i]=yeni;
+  s.kayitlar[i]=h.altKayit || kayitOlustur(yeni,null,false,hareketSirasi(s.hareketler,i));
+  return true;
+}
+/* Ekrandaki hareketi değiştirir ve kartı kaydırma yönünde kaydırarak çizer. */
+function alternatifUygula(yon){
+  const s=state.active; if(!s) return;
+  const h=s.hareketler[state.exIndex];
+  if(!h||!h.alt||!EX[h.alt.ex]){ toast("Bu hareketin alternatifi yok"); return; }
+  if(!alternatifeGec(state.exIndex)) return;
+  saveAll(); renderWorkout();
+  const kart=document.getElementById("exKart");
+  if(kart) kart.classList.add(yon>0?"kaySag":"kaySol");
+  const yeni=s.hareketler[state.exIndex];
+  toast((yeni.altta?"Alternatif: ":"Ana hareket: ")+exAd(yeni.ex));
+}
+/* Görünen + arkada kalan (işaretli seti olan) bütün kayıtlar. */
+function seansKayitlari(s){
+  /* Gizli kayıt kendi hareketinin hemen ardına girer, sona değil: aynı
+     hareket günde iki kez geçiyorsa (barfiks) sıraları karışmasın. */
+  const hs=s.hareketler||[];
+  return s.kayitlar.flatMap((k,i)=>{
+    const g=hs[i]&&hs[i].altKayit;
+    return g&&g.setler.some(x=>x.done) ? [k,g] : [k];
+  });
+}
+
 function startSession(prog){
   if(!prog||!prog.hareketler.length) return;
   /* Program anlık kopyalanır: seans sürerken programı düzenlemek seansı bozmaz. */
@@ -2767,7 +2973,8 @@ function startSession(prog){
   const hareketler=prog.hareketler.map(h=>({
     ex:h.ex, set:Math.max(1,+h.set||1), tekrar:h.tekrar,
     mola:(h.mola==null ? 60 : Math.max(0,Math.min(600,+h.mola||0))),
-    tip:h.tip||tipOf(h.ex)
+    tip:h.tip||tipOf(h.ex),
+    ...(h.alt && EX[h.alt.ex] ? {alt:{...h.alt}} : {})
   }));
   state.active={
     id:"s"+Date.now(), tarih:new Date().toISOString(),
@@ -2776,12 +2983,13 @@ function startSession(prog){
     /* Gecen antrenmanda ne yaptiysan onunla basla: set sayisi, kilo ve
        tekrar set set birebir tasinir. Programi o antrenmandan SONRA
        duzenlediysen programdaki hedef gecerli olur. */
-    kayitlar:hareketler.map(h=>{
+    kayitlar:hareketler.map((h,i)=>{
       /* Program duzenlemesi yalnizca SET SAYISINI belirler; kilo ve tekrar
          her zaman gecen antrenmandan gelir. */
-      const onceki=sonKayitBilgi(h.ex);
+      const sira=hareketSirasi(hareketler,i);
+      const onceki=sonKayitBilgi(h.ex, sira);
       const programDahaYeni = prog.duzenlendi && (!onceki || prog.duzenlendi > Date.parse(onceki.tarih));
-      return kayitOlustur(h, prog.opsiyonel || programDahaYeni ? h.set : null, !!prog.opsiyonel);
+      return kayitOlustur(h, prog.opsiyonel || programDahaYeni ? h.set : null, !!prog.opsiyonel, sira);
     })
   };
   state.exIndex=0; state.tab="workout"; state.duzenle=null; state.secici=null; state.openEx=null;
@@ -2805,7 +3013,7 @@ function saatBaslat(){
 
 function bitirSor(){
   const s=state.active; if(!s) return;
-  const yapilan=s.kayitlar.reduce((a,k)=>a+k.setler.filter(x=>x.done).length,0);
+  const yapilan=seansKayitlari(s).reduce((a,k)=>a+k.setler.filter(x=>x.done).length,0);
   const sure=mmss(Math.floor((Date.now()-s.baslangic)/1000));
   modalAc(`
     <h2>Antrenmanı bitir</h2>
@@ -2827,6 +3035,7 @@ function bitirSor(){
 async function kaydetVeBitir(){
   const s=state.active;
   s.sure=Math.floor((Date.now()-s.baslangic)/1000);
+  s.kayitlar=seansKayitlari(s);
   s.kayitlar.forEach(k=>{ k.setler=k.setler.filter(x=>x.done); });
   s.kayitlar=s.kayitlar.filter(k=>k.setler.length);
   s.hacim=s.kayitlar.reduce((a,k)=>a+k.setler.reduce((b,x)=>b+((x.kg||0)*(x.tekrar||0)),0),0);
@@ -2880,7 +3089,7 @@ function renderProgramDuzenle(){
         const e=EX[h.ex];
         return `<div class="progrow">
           ${plakaIc(e)}
-          <button class="nm" data-ayar="${i}"><b>${exAd(h.ex)}</b><span class="muted small">${h.set} set · ${h.tekrar}${h.tip==="sure"?" sn":""} · ${h.mola} sn mola</span></button>
+          <button class="nm" data-ayar="${i}"><b>${exAd(h.ex)}</b><span class="muted small">${h.set} set · ${h.tekrar}${h.tip==="sure"?" sn":""} · ${h.mola} sn mola</span>${h.alt&&EX[h.alt.ex]?`<span class="muted small">⇄ ${exAd(h.alt.ex)}</span>`:""}</button>
           <button class="iconbtn tut" data-tut="${i}" title="Sürükleyerek sırala"
             aria-label="Sırala: sürükle, ya da yukarı/aşağı ok tuşlarını kullan">≡</button>
           <button class="iconbtn" data-sil="${i}">✕</button>
@@ -3032,9 +3241,23 @@ function hareketAyarSheet(p,i){
         <div><label>${h.tip==="sure"?"Saniye":"Tekrar"}</label><input type="text" id="aTek" value="${String(h.tekrar).replace(/"/g,"&quot;")}"></div>
         <div><label>Mola (sn)</label><input type="number" inputmode="numeric" id="aMola" value="${h.mola}"></div>
       </div>
+      <p class="muted small" style="margin:14px 0 6px">Alternatif hareket — alet doluyken antrenmanda sağa kaydırınca gelir</p>
+      ${h.alt&&EX[h.alt.ex]?`<p class="small" style="margin:0 0 8px">⇄ <b>${exAd(h.alt.ex)}</b></p>`:`<p class="muted small" style="margin:0 0 8px">Alternatif yok</p>`}
+      <div class="row" style="gap:8px;margin-bottom:12px">
+        <button class="btn quiet sm" id="aAltSec">${h.alt?"Alternatifi değiştir":"+ Alternatif ekle"}</button>
+        ${h.alt?`<button class="btn ghost sm" id="aAltSil">Alternatifi kaldır</button>`:""}
+      </div>
       <button class="btn" id="aOk">Kaydet</button>
       <button class="btn ghost" id="aIptal">Vazgeç</button>`);
     const sheet=document.getElementById("modalBody");
+    sheet.querySelector("#aAltSec").onclick=async()=>{
+      oku(); p.duzenlendi=Date.now(); await saveAll(); modalKapat();
+      state.secici={progId:p.id, altIdx:i}; state.duzenle=null;
+      state.tab="guide"; state.kat.limit=60; state.openEx=null;
+      render(); scrollTo(0,0);
+    };
+    const altSil=sheet.querySelector("#aAltSil");
+    if(altSil) altSil.onclick=()=>{ oku(); delete h.alt; ciz(); };
     const oku=()=>{
       h.set=Math.max(1,Math.min(20,+sheet.querySelector("#aSet").value||1));
       h.tekrar=sheet.querySelector("#aTek").value.trim()||"10";
@@ -3052,6 +3275,21 @@ function hareketAyarSheet(p,i){
     sheet.querySelector("#aIptal").onclick=()=>{ Object.assign(h,snap); modalKapat(); };
   };
   ciz();
+}
+
+/* Katalogdan seçilen hareketi program satırının alternatifi yapar. Set,
+   tekrar ve mola ana hareketten gelir; sayım tipi hareketin kendisinden. */
+async function alternatifSec(exId){
+  const p=progById(state.secici.progId), i=state.secici.altIdx;
+  const h=p&&p.hareketler[i];
+  state.secici=null; state.openEx=null; state.tab="programs";
+  if(!h){ state.duzenle=null; render(); toast("Program bulunamadı"); return; }
+  if(exId===h.ex){ state.duzenle=p.id; render(); toast("Alternatif, hareketin kendisi olamaz"); return; }
+  h.alt={ex:exId, tip:tipOf(exId)};
+  p.duzenlendi=Date.now();
+  await saveAll();
+  state.duzenle=p.id; render(); scrollTo(0,0);
+  toast("⇄ "+exAd(exId)+" alternatif olarak eklendi");
 }
 
 /* katalogdan seçilen hareketi bir programa ekler */
@@ -3370,6 +3608,7 @@ function renderGuide(){
     if(k.ekip && e.q!==k.ekip) return false;
     if(!qEn) return true;
     return e.n.toLowerCase().includes(qEn)
+        || (e.tam && e.tam.toLocaleLowerCase("tr").includes(qTr))
         || e.t.toLowerCase().includes(qEn)
         || kasTR(e.t).toLocaleLowerCase("tr").includes(qTr)
         || ekipTR(e.q).toLocaleLowerCase("tr").includes(qTr)
@@ -3383,6 +3622,8 @@ function renderGuide(){
     ${secim?`<div class="card" style="padding:12px 16px;margin-bottom:10px">
       <div class="row between"><span class="small">${state.secici.seans
         ? "Sürmekte olan <b>antrenmana</b> ekleniyor"
+        : state.secici.altIdx!=null
+        ? "Alternatif seçiliyor: <b>"+((progById(state.secici.progId)||{hareketler:[]}).hareketler[state.secici.altIdx]?exAd(progById(state.secici.progId).hareketler[state.secici.altIdx].ex):"?")+"</b>"
         : "Eklenecek program: <b>"+(progById(state.secici.progId)?progById(state.secici.progId).ad:"?")+"</b>"}</span>
       <button class="pill" id="vazgec">Vazgeç</button></div></div>`:""}
     <input type="search" class="text" id="kAra" placeholder="Ara: bench press, squat, omuz, dambıl..." value="${String(k.q||"").replace(/"/g,"&quot;")}">
@@ -3425,6 +3666,7 @@ function renderGuide(){
     render(); scrollTo(0,0);
   };
   view.querySelectorAll("[data-ex]").forEach(b=>b.onclick=()=>{
+    if(secim && state.secici.altIdx!=null){ alternatifSec(b.dataset.ex); return; }
     if(secim){ ekleSheet(b.dataset.ex); return; }
     state.openEx=b.dataset.ex; render(); scrollTo(0,0);
   });
@@ -3443,6 +3685,7 @@ function renderExDetay(){
         <div class="stage-cap"><span>${bolgeTR(e.c)}</span><span>${ekipTR(e.q)}</span></div>
       </div>
       <h2 style="margin-top:12px">${e.n}</h2>
+      ${e.tam?`<p class="muted small">${e.tam}</p>`:""}
       <p class="muted small">Hedef: ${kasTR(e.t)}${e.s&&e.s.length?" · Yardımcı: "+e.s.map(kasTR).join(", "):""}</p>
       ${o&&o.ipucu?`<p class="small" style="margin-top:8px">${o.ipucu}</p>`:""}
       <h3 style="margin-top:14px">Nasıl yapılır</h3>
@@ -3849,6 +4092,24 @@ document.querySelectorAll("nav button").forEach(b=>{
   view.addEventListener("touchend",e=>{ if(x0==null) return;
     const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null;
     if(Date.now()-t0<600&&Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*2) ozetGunDegistir(dx>0?-1:1); },{passive:true});
+})();
+/* Antrenmanda hareket kartını sağa kaydır: alternatif hareket gelir (alet
+   doluyken). Alternatifteyken sağa ya da sola kaydırmak ana harekete döner.
+   Kutulara ve düğmelere başlayan dokunuşlar sayılmaz; kilo yazarken ya da
+   set işaretlerken yanlışlıkla hareket değişmesin. */
+(function(){
+  let x0=null,y0=0,t0=0;
+  view.addEventListener("touchstart",e=>{
+    if(state.tab!=="workout"||!state.active||e.touches.length!==1
+       ||document.querySelector(".modal:not(.hidden)")
+       ||!e.target.closest("#exKart")||e.target.closest("input,button,summary")){x0=null;return;}
+    x0=e.touches[0].clientX; y0=e.touches[0].clientY; t0=Date.now(); },{passive:true});
+  view.addEventListener("touchend",e=>{ if(x0==null) return;
+    const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null;
+    if(!(Date.now()-t0<600&&Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*2)) return;
+    const h=state.active&&state.active.hareketler[state.exIndex];
+    if(!h) return;
+    if(dx>0 || h.altta) alternatifUygula(dx>0?1:-1); },{passive:true});
 })();
 /* Uygulama arka plana alınırken ya da kapanırken yarım antrenmanı yaz. */
 document.addEventListener("visibilitychange",()=>{ if(document.hidden && state.active) saveAll(); });
