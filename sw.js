@@ -8,7 +8,7 @@
    ASSETS'i bastan indirir, activate eski cache'i siler. Aksi halde sunucu
    kapaliyken (ya da internet yokken) onceAg cache'e duser ve kullanici
    eski surumu gorur — guncelleme yapilmamis gibi. */
-const CORE  = 'salon-defteri-v7';   // v7: salon kullanimi, gecmis duzenleme, program siralama
+const CORE  = 'salon-defteri-v31';  // v31: kısa İngilizce hareket adları, sade antrenman ekranı
 /* Medya "once cache" okunuyor: bir kez indirilen gorsel bir daha aga
    sorulmaz. Var olan bir gorseli DEGISTIRDIGINDE bu surumu artir, yoksa
    kullanicida eski gorsel kalir. (Yeni id eklemek icin gerekmez.) */
@@ -16,12 +16,14 @@ const MEDYA = 'salon-defteri-medya-v3';   // v3: c003-c005 figur cizimine gecti
 const MEDYA_TAVAN = 600;   // bu sayiyi asinca en eski kayitlar atilir
 
 const ASSETS = [
-  './', './index.html', './manifest.json', './data/exercises.js', './data/custom.js',
-  './icon-192.png', './icon-512.png'
+  './', './index.html', './manifest.json', './data/exercises.js', './data/custom.js', './data/food.js', './data/rapor.js', './data/legacy-workout-guide.js',
+  './icon-192.png', './icon-512.png',
+  ...['c003','c004','c005','c006','c008','c009','c010','c013','c014','c015','c017','c019'].flatMap(id=>[`./videos/${id}-anim-v2.gif`,`./images/${id}-anim-v2.jpg`]),
+  './videos/0659-LEH9jxP.gif', './images/0659-LEH9jxP.jpg'
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CORE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CORE).then(c => c.addAll(ASSETS.map(url=>new Request(url,{cache:'reload'})))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -48,6 +50,8 @@ async function onceCache(request){
   const cache = await caches.open(MEDYA);
   const hit = await cache.match(request);
   if (hit) return hit;
+  const coreHit=await (await caches.open(CORE)).match(request);
+  if(coreHit)return coreHit;
   const res = await fetch(request);
   if (res && res.ok) {
     await cache.put(request, res.clone());
@@ -60,7 +64,7 @@ async function onceCache(request){
 async function onceAg(request){
   const cache = await caches.open(CORE);
   try {
-    const res = await fetch(request);
+    const res = await fetch(request,{cache:'no-cache'});
     if (res && res.ok) await cache.put(request, res.clone());
     return res;
   } catch (e) {

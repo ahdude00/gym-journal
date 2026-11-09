@@ -1,0 +1,16 @@
+{
+  "name": "salon-defteri-android",
+  "private": true,
+  "description": "Salon Defteri için Android kabuğu (Capacitor): GitHub Pages'teki uygulamayı açar, Health Connect'ten adımları okur.",
+  "scripts": {
+    "sync": "cap sync android",
+    "apk": "cap sync android && cd android && gradlew.bat assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3"
+  }
+}

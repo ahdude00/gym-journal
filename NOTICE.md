@@ -1,5 +1,12 @@
 # Media Attribution & License
 
+## Saved SVG-catalog record compatibility
+
+`data/legacy-workout-guide.js` preserves metadata for saved exercise IDs from
+[Workout Guide](https://github.com/bryllim/workout-guide) by Bryl Lim / Everkinetic
+(CC BY-SA 4.0). The SVG artwork is no longer displayed or bundled. Matching saved
+IDs use the original exercise media; other saved IDs retain their names and metadata.
+
 The exercise **media** (thumbnail images and animation GIFs) in this repository
 is the property of **Gym visual** and is redistributed here **with permission**.
 
@@ -41,12 +48,24 @@ Five exercises have no record of their own in the dataset and are added by
   other dataset animations, so the frames were extracted from those
   (`tools/ozel-gif-uret.py`). These remain **© Gym visual** and everything above
   applies to them unchanged.
-- **`c003`, `c004`, `c005` — original drawings.** Cat-cow, wall slide and chin
-  tuck do not appear anywhere in the dataset, and no dataset animation contains
-  their poses, so no frame could be extracted. They are drawn from scratch as
-  stick figures by [`tools/cop-adam-uret.py`](tools/cop-adam-uret.py).
-  **These three are not Gym visual media and the notice above does not apply to
-  them.**
+- **`c003`–`c006`, `c008`–`c010` — original animations.** See below.
+
+## Original animations (`c003`, `c004`, `c005`, `c006`, `c008`, `c009`, `c010`)
+
+Cat-cow, wall slide, chin tuck and the Sunday recovery entries have no
+counterpart in the dataset and no dataset animation contains their poses. The
+`*-anim-v2.gif` and matching JPEG files are original procedural 3D
+illustrations generated locally with [`tools/program-gifs/`](tools/program-gifs/):
+an anatomical figure built from blended ellipsoids, polygonised with Surface
+Nets and rendered with Three.js. They use a white background, light grey figure,
+black shorts, red target muscles and the same 180×180, 12-frame format for
+visual consistency. They are **not the Gym visual character**, do not derive
+from Gym visual media, and the notice above does not apply to them. No image
+generation service was used. Three.js is used under its MIT license, retained in
+`tools/program-gifs/vendor/LICENSE`.
+
+`c007` points to the existing `0659-LEH9jxP` wall press-up GIF/JPEG without
+modification; those files remain Gym visual media under the terms above.
 
 ## Dataset (non-media)
 

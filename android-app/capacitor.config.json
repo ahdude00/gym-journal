@@ -1,0 +1,12 @@
+{
+  "appId": "com.ahdude.salondefteri",
+  "appName": "Salon Defteri",
+  "webDir": "www",
+  "server": {
+    "url": "https://ahdude00.github.io/gym-journal/",
+    "androidScheme": "https"
+  },
+  "android": {
+    "appendUserAgent": "SalonDefteriAndroid"
+  }
+}
